@@ -137,6 +137,7 @@ if (session_status() === PHP_SESSION_NONE) {
     // ── Timeout por inactividad ───────────────────────────────────
     if (isset($_SESSION['_last_activity'])
         && (time() - $_SESSION['_last_activity']) > SESSION_IDLE_TIMEOUT) {
+        $teniaSesion = !empty($_SESSION['cliente_id']) || !empty($_SESSION['usuario_id']);
         session_unset();
         session_destroy();
         session_start();
@@ -144,6 +145,9 @@ if (session_status() === PHP_SESSION_NONE) {
         $_SESSION['_initiated']     = true;
         $_SESSION['_created']       = time();
         $_SESSION['_last_activity'] = time();
+        if ($teniaSesion) {
+            $_SESSION['_session_expired'] = true;
+        }
     } else {
         $_SESSION['_last_activity'] = time();
     }

@@ -3,7 +3,12 @@ require_once dirname(__DIR__) . '/includes/config.php';
 
 // ── Guarda: mi cuenta requiere sesión activa ─────────────────────────────────
 if (empty($_SESSION['cliente_id'])) {
-    $_SESSION['_flash'] = ['msg' => 'Debes iniciar sesión para acceder a tu cuenta.'];
+    if (!empty($_SESSION['_session_expired'])) {
+        unset($_SESSION['_session_expired']);
+        $_SESSION['_flash'] = ['msg' => 'Tu sesión ha expirado por inactividad. Por favor inicia sesión nuevamente.', 'type' => 'warning'];
+    } else {
+        $_SESSION['_flash'] = ['msg' => 'Debes iniciar sesión para acceder a tu cuenta.'];
+    }
     header('Location: /inicio');
     exit;
 }
