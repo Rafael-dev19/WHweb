@@ -506,6 +506,31 @@
     }
   }
 
+  /* ── Contador de intentos y bloqueo temporal ────────────────── */
+  let _loginIntentos = 0;
+  let _loginTimer    = null;
+
+  function _iniciarCuentaRegresiva(segundos = 30) {
+    const btn = document.getElementById('btnLoginSubmit');
+    if (btn) btn.disabled = true;
+    let restantes = segundos;
+    const _actualizar = () => _authShowAlert(
+      `Demasiados intentos fallidos. Espera <strong>${restantes}s</strong> antes de reintentar.`, 'error'
+    );
+    _actualizar();
+    _loginTimer = setInterval(() => {
+      restantes--;
+      if (restantes <= 0) {
+        clearInterval(_loginTimer);
+        _loginIntentos = 0;
+        if (btn) btn.disabled = false;
+        _authShowAlert('Ya puedes intentar de nuevo.', 'error');
+      } else {
+        _actualizar();
+      }
+    }, 1000);
+  }
+
   /* ── Login con email ─────────────────────────────────────────── */
   function _marcarCampoError(id, msg) {
     const el = document.getElementById(id);
@@ -541,18 +566,24 @@
       if (data.redirect) { window.location.href = data.redirect; return; }  // personal → su panel
       _onAutenticado(data.cliente, cred.user.emailVerified);
     } catch (e) {
-      const map = {
-        'auth/user-not-found':    'No existe cuenta con ese correo.',
-        'auth/wrong-password':    'Contraseña incorrecta.',
-        'auth/invalid-email':     'Correo inválido.',
-        'auth/too-many-requests': 'Demasiados intentos. Espera un momento.',
-        'auth/invalid-credential': 'Correo o contraseña incorrectos.',
-      };
-      const msg = e.message || '';
       if (_esFalloDeConexion(e)) {
         _authShowAlert('Sin conexión. Verifica tu internet e intenta de nuevo.', 'error');
+      } else if (e.code === 'auth/too-many-requests') {
+        _iniciarCuentaRegresiva(30);
       } else {
-        _authShowAlert(map[e.code] || (msg.startsWith('Error') ? msg : 'Correo o contraseña incorrectos. Intenta de nuevo.'), 'error');
+        _loginIntentos++;
+        const restantes = Math.max(0, 5 - _loginIntentos);
+        const map = {
+          'auth/user-not-found':     'No existe cuenta con ese correo.',
+          'auth/wrong-password':     'Contraseña incorrecta.',
+          'auth/invalid-email':      'Correo inválido.',
+          'auth/invalid-credential': 'Correo o contraseña incorrectos.',
+        };
+        const base = map[e.code] || (e.message?.startsWith('Error') ? e.message : 'Correo o contraseña incorrectos.');
+        const aviso = restantes > 0
+          ? ` ${restantes} intento${restantes !== 1 ? 's' : ''} restante${restantes !== 1 ? 's' : ''} antes del bloqueo.`
+          : '';
+        _authShowAlert(base + aviso, 'error');
       }
     } finally {
       _authSetLoading('btnLoginSubmit', false);
@@ -743,11 +774,15 @@
       const overlay = document.getElementById('authModalOverlay');
       if (overlay) {
         overlay.classList.remove('visible');
+        if (_loginTimer) { clearInterval(_loginTimer); _loginTimer = null; }
         setTimeout(() => {
           overlay.style.display = 'none';
           document.querySelector('#authFormLogin form')?.reset();
           document.querySelector('#authFormRegistro form')?.reset();
           _authClearAlert();
+          _loginIntentos = 0;
+          const btn = document.getElementById('btnLoginSubmit');
+          if (btn) btn.disabled = false;
           if (typeof window._authSetTab === 'function') window._authSetTab('login');
           document.querySelectorAll('#authModalOverlay input').forEach(el => {
             el.style.borderColor = '';
