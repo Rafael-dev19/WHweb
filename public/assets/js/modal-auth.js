@@ -511,6 +511,7 @@
   let _loginTimer    = null;
 
   function _iniciarCuentaRegresiva(segundos = 30) {
+    if (_loginTimer) { clearInterval(_loginTimer); _loginTimer = null; }
     const btn = document.getElementById('btnLoginSubmit');
     if (btn) btn.disabled = true;
     let restantes = segundos;
@@ -525,6 +526,7 @@
       restantes--;
       if (restantes <= 0) {
         clearInterval(_loginTimer);
+        _loginTimer = null;
         _loginIntentos = 0;
         if (btn) btn.disabled = false;
         _authShowAlert('Ya puedes intentar de nuevo.', 'error');
@@ -569,7 +571,9 @@
       if (data.redirect) { window.location.href = data.redirect; return; }  // personal → su panel
       _onAutenticado(data.cliente, cred.user.emailVerified);
     } catch (e) {
-      if (_esFalloDeConexion(e)) {
+      if (_loginTimer) {
+        // timer activo — no interrumpir la cuenta regresiva
+      } else if (_esFalloDeConexion(e)) {
         _authShowAlert('Sin conexión. Verifica tu internet e intenta de nuevo.', 'error');
       } else if (e.code === 'auth/too-many-requests') {
         _iniciarCuentaRegresiva(30);
