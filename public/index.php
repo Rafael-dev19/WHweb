@@ -588,6 +588,15 @@ if (!empty($_SESSION['_flash'])) {
         }, 400);
       });
     }
+    if (new URLSearchParams(location.search).get('auth') === '1') {
+      window.addEventListener('load', function () {
+        setTimeout(function () {
+          if (window.AuthModal && typeof AuthModal.open === 'function') {
+            AuthModal.open();
+          }
+        }, 400);
+      });
+    }
   </script>
 
 </body>

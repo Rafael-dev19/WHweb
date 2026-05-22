@@ -7,7 +7,7 @@ require_once dirname(__DIR__, 2) . "/includes/auth.php";
 
 $_usuario = sesionActiva();
 if (!$_usuario || !in_array($_usuario["rol"], ["administrador", "empleado"], true)) {
-    header("Location: /login?redirect=admin&error=sesion");
+    header("Location: /acceso-denegado?area=empleado");
     exit;
 }
 unset($_usuario);

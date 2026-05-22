@@ -171,6 +171,8 @@ function initRealTimeValidation() {
 
 function showFieldError(input, msg) {
   clearFieldError(input);
+  input.style.borderColor = '#c0392b';
+  input.style.boxShadow   = '0 0 0 2px rgba(192,57,43,0.3)';
   const err = document.createElement('div');
   err.className = 'field-error-msg';
   err.style.cssText = 'color:#e74c3c;font-size:12px;margin-top:5px;font-weight:500;';
@@ -179,8 +181,24 @@ function showFieldError(input, msg) {
 }
 
 function clearFieldError(input) {
+  input.style.borderColor = '';
+  input.style.boxShadow   = '';
   const prev = input.parentNode.querySelector('.field-error-msg');
   if (prev) prev.remove();
+}
+
+function resaltarCamposVacios(form) {
+  let primerVacio = null;
+  form.querySelectorAll('input[required], textarea[required], select[required]').forEach(field => {
+    if (!field.value.trim()) {
+      showFieldError(field, 'Este campo es obligatorio');
+      if (!primerVacio) primerVacio = field;
+    } else {
+      clearFieldError(field);
+    }
+  });
+  if (primerVacio) primerVacio.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  return !!primerVacio;
 }
 
 // ── Formulario Cotización ─────────────────────────────────────────
@@ -190,6 +208,10 @@ function initFormCotizacion() {
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (resaltarCamposVacios(form)) {
+      showAlert('Por favor completa todos los campos obligatorios marcados en rojo', 'error');
+      return;
+    }
     const fd = new FormData(form);
 
     const datos = {
@@ -287,6 +309,10 @@ function initFormCita() {
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (resaltarCamposVacios(form)) {
+      showAlert('Por favor completa todos los campos obligatorios marcados en rojo', 'error');
+      return;
+    }
 
     if (!selectedTime) {
       showAlert('Por favor selecciona un horario', 'error'); return;

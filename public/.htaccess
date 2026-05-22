@@ -30,6 +30,7 @@ Options -Indexes -ExecCGI
     RewriteRule ^detalle/([0-9]+)/?$         detalle_producto.php?id=$1      [L,QSA]
     RewriteRule ^mi-cuenta/?$                mi-cuenta.php                   [L,QSA]
     RewriteRule ^terminos/?$                 terminos.php                    [L,QSA]
+    RewriteRule ^acceso-denegado/?$          acceso-denegado.php             [L,QSA]
 </IfModule>
 
 # Bloquear archivos sensibles

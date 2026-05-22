@@ -679,6 +679,32 @@ function renderFallback() {
     </div>`;
 }
 
+// ── Helpers de validación visual ─────────────────────────────────
+function _marcarError(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.borderColor = '#c0392b';
+    el.style.boxShadow   = '0 0 0 2px rgba(192,57,43,0.35)';
+    el.addEventListener('input', function _limpiar() {
+        this.style.borderColor = ''; this.style.boxShadow = '';
+        this.removeEventListener('input', _limpiar);
+    });
+}
+
+function resaltarCamposVaciosCheckout(ids) {
+    let primerVacio = null;
+    ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (!el.value.trim()) {
+            _marcarError(id);
+            if (!primerVacio) primerVacio = el;
+        }
+    });
+    if (primerVacio) primerVacio.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return !!primerVacio;
+}
+
 // ── Validación y envío ────────────────────────────────────────────
 function procederAlPago() {
     if (estado.items.length === 0)   { showToast('Tu carrito está vacío', 'error'); return; }
@@ -690,26 +716,35 @@ function procederAlPago() {
         return;
     }
 
+    const camposBase = ['clienteNombre', 'clienteTelefono', 'clienteCorreo', 'clienteCorreoConfirm'];
+    const camposEnvio = estado.tipoEntrega === 'envio'
+        ? ['clienteDireccion', 'clienteCiudad', 'clienteMunicipio', 'clienteCP']
+        : [];
+    if (resaltarCamposVaciosCheckout([...camposBase, ...camposEnvio])) {
+        showToast('Por favor completa todos los campos obligatorios marcados en rojo', 'error');
+        return;
+    }
+
     const nombre   = sanitizeName(document.getElementById('clienteNombre')?.value    || '');
     const telefono = sanitizePhone(document.getElementById('clienteTelefono')?.value  || '');
     const correo   = sanitizeEmail(document.getElementById('clienteCorreo')?.value    || '');
 
     const correoConfirmVal = sanitizeEmail(document.getElementById('clienteCorreoConfirm')?.value || '');
 
-    if (!nombre   || nombre.length < 3)      { showToast('Ingresa tu nombre completo (mínimo 3 caracteres)', 'error'); document.getElementById('clienteNombre')?.focus();    return; }
-    if (!telefono || !isValidPhone(telefono)) { showToast('Ingresa un teléfono válido de 10 dígitos', 'error');         document.getElementById('clienteTelefono')?.focus(); return; }
-    if (!correo   || !isEmailValido(correo))  { showToast('Ingresa un correo electrónico válido (ej: nombre@dominio.com)', 'error'); document.getElementById('clienteCorreo')?.focus(); return; }
-    if (!correoConfirmVal || correoConfirmVal !== correo) { showToast('Los correos electrónicos no coinciden. Verifícalos.', 'error'); document.getElementById('clienteCorreoConfirm')?.focus(); return; }
+    if (!nombre   || nombre.length < 3)      { _marcarError('clienteNombre');       showToast('Ingresa tu nombre completo (mínimo 3 caracteres)', 'error'); return; }
+    if (!telefono || !isValidPhone(telefono)) { _marcarError('clienteTelefono');     showToast('Ingresa un teléfono válido de 10 dígitos', 'error'); return; }
+    if (!correo   || !isEmailValido(correo))  { _marcarError('clienteCorreo');       showToast('Ingresa un correo electrónico válido (ej: nombre@dominio.com)', 'error'); return; }
+    if (!correoConfirmVal || correoConfirmVal !== correo) { _marcarError('clienteCorreoConfirm'); showToast('Los correos electrónicos no coinciden. Verifícalos.', 'error'); return; }
 
     if (estado.tipoEntrega === 'envio') {
         const dir = sanitizeText(document.getElementById('clienteDireccion')?.value || '', 250);
         const ciu = sanitizeText(document.getElementById('clienteCiudad')?.value    || '', 100);
         const mun = sanitizeText(document.getElementById('clienteMunicipio')?.value || '', 100);
         const cp  = sanitizeCP(document.getElementById('clienteCP')?.value           || '');
-        if (!dir)          { showToast('Ingresa la dirección de entrega',  'error'); document.getElementById('clienteDireccion')?.focus();  return; }
-        if (!ciu)          { showToast('Ingresa la ciudad',                'error'); document.getElementById('clienteCiudad')?.focus();      return; }
-        if (!mun)          { showToast('Ingresa el municipio',             'error'); document.getElementById('clienteMunicipio')?.focus();   return; }
-        if (cp.length < 4) { showToast('Ingresa el código postal',         'error'); document.getElementById('clienteCP')?.focus();          return; }
+        if (!dir)          { _marcarError('clienteDireccion');  showToast('Ingresa la dirección de entrega',  'error'); return; }
+        if (!ciu)          { _marcarError('clienteCiudad');      showToast('Ingresa la ciudad',                'error'); return; }
+        if (!mun)          { _marcarError('clienteMunicipio');   showToast('Ingresa el municipio',             'error'); return; }
+        if (cp.length < 4) { _marcarError('clienteCP');          showToast('Ingresa el código postal',         'error'); return; }
     }
 
     const subtotal   = estado.items.reduce((s, i) => s + i.precio * i.cantidad, 0);

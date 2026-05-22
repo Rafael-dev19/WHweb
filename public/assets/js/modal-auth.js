@@ -507,12 +507,28 @@
   }
 
   /* ── Login con email ─────────────────────────────────────────── */
+  function _marcarCampoError(id, msg) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.borderColor = '#c0392b';
+    el.style.boxShadow   = '0 0 0 2px rgba(192,57,43,0.35)';
+    el.addEventListener('input', function _limpia() {
+      this.style.borderColor = ''; this.style.boxShadow = '';
+      this.removeEventListener('input', _limpia);
+    });
+  }
+
   window._authLoginEmail = async function (e) {
     e.preventDefault();
     _authClearAlert();
     const email    = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
-    if (!email || !password) return;
+    if (!email || !password) {
+      if (!email)    _marcarCampoError('loginEmail',    'Requerido');
+      if (!password) _marcarCampoError('loginPassword', 'Requerido');
+      _authShowAlert('Por favor completa todos los campos', 'error');
+      return;
+    }
 
     _authSetLoading('btnLoginSubmit', true);
     try {
@@ -592,9 +608,17 @@
     const email           = document.getElementById('regEmail').value.trim();
     const password        = document.getElementById('regPassword').value;
     const confirmPassword = document.getElementById('regConfirmPassword').value;
-    if (!nombre || !email || !password || !confirmPassword) return;
+    if (!nombre || !email || !password || !confirmPassword) {
+      if (!nombre)          _marcarCampoError('regNombre',          'Requerido');
+      if (!email)           _marcarCampoError('regEmail',           'Requerido');
+      if (!password)        _marcarCampoError('regPassword',        'Requerido');
+      if (!confirmPassword) _marcarCampoError('regConfirmPassword', 'Requerido');
+      _authShowAlert('Por favor completa todos los campos', 'error');
+      return;
+    }
 
     if (password !== confirmPassword) {
+      _marcarCampoError('regConfirmPassword', '');
       _authShowAlert('Las contraseñas no coinciden', 'error'); return;
     }
 
@@ -719,7 +743,17 @@
       const overlay = document.getElementById('authModalOverlay');
       if (overlay) {
         overlay.classList.remove('visible');
-        setTimeout(() => { overlay.style.display = 'none'; }, 300);
+        setTimeout(() => {
+          overlay.style.display = 'none';
+          document.querySelector('#authFormLogin form')?.reset();
+          document.querySelector('#authFormRegistro form')?.reset();
+          _authClearAlert();
+          if (typeof window._authSetTab === 'function') window._authSetTab('login');
+          document.querySelectorAll('#authModalOverlay input').forEach(el => {
+            el.style.borderColor = '';
+            el.style.boxShadow   = '';
+          });
+        }, 300);
       }
     },
 

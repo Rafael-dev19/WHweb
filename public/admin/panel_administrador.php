@@ -8,7 +8,7 @@ require_once dirname(__DIR__, 2) . "/includes/auth.php";
 
 $_usuario = sesionActiva();
 if (!$_usuario || $_usuario["rol"] !== "administrador") {
-    header("Location: /login?redirect=admin&error=sesion");
+    header("Location: /acceso-denegado?area=admin");
     exit;
 }
 // No exponer datos de sesión en el HTML

@@ -53,9 +53,12 @@ switch ($method) {
         }
 
         if ($busqueda) {
-            $where[]  = '(p.nombre LIKE ? OR p.descripcion LIKE ?)';
-            $params[] = "%$busqueda%";
-            $params[] = "%$busqueda%";
+            $terms = array_values(array_filter(preg_split('/\s+/', $busqueda), fn($t) => mb_strlen($t) >= 2));
+            if (empty($terms)) $terms = [$busqueda];
+            foreach ($terms as $term) {
+                $where[]  = 'p.nombre LIKE ?';
+                $params[] = "%{$term}%";
+            }
         }
         if ($catId) {
             $where[]  = 'p.categoria_id = ?';

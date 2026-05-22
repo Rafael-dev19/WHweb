@@ -201,7 +201,8 @@ function initBusqueda() {
     // Bloquear caracteres especiales peligrosos en tiempo real
     input.addEventListener('input', function () {
       this.value = this.value.replace(/[<>"'&;{}()[\]\\`]/g, '');
-      debounce(ejecutarBusqueda, 500)();
+      const val = this.value.trim();
+      if (val.length === 0 || val.length >= 2) debounce(ejecutarBusqueda, 500)();
     });
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') ejecutarBusqueda();
