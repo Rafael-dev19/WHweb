@@ -514,9 +514,12 @@
     const btn = document.getElementById('btnLoginSubmit');
     if (btn) btn.disabled = true;
     let restantes = segundos;
-    const _actualizar = () => _authShowAlert(
-      `Demasiados intentos fallidos. Espera <strong>${restantes}s</strong> antes de reintentar.`, 'error'
-    );
+    const _actualizar = () => {
+      const el = document.getElementById('authAlert');
+      if (!el) return;
+      el.innerHTML = `Demasiados intentos fallidos. Espera <strong>${restantes}s</strong> antes de reintentar.`;
+      el.className = 'auth-alert error';
+    };
     _actualizar();
     _loginTimer = setInterval(() => {
       restantes--;
