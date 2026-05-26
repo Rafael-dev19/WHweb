@@ -61,8 +61,8 @@ if ($method === 'GET' && !$id && !$action) {
              $where
              GROUP BY c.id
              ORDER BY c.fecha_registro DESC
-             LIMIT $limit OFFSET $offset",
-            $params
+             LIMIT ? OFFSET ?",
+            array_merge($params, [$limit, $offset])
         );
     } else {
         $clientes = dbRows(
@@ -71,8 +71,8 @@ if ($method === 'GET' && !$id && !$action) {
              FROM clientes c
              $where
              ORDER BY c.fecha_registro DESC
-             LIMIT $limit OFFSET $offset",
-            $params
+             LIMIT ? OFFSET ?",
+            array_merge($params, [$limit, $offset])
         );
     }
 

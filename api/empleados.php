@@ -17,7 +17,10 @@ switch ($method) {
         $offset = ($page - 1) * $limit;
         $where = ['1=1']; $params = [];
         if (isset($_GET['activo'])) { $where[] = 'activo = ?'; $params[] = sanitizeInt($_GET['activo']); }
-        if (!empty($_GET['rol']))   { $where[] = 'rol = ?';    $params[] = $_GET['rol']; }
+        if (!empty($_GET['rol'])) {
+            if (!in_array($_GET['rol'], ['administrador', 'empleado'], true)) jsonError('rol inválido', 422);
+            $where[] = 'rol = ?'; $params[] = $_GET['rol'];
+        }
         if (!empty($_GET['busqueda'])) {
             $b = '%' . $_GET['busqueda'] . '%';
             $where[] = '(nombre_completo LIKE ? OR correo LIKE ?)';

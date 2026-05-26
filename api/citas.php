@@ -41,11 +41,28 @@ switch ($method) {
         $limit = min(50, max(1, sanitizeInt($_GET['limit'] ?? 20)));
         $offset = ($page - 1) * $limit;
         $where = ['1=1']; $params = [];
-        if (!empty($_GET['estado'])) { $where[] = 'estado = ?'; $params[] = $_GET['estado']; }
-        if (!empty($_GET['tipo']))   { $where[] = 'tipo = ?';   $params[] = $_GET['tipo']; }
-        if (!empty($_GET['fecha']))  { $where[] = 'DATE(fecha_cita) = ?'; $params[] = $_GET['fecha']; }
-        if (!empty($_GET['fecha_desde'])) { $where[] = 'DATE(fecha_cita) >= ?'; $params[] = $_GET['fecha_desde']; }
-        if (!empty($_GET['fecha_hasta'])) { $where[] = 'DATE(fecha_cita) <= ?'; $params[] = $_GET['fecha_hasta']; }
+        $estadosValidos = ['nueva', 'confirmada', 'completada', 'cancelada'];
+        $tiposPermitidos = ['medicion', 'instalacion', 'otro'];
+        if (!empty($_GET['estado'])) {
+            if (!in_array($_GET['estado'], $estadosValidos, true)) jsonError('estado inválido', 422);
+            $where[] = 'estado = ?'; $params[] = $_GET['estado'];
+        }
+        if (!empty($_GET['tipo'])) {
+            if (!in_array($_GET['tipo'], $tiposPermitidos, true)) jsonError('tipo inválido', 422);
+            $where[] = 'tipo = ?'; $params[] = $_GET['tipo'];
+        }
+        if (!empty($_GET['fecha'])) {
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['fecha'])) jsonError('Formato de fecha inválido (YYYY-MM-DD)', 422);
+            $where[] = 'DATE(fecha_cita) = ?'; $params[] = $_GET['fecha'];
+        }
+        if (!empty($_GET['fecha_desde'])) {
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['fecha_desde'])) jsonError('Formato de fecha_desde inválido (YYYY-MM-DD)', 422);
+            $where[] = 'DATE(fecha_cita) >= ?'; $params[] = $_GET['fecha_desde'];
+        }
+        if (!empty($_GET['fecha_hasta'])) {
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['fecha_hasta'])) jsonError('Formato de fecha_hasta inválido (YYYY-MM-DD)', 422);
+            $where[] = 'DATE(fecha_cita) <= ?'; $params[] = $_GET['fecha_hasta'];
+        }
         $whereStr = 'WHERE ' . implode(' AND ', $where);
         $total = (int)(dbRow("SELECT COUNT(*) AS n FROM citas $whereStr", $params)['n'] ?? 0);
         $params[] = $limit; $params[] = $offset;

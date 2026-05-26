@@ -157,7 +157,7 @@
   </div>
 
   </main>
-  <script>
+  <script nonce="<?= CSP_NONCE ?>">
     document.addEventListener('keydown', function(e){
       if(e.key === 'Escape') document.getElementById('whGuideCatModal').classList.remove('open');
     });

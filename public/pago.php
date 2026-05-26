@@ -33,7 +33,7 @@ if (!$paypalId)  error_log('[pago.php] PAYPAL_CLIENT_ID vacío o no definido');
   <link rel="icon" href="/assets/img/favicon.ico">
 
   <!-- Credenciales inyectadas desde .env (nunca hardcodeadas) -->
-  <script>
+  <script nonce="<?= CSP_NONCE ?>">
     window.STRIPE_PK  = "<?= htmlspecialchars($stripePk, ENT_QUOTES, 'UTF-8') ?>";
     window.PAYPAL_ENV = "<?= htmlspecialchars($paypalEnv, ENT_QUOTES, 'UTF-8') ?>";
   </script>
