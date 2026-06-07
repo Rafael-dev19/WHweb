@@ -69,9 +69,9 @@ function renderCategorias() {
   const container = document.getElementById('categorias-filtro');
   if (!container) return;
   container.innerHTML = `
-    <button class="filter-btn active" onclick="filtrarPorCategoria(null, this)">Todos</button>
+    <button class="filter-btn active" data-cat-filter="">Todos</button>
     ${state.categorias.map(cat => `
-      <button class="filter-btn" onclick="filtrarPorCategoria(${cat.id}, this)">${escHtml(cat.nombre)}</button>
+      <button class="filter-btn" data-cat-filter="${cat.id}">${escHtml(cat.nombre)}</button>
     `).join('')}
   `;
 }
@@ -111,7 +111,7 @@ async function cargarProductos(resetPage = false) {
     console.error('Error cargando productos:', e);
     grid.innerHTML = `<div class="error-state">
       <p><i class="fa-solid fa-triangle-exclamation"></i> No se pudieron cargar los productos.</p>
-      <button onclick="cargarProductos()" class="btn-reload">Reintentar</button>
+      <button data-call="cargarProductos" class="btn-reload">Reintentar</button>
     </div>`;
   } finally {
     state.loading = false;
@@ -127,18 +127,17 @@ function renderProductos() {
     grid.innerHTML = `
       <div class="no-productos" style="grid-column:1/-1; text-align:center; padding:40px;">
         <p><i class="fa-solid fa-box"></i> No se encontraron productos</p>
-        <button onclick="limpiarFiltros()" class="btn-secondary" style="margin-top:10px;">Limpiar filtros</button>
+        <button data-call="limpiarFiltros" class="btn-secondary" style="margin-top:10px;">Limpiar filtros</button>
       </div>`;
     return;
   }
 
   grid.innerHTML = state.allProducts.map(p => {
     const imgSrc = p.imagen_principal
-      ? `<img src="${escHtml(p.imagen_principal)}" alt="${escHtml(p.nombre)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+      ? `<img src="${escHtml(p.imagen_principal)}" alt="${escHtml(p.nombre)}" loading="lazy" data-lightbox data-img-fallback="ph-${p.id}" class="wh-img-zoom">`
       : '';
-    const imgPlaceholder = `<div class="placeholder-imagen" ${p.imagen_principal ? 'style="display:none"' : ''}><i class="fa-solid fa-tree"></i></div>`;
+    const imgPlaceholder = `<div class="placeholder-imagen" id="ph-${p.id}" ${p.imagen_principal ? 'style="display:none"' : ''}><i class="fa-solid fa-tree"></i></div>`;
     const badge = p.etiqueta ? `<div class="product-badge">${escHtml(p.etiqueta)}</div>` : '';
-    const stockBadge = '';
     const precio = formatCurrency(p.precio);
 
     return `
@@ -146,7 +145,6 @@ function renderProductos() {
         <div class="product-image">
           ${imgSrc}${imgPlaceholder}
           ${badge}
-          ${stockBadge}
         </div>
         <div class="product-info">
           <div class="product-name">${escHtml(p.nombre)}</div>
@@ -155,15 +153,24 @@ function renderProductos() {
             <span class="price">${precio}</span>
           </div>
           <div class="product-actions">
-<button class="btn-add-cart" onclick="agregarAlCarrito(${p.id}, '${escHtml(p.nombre).replace(/'/g,"\\'")}', ${p.precio}, '${escHtml(p.imagen_principal || '')}')">
-                   <i class="fa-solid fa-cart-shopping"></i> Agregar al carrito
-                 </button>
+            <button class="btn-add-cart"
+              data-id="${p.id}"
+              data-nombre="${escHtml(p.nombre)}"
+              data-precio="${p.precio}"
+              data-imagen="${escHtml(p.imagen_principal || '')}">
+              <i class="fa-solid fa-cart-shopping"></i> Agregar al carrito
+            </button>
             <a href="/detalle/${p.id}" class="btn-details">Ver detalles</a>
           </div>
         </div>
       </div>
     `;
   }).join('');
+
+  // Bind cart buttons after render
+  document.querySelectorAll('.btn-add-cart[data-id]').forEach(btn => {
+    btn.addEventListener('click', function () { agregarAlCarritoBtn(this); });
+  });
 }
 
 // ---- Paginación ----
@@ -174,9 +181,9 @@ function renderPaginacion(pag) {
     return;
   }
   let btns = '';
-  if (pag.hay_anterior) btns += `<button onclick="irAPagina(${state.page - 1})"><i class="fa-solid fa-chevron-left"></i> Anterior</button>`;
+  if (pag.hay_anterior) btns += `<button data-call="irAPagina" data-args="[${state.page - 1}]"><i class="fa-solid fa-chevron-left"></i> Anterior</button>`;
   btns += `<span class="pag-info">Página ${pag.pagina} de ${pag.total_paginas}</span>`;
-  if (pag.hay_siguiente) btns += `<button onclick="irAPagina(${state.page + 1})">Siguiente <i class="fa-solid fa-chevron-right"></i></button>`;
+  if (pag.hay_siguiente) btns += `<button data-call="irAPagina" data-args="[${state.page + 1}]">Siguiente <i class="fa-solid fa-chevron-right"></i></button>`;
   container.innerHTML = `<div class="paginacion-btns">${btns}</div>`;
 }
 
@@ -306,3 +313,4 @@ window.limpiarFiltros = limpiarFiltros;
 window.agregarAlCarrito = agregarAlCarrito;
 window.agregarAlCarritoBtn = agregarAlCarritoBtn;
 window.irAPagina = irAPagina;
+window.cargarProductos = cargarProductos;

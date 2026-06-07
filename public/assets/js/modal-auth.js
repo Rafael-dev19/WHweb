@@ -18,7 +18,7 @@
     const html = `
 <div id="authModalOverlay" class="auth-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
   <div class="auth-modal">
-    <button class="auth-modal-close" onclick="AuthModal.close()" aria-label="Cerrar">
+    <button class="auth-modal-close" id="btnAuthClose" aria-label="Cerrar">
       <i class="fa-solid fa-xmark"></i>
     </button>
 
@@ -33,7 +33,7 @@
       <div id="authAlert" class="auth-alert"></div>
 
       <div id="authFormLogin">
-        <form class="auth-form" onsubmit="_authLoginEmail(event)">
+        <form class="auth-form" id="formAuthLogin">
           <div class="auth-form-group">
             <label>Correo electrónico</label>
             <input type="email" id="loginEmail" placeholder="correo@ejemplo.com" autocomplete="email" required>
@@ -44,16 +44,16 @@
           </div>
           <button type="submit" class="btn-auth-primary" id="btnLoginSubmit">Iniciar sesión</button>
           <div class="auth-forgot-wrap">
-            <a href="#" class="auth-forgot-link" onclick="_authResetPassword(event)">¿Olvidaste tu contraseña?</a>
+            <a href="#" class="auth-forgot-link" id="linkAuthForgot">¿Olvidaste tu contraseña?</a>
           </div>
         </form>
         <div class="auth-switch-link">
-          ¿No tienes cuenta? <a href="#" onclick="_authSetTab('registro'); return false;">Regístrate aquí</a>
+          ¿No tienes cuenta? <a href="#" id="linkGoRegistro">Regístrate aquí</a>
         </div>
       </div>
 
       <div id="authFormRegistro" style="display:none;">
-        <form class="auth-form" onsubmit="_authRegistroEmail(event)">
+        <form class="auth-form" id="formAuthRegistro">
           <div class="auth-form-group">
             <label>Nombre completo</label>
             <input type="text" id="regNombre" placeholder="Juan Pérez" autocomplete="name" required minlength="2" maxlength="120">
@@ -73,7 +73,7 @@
           <button type="submit" class="btn-auth-primary" id="btnRegSubmit">Crear cuenta</button>
         </form>
         <div class="auth-switch-link">
-          ¿Ya tienes cuenta? <a href="#" onclick="_authSetTab('login'); return false;">Inicia sesión aquí</a>
+          ¿Ya tienes cuenta? <a href="#" id="linkGoLogin">Inicia sesión aquí</a>
         </div>
       </div>
 
@@ -95,12 +95,11 @@
           Si no ves el correo, revisa tu carpeta de <strong style="color:#aaa;">spam o promociones</strong>.
         </p>
         <div id="authVerifAlert" style="margin-top:12px; font-size:13px; min-height:20px;"></div>
-        <button class="btn-auth-primary" style="margin-top:16px;" onclick="_authContinuarDespuesDeRegistro()">
+        <button class="btn-auth-primary" style="margin-top:16px;" id="btnAuthContinuar">
           Continuar a mi cuenta
         </button>
         <div style="margin-top:14px;">
-          <a href="#" id="btnReenviarVerif" style="font-size:12px; color:#9a8e80; text-decoration:none;"
-             onclick="_authReenviarVerificacion(event)">
+          <a href="#" id="btnReenviarVerif" style="font-size:12px; color:#9a8e80; text-decoration:none;">
             ¿No llegó? Reenviar correo
           </a>
         </div>
@@ -113,10 +112,10 @@
         <div class="auth-user-name" id="authUserName">—</div>
         <div class="auth-user-email" id="authUserEmail">—</div>
         <div class="auth-user-actions">
-          <button class="btn-auth-mi-cuenta" onclick="location.href='/mi-cuenta'">
+          <button class="btn-auth-mi-cuenta" id="btnAuthMiCuenta">
             <i class="fa-solid fa-user-circle"></i> Mi cuenta
           </button>
-          <button class="btn-auth-logout" onclick="_authLogout()">
+          <button class="btn-auth-logout" id="btnAuthLogout">
             <i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión
           </button>
         </div>
@@ -132,6 +131,38 @@
 
   /* ── Sanitización en tiempo real del modal ───────────────────── */
   function _initCamposModal() {
+    // ── Event listeners del modal ─────────────────────────────────
+    const btnClose = document.getElementById('btnAuthClose');
+    if (btnClose) btnClose.addEventListener('click', () => AuthModal.close());
+
+    const formLogin = document.getElementById('formAuthLogin');
+    if (formLogin) formLogin.addEventListener('submit', (e) => window._authLoginEmail(e));
+
+    const linkForgot = document.getElementById('linkAuthForgot');
+    if (linkForgot) linkForgot.addEventListener('click', (e) => window._authResetPassword(e));
+
+    const linkGoReg = document.getElementById('linkGoRegistro');
+    if (linkGoReg) linkGoReg.addEventListener('click', (e) => { e.preventDefault(); window._authSetTab('registro'); });
+
+    const formReg = document.getElementById('formAuthRegistro');
+    if (formReg) formReg.addEventListener('submit', (e) => window._authRegistroEmail(e));
+
+    const linkGoLogin = document.getElementById('linkGoLogin');
+    if (linkGoLogin) linkGoLogin.addEventListener('click', (e) => { e.preventDefault(); window._authSetTab('login'); });
+
+    const btnContinuar = document.getElementById('btnAuthContinuar');
+    if (btnContinuar) btnContinuar.addEventListener('click', () => window._authContinuarDespuesDeRegistro());
+
+    const btnReenviar = document.getElementById('btnReenviarVerif');
+    if (btnReenviar) btnReenviar.addEventListener('click', (e) => window._authReenviarVerificacion(e));
+
+    const btnMiCuenta = document.getElementById('btnAuthMiCuenta');
+    if (btnMiCuenta) btnMiCuenta.addEventListener('click', () => { location.href = '/mi-cuenta'; });
+
+    const btnLogout = document.getElementById('btnAuthLogout');
+    if (btnLogout) btnLogout.addEventListener('click', () => window._authLogout());
+
+    // ── Sanitización de inputs ────────────────────────────────────
     const loginEmail = document.getElementById('loginEmail');
     if (loginEmail) loginEmail.addEventListener('input', function () {
       this.value = this.value.replace(/[^a-zA-Z0-9._%+\-@]/g, '');
@@ -269,10 +300,12 @@
         <i class="fa-solid fa-user-circle"></i> Mi cuenta
       </a>
       <div class="auth-mini-divider"></div>
-      <button class="auth-mini-item auth-mini-logout" onclick="_authLogout()">
+      <button class="auth-mini-item auth-mini-logout">
         <i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión
       </button>`;
     btn.appendChild(menu);
+    const miniLogout = menu.querySelector('.auth-mini-logout');
+    if (miniLogout) miniLogout.addEventListener('click', () => window._authLogout());
 
     function _closeMiniMenu(e) {
       if (!btn.contains(e.target)) {
@@ -417,16 +450,20 @@
         Sin confirmar no podrás completar compras.
       </span>
       <div class="wh-verif-actions">
-        <button type="button" class="wh-verif-btn" id="btnBannerReenviar" onclick="_authReenviarBanner(event)">
+        <button type="button" class="wh-verif-btn" id="btnBannerReenviar">
           <i class="fa-solid fa-paper-plane"></i> Reenviar
         </button>
-        <button type="button" class="wh-verif-btn wh-verif-btn-ok" onclick="_authYaVerifique()">
+        <button type="button" class="wh-verif-btn wh-verif-btn-ok" id="btnBannerYaVerifique">
           Ya verifiqué
         </button>
       </div>`;
     const nav = document.querySelector('.header-nav');
     if (nav) nav.insertAdjacentElement('afterend', banner);
     else document.body.insertAdjacentElement('afterbegin', banner);
+    const btnBannerReenv = document.getElementById('btnBannerReenviar');
+    if (btnBannerReenv) btnBannerReenv.addEventListener('click', (e) => window._authReenviarBanner(e));
+    const btnBannerYaVerif = document.getElementById('btnBannerYaVerifique');
+    if (btnBannerYaVerif) btnBannerYaVerif.addEventListener('click', () => window._authYaVerifique());
     _iniciarPollingVerificacion();
   }
 

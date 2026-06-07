@@ -163,6 +163,22 @@
       return;
     }
 
+    // .thumb[data-idx] → cambiarImagen() en detalle_producto
+    t = e.target.closest('.thumb[data-idx]');
+    if (t) {
+      if (typeof window.cambiarImagen === 'function') {
+        window.cambiarImagen(parseInt(t.dataset.idx), t.dataset.url);
+      }
+      return;
+    }
+
+    // [data-lightbox] en IMG → abrir lightbox de zoom
+    t = e.target.closest('[data-lightbox]');
+    if (t && t.tagName === 'IMG' && t.src) {
+      _whOpenLightbox(t.src, t.alt || '');
+      return;
+    }
+
     // [data-call="funcName"] con [data-args='[...]'] opcional → función global
     t = e.target.closest('[data-call]');
     if (t) {
@@ -178,6 +194,68 @@
       return;
     }
   });
+
+  // ── Lightbox ──────────────────────────────────────────────────
+  function _whOpenLightbox(src, alt) {
+    var existing = document.getElementById('whLightboxOverlay');
+    if (existing) existing.remove();
+
+    var overlay = document.createElement('div');
+    overlay.id = 'whLightboxOverlay';
+    overlay.className = 'wh-lightbox';
+
+    var inner = document.createElement('div');
+    inner.className = 'wh-lightbox-inner';
+
+    var img = document.createElement('img');
+    img.className = 'wh-lightbox-img';
+    img.src = src;
+    img.alt = alt;
+
+    var closeBtn = document.createElement('button');
+    closeBtn.className = 'wh-lightbox-close';
+    closeBtn.setAttribute('aria-label', 'Cerrar');
+    closeBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+
+    var hint = document.createElement('div');
+    hint.className = 'wh-lightbox-hint';
+    hint.textContent = 'Scroll para zoom · Clic fuera para cerrar';
+
+    inner.appendChild(img);
+    inner.appendChild(closeBtn);
+    inner.appendChild(hint);
+    overlay.appendChild(inner);
+    document.body.appendChild(overlay);
+
+    // Zoom con scroll
+    var zoom = 1;
+    img.addEventListener('wheel', function (ev) {
+      ev.preventDefault();
+      zoom += ev.deltaY < 0 ? 0.15 : -0.15;
+      zoom = Math.max(0.5, Math.min(4, zoom));
+      img.style.transform = 'scale(' + zoom + ')';
+    }, { passive: false });
+
+    // Cerrar al hacer clic fuera de la imagen o en el botón X
+    overlay.addEventListener('click', function (ev) {
+      if (ev.target === overlay || ev.target === closeBtn || ev.target.closest('.wh-lightbox-close')) {
+        _whCloseLightbox(overlay);
+      }
+    });
+
+    // Cerrar con Escape
+    function _escHandler(ev) {
+      if (ev.key === 'Escape') { _whCloseLightbox(overlay); document.removeEventListener('keydown', _escHandler); }
+    }
+    document.addEventListener('keydown', _escHandler);
+
+    requestAnimationFrame(function () { overlay.classList.add('wh-lightbox--visible'); });
+  }
+
+  function _whCloseLightbox(overlay) {
+    overlay.classList.remove('wh-lightbox--visible');
+    setTimeout(function () { if (overlay.parentNode) overlay.remove(); }, 250);
+  }
 
   // ── Change delegation ─────────────────────────────────────────────
   document.addEventListener('change', function (e) {

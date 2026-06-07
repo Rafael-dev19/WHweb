@@ -240,12 +240,14 @@ function mostrarProducto() {
       mainImg.src = primera;
       mainImg.alt = p.nombre;
       mainImg.style.display = 'block';
+      mainImg.setAttribute('data-lightbox', '');
+      mainImg.classList.add('wh-img-zoom');
       if (placeholder) placeholder.style.display = 'none';
     }
 
     if (thumbsEl && imagenes.length > 1) {
       thumbsEl.innerHTML = imagenes.map((img, idx) => `
-        <div class="thumb ${idx === 0 ? 'active' : ''}" data-idx="${idx}" data-url="${escHtml(img.url_imagen)}" onclick="cambiarImagenBtn(this)">
+        <div class="thumb ${idx === 0 ? 'active' : ''}" data-idx="${idx}" data-url="${escHtml(img.url_imagen)}">
           <img src="${escHtml(img.url_imagen)}" alt="Vista ${idx+1}" loading="lazy" style="width:100%;height:100%;object-fit:cover;object-position:center top;border-radius:8px;">
         </div>
       `).join('');
