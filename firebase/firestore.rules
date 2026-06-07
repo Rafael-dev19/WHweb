@@ -2,13 +2,18 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /notificaciones/{notifId} {
+      // El backend PHP usa REST API con API key (sin auth token), por eso read/create no pueden requerir auth
       allow read:   if true;
       allow create: if request.resource.data.keys().hasAll(['tipo','titulo','mensaje','leida','fecha'])
                     && request.resource.data.tipo in [
                          'nuevo_pedido','estado_pedido',
                          'nueva_cotizacion','cotizacion_respondida','nueva_cita'
                        ]
-                    && request.resource.data.leida == false;
+                    && request.resource.data.leida == false
+                    && request.resource.data.titulo is string
+                    && request.resource.data.titulo.size() <= 200
+                    && request.resource.data.mensaje is string
+                    && request.resource.data.mensaje.size() <= 1000;
       allow update: if request.auth != null
                     && request.resource.data.diff(resource.data).affectedKeys()
                          .hasOnly(['leida','fecha_leida']);

@@ -7,6 +7,12 @@ Options -Indexes -ExecCGI
     RewriteEngine On
     RewriteBase /
 
+    # ── Forzar HTTPS (excepto localhost y 127.0.0.1) ─────────────
+    RewriteCond %{HTTPS} off
+    RewriteCond %{HTTP_HOST} !^localhost$ [NC]
+    RewriteCond %{HTTP_HOST} !^127\.0\.0\.1$
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
     # Sitemap dinámico
     RewriteRule ^sitemap\.xml$               sitemap.php                     [L]
 
@@ -56,7 +62,7 @@ Options -Indexes -ExecCGI
 
     # ── Content Security Policy ───────────────────────────────────
     Header always set Content-Security-Policy "default-src 'self'; \
-        script-src 'self' 'unsafe-inline' \
+        script-src 'self' \
             https://cdn.sheetjs.com \
             https://js.stripe.com \
             https://www.paypal.com \

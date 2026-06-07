@@ -32,11 +32,11 @@ if (!$paypalId)  error_log('[pago.php] PAYPAL_CLIENT_ID vacío o no definido');
 
   <link rel="icon" href="/assets/img/favicon.ico">
 
-  <!-- Credenciales inyectadas desde .env (nunca hardcodeadas) -->
-  <script>
-    window.STRIPE_PK  = "<?= htmlspecialchars($stripePk, ENT_QUOTES, 'UTF-8') ?>";
-    window.PAYPAL_ENV = "<?= htmlspecialchars($paypalEnv, ENT_QUOTES, 'UTF-8') ?>";
-  </script>
+  <!-- Credenciales inyectadas desde .env — leídas por pago.js desde data attributes -->
+  <div id="payment-config"
+       data-stripe-pk="<?= htmlspecialchars($stripePk, ENT_QUOTES, 'UTF-8') ?>"
+       data-paypal-env="<?= htmlspecialchars($paypalEnv, ENT_QUOTES, 'UTF-8') ?>"
+       hidden></div>
 
   <script src="https://js.stripe.com/v3/"></script>
 
@@ -54,6 +54,7 @@ if (!$paypalId)  error_log('[pago.php] PAYPAL_CLIENT_ID vacío o no definido');
   <link rel="stylesheet" href="/assets/css/variables.css">
   <link rel="stylesheet" href="/assets/css/styles.css?v=4">
   <link rel="stylesheet" href="./assets/css/pago.css?v=3">
+  <link rel="stylesheet" href="/assets/css/animations.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous" defer></script>
 </head>
@@ -100,34 +101,28 @@ if (!$paypalId)  error_log('[pago.php] PAYPAL_CLIENT_ID vacío o no definido');
 
 
         <h2 class="section-title">
-          <span><i class="fa-solid fa-credit-card"></i></span> Método de Pago
-          <span class="wh-help" data-tip="Elige cómo quieres pagar. Ambas opciones son 100% seguras. Tu información de tarjeta nunca pasa por nuestros servidores — va directo a Stripe/PayPal.">?</span>
+          <span><i class="fa-solid fa-lock"></i></span> Pago Seguro
+          <span class="wh-help" data-tip="Elige cómo quieres pagar. Ambas opciones son 100% seguras y cifradas. Tu información de tarjeta nunca toca nuestros servidores — va directo a Stripe o PayPal.">?</span>
         </h2>
 
-        <div class="row g-3 payment-methods">
-          <div class="col-6">
-            <div class="payment-option selected h-100" data-method="card" id="opt-card">
-              <div class="payment-icon"><i class="fa-solid fa-credit-card"></i></div>
-              <h3>Tarjeta de Crédito/Débito</h3>
-              <p>Pago seguro con Stripe · Visa, Mastercard, Amex</p>
-            </div>
-          </div>
-
-          <div class="col-6">
-            <div class="payment-option h-100" data-method="paypal" id="opt-paypal">
-              <div class="payment-icon"><i class="fab fa-paypal"></i></div>
-              <h3>PayPal</h3>
-              <p>Paga con tu cuenta PayPal o tarjeta sin registrarte</p>
-            </div>
-          </div>
-        </div>
-
+        <!-- ── Stripe ── -->
         <div id="stripe-section" class="payment-form-section">
-          <h3>Datos de Tarjeta</h3>
+          <div class="payment-gateway-header">
+            <i class="fa-solid fa-credit-card"></i>
+            <div>
+              <h3>Tarjeta de Crédito o Débito</h3>
+              <p class="gateway-sub">Visa · Mastercard · American Express — procesado por Stripe</p>
+            </div>
+            <div class="gateway-badges">
+              <img src="https://cdn.jsdelivr.net/npm/payment-icons@1.1.0/min/flat/visa.svg" alt="Visa" width="36" loading="lazy">
+              <img src="https://cdn.jsdelivr.net/npm/payment-icons@1.1.0/min/flat/mastercard.svg" alt="Mastercard" width="36" loading="lazy">
+              <img src="https://cdn.jsdelivr.net/npm/payment-icons@1.1.0/min/flat/amex.svg" alt="Amex" width="36" loading="lazy">
+            </div>
+          </div>
           <div class="stripe-card-container">
             <label class="stripe-label">
               Número de tarjeta, vencimiento y CVV
-              <span class="wh-help" data-tip="El CVV son los 3 dígitos al reverso de tu tarjeta (4 dígitos en Amex). Este formulario es cifrado por Stripe — nosotros nunca vemos tu número de tarjeta.">?</span>
+              <span class="wh-help" data-tip="El CVV son los 3 dígitos al reverso de tu tarjeta (4 dígitos en Amex). Este formulario es cifrado con SSL — nosotros nunca vemos ni guardamos tu número de tarjeta.">?</span>
             </label>
             <div id="card-element" class="stripe-element"></div>
             <div id="card-errors" class="card-error" role="alert"></div>
@@ -138,17 +133,30 @@ if (!$paypalId)  error_log('[pago.php] PAYPAL_CLIENT_ID vacío o no definido');
           </button>
         </div>
 
-        <div id="paypal-section" class="payment-form-section" style="display:none;">
-          <h3>Pago con PayPal
-            <span class="wh-help" data-tip="Puedes pagar con tu saldo de PayPal o con cualquier tarjeta sin necesitar una cuenta PayPal. Es redirigido a los servidores seguros de PayPal.">?</span>
-          </h3>
+        <!-- ── Divider ── -->
+        <div class="payment-divider">
+          <span>o paga con</span>
+        </div>
+
+        <!-- ── PayPal ── -->
+        <div id="paypal-section" class="payment-form-section">
+          <div class="payment-gateway-header">
+            <i class="fab fa-paypal" style="color:#009cde;font-size:28px;"></i>
+            <div>
+              <h3>PayPal</h3>
+              <p class="gateway-sub">Usa tu cuenta PayPal o cualquier tarjeta sin registrarte
+                <span class="wh-help" data-tip="No necesitas cuenta PayPal — puedes pagar con tarjeta de débito o crédito directamente en la ventana de PayPal. Es seguro y no compartimos tus datos.">?</span>
+              </p>
+            </div>
+          </div>
           <div id="paypal-button-container"></div>
         </div>
 
         <div class="security-badges">
-          <span title="Conexión cifrada con SSL de 256 bits — los datos viajan protegidos"><i class="fa-solid fa-lock"></i> SSL 256-bit</span>
-          <span title="Cumplimos con el estándar internacional de seguridad para pagos con tarjeta"><i class="fa-solid fa-circle-check"></i> PCI DSS</span>
-          <span title="No almacenamos ni vemos tus datos de tarjeta en ningún momento"><i class="fa-solid fa-shield-halved"></i> Datos protegidos</span>
+          <span title="Conexión cifrada con SSL de 256 bits — todos los datos viajan protegidos entre tu navegador y los servidores de pago"><i class="fa-solid fa-lock"></i> SSL 256-bit</span>
+          <span title="PCI DSS: estándar internacional de seguridad para pagos con tarjeta. Significa que Stripe/PayPal cumplen los máximos requisitos de seguridad"><i class="fa-solid fa-circle-check"></i> PCI DSS</span>
+          <span title="Wooden House nunca almacena, procesa ni ve tus datos de tarjeta. Todo va directo a Stripe o PayPal"><i class="fa-solid fa-shield-halved"></i> Datos protegidos</span>
+          <span title="Puedes cancelar antes de que el pago se confirme. Una vez pagado, contáctanos para gestionar cualquier cambio"><i class="fa-solid fa-rotate-left"></i> Cancelación fácil</span>
         </div>
       </div>
 
@@ -180,5 +188,7 @@ if (!$paypalId)  error_log('[pago.php] PAYPAL_CLIENT_ID vacío o no definido');
   <script src="/assets/js/firebase-config.js"></script>
   <script src="/assets/js/modal-auth.js?v=9"></script>
   <script src="./assets/js/pago.js"></script>
+  <script src="./assets/js/event-delegation.js"></script>
+  <script src="./assets/js/animations.js"></script>
 </body>
 </html>

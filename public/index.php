@@ -20,6 +20,7 @@ if (!empty($_SESSION['_flash'])) {
   <link rel="stylesheet" href="./assets/css/styles.css?v=4">
   <link rel="stylesheet" href="./assets/css/index.css">
   <link rel="stylesheet" href="./assets/css/modal-auth.css?v=4">
+  <link rel="stylesheet" href="./assets/css/animations.css">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous" defer></script>
 </head>
 
@@ -29,14 +30,8 @@ if (!empty($_SESSION['_flash'])) {
   <div class="wh-alerta" id="whAlerta" role="alert">
     <i class="fa-solid fa-triangle-exclamation"></i>
     <span><?= htmlspecialchars($_flash['msg'], ENT_QUOTES, 'UTF-8') ?></span>
-    <button class="wh-alerta-cerrar" onclick="this.parentElement.remove()" aria-label="Cerrar">×</button>
+    <button class="wh-alerta-cerrar" data-close-parent aria-label="Cerrar">×</button>
   </div>
-  <script>
-    setTimeout(function() {
-      var a = document.getElementById('whAlerta');
-      if (a) { a.style.transition = 'opacity .4s'; a.style.opacity = '0'; setTimeout(function(){ a.remove(); }, 400); }
-    }, 6000);
-  </script>
 <?php endif; ?>
 
   <!-- Header Navigation -->
@@ -199,84 +194,59 @@ if (!empty($_SESSION['_flash'])) {
 
     <div>
       <h2 class="section-title"><i class="fa-solid fa-star"></i> ¿Por Qué Elegirnos?</h2>
-      <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-4 mb-5">
+      <div class="row row-cols-1 row-cols-sm-3 g-4 mb-5">
         <div class="col">
           <div class="reason-card h-100">
-            <h4><i class="fa-solid fa-palette"></i> Diseño Personalizado</h4>
-            <p>Cada mueble es único y diseñado específicamente para ti. Trabajamos contigo desde el concepto hasta la instalación.</p>
+            <h4><i class="fa-solid fa-palette"></i> Diseño a tu medida</h4>
+            <p>Cada mueble es único. Diseñamos y fabricamos desde el concepto hasta la instalación según tus espacios exactos.</p>
           </div>
         </div>
         <div class="col">
           <div class="reason-card h-100">
-            <h4><i class="fa-solid fa-tree"></i> Materiales de Calidad</h4>
-            <p>Utilizamos maderas nobles y materiales de primera calidad que garantizan durabilidad y belleza.</p>
+            <h4><i class="fa-solid fa-tree"></i> Materiales nobles</h4>
+            <p>Maderas de primera calidad — pino, cedro, encino, MDF. Durabilidad y belleza garantizada durante años.</p>
           </div>
         </div>
         <div class="col">
           <div class="reason-card h-100">
-            <h4><i class="fa-solid fa-wrench"></i> Instalación Profesional</h4>
-            <p>Equipo técnico especializado se encarga de la instalación perfecta en tu hogar.</p>
-          </div>
-        </div>
-        <div class="col">
-          <div class="reason-card h-100">
-            <h4><i class="fa-solid fa-bolt"></i> Entrega Puntual</h4>
-            <p>Cumplimos con los tiempos de entrega acordados. Tu proyecto es nuestra prioridad.</p>
-          </div>
-        </div>
-        <div class="col">
-          <div class="reason-card h-100">
-            <h4><i class="fa-solid fa-tag"></i> Precios Justos</h4>
-            <p>Cotizaciones transparentes y competitivas sin costos ocultos. Calidad al mejor precio.</p>
-          </div>
-        </div>
-        <div class="col">
-          <div class="reason-card h-100">
-            <h4><i class="fa-solid fa-shield-halved"></i> Garantía Total</h4>
-            <p>1 año de garantía contra defectos de fabricación y 30 días de garantía de satisfacción.</p>
+            <h4><i class="fa-solid fa-shield-halved"></i> Garantía + entrega puntual</h4>
+            <p>1 año de garantía contra defectos. Cumplimos los plazos acordados y dejamos todo instalado y limpio.</p>
           </div>
         </div>
       </div>
     </div>
 
     <div>
-      <h2 class="section-title"><i class="fa-solid fa-clipboard-list"></i> Proceso de Trabajo</h2>
-      <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-5 g-5 mb-5">
+      <h2 class="section-title"><i class="fa-solid fa-clipboard-list"></i> Así Funciona</h2>
+      <div class="row row-cols-2 row-cols-md-4 g-4 mb-5">
         <div class="col">
           <div class="process-step h-100">
             <div class="process-number">1</div>
-            <h4>Consulta Inicial</h4>
-            <p>Conversamos sobre tu proyecto, necesidades y presupuesto</p>
+            <h4>Consulta o Cita</h4>
+            <p>Cuéntanos tu proyecto en línea o agenda una visita a domicilio gratuita</p>
           </div>
         </div>
         <div class="col">
           <div class="process-step h-100">
             <div class="process-number">2</div>
-            <h4>Medición y Diseño</h4>
-            <p>Visitamos tu hogar para tomar medidas exactas y crear el diseño</p>
+            <h4>Cotización en 24 hrs</h4>
+            <p>Recibes propuesta con precio, diseño y plazo de entrega — sin compromiso</p>
+          </div>
+        </div>
+        <div class="col">
+          <div class="process-step h-100">
+            <div class="process-number">3</div>
+            <h4>Fabricación a medida</h4>
+            <p>Nuestros artesanos fabrican tu mueble con materiales de calidad</p>
           </div>
         </div>
         <div class="col">
           <a href="/solicitudes" class="process-step h-100 d-block" style="text-decoration:none;color:inherit;">
-            <div class="process-number">3</div>
-            <h4>Cotización</h4>
-            <p>Recibes propuesta detallada con renders 3D y precios claros</p>
-            <span style="display:block;margin-top:10px;font-size:12px;color:#8b7355;font-weight:600;">Solicitar →</span>
-          </a>
-        </div>
-        <div class="col">
-          <div class="process-step h-100">
             <div class="process-number">4</div>
-            <h4>Fabricación</h4>
-            <p>Elaboramos tu mueble con materiales de primera calidad</p>
-          </div>
-        </div>
-        <div class="col">
-          <div class="process-step h-100">
-            <div class="process-number">5</div>
-            <h4>Instalación</h4>
-            <p>Entregamos e instalamos profesionalmente en tu hogar</p>
-          </div>
+            <h4>Entrega e instalación</h4>
+            <p>Instalamos en tu hogar, probamos y dejamos todo perfecto</p>
+            <span style="display:block;margin-top:10px;font-size:12px;color:#8b7355;font-weight:600;">Iniciar ahora →</span>
+          </a>
         </div>
       </div>
     </div>
@@ -349,42 +319,42 @@ if (!empty($_SESSION['_flash'])) {
     <div class="faq-section">
       <h2 class="section-title"><i class="fa-solid fa-circle-question"></i> Preguntas Frecuentes</h2>
 
-      <div class="faq-item" onclick="toggleFAQ(this)">
+      <div class="faq-item">
         <div class="faq-question">¿Hacen entregas a domicilio?<span class="faq-icon"><i class="fa-solid fa-chevron-down"></i></span></div>
         <div class="faq-answer">Sí, realizamos entregas en toda la Zona Metropolitana de Guadalajara. El costo de envío varía según la ubicación y tamaño del mueble. El tiempo de entrega es de 5-7 días hábiles después de la confirmación del pedido.</div>
       </div>
 
-      <div class="faq-item" onclick="toggleFAQ(this)">
+      <div class="faq-item">
         <div class="faq-question">¿Incluyen instalación profesional?<span class="faq-icon"><i class="fa-solid fa-chevron-down"></i></span></div>
         <div class="faq-answer">Sí, todos nuestros proyectos incluyen instalación profesional. Nuestro equipo técnico especializado se encargará de instalar tu mueble de manera segura, profesional y dejando todo limpio.</div>
       </div>
 
-      <div class="faq-item" onclick="toggleFAQ(this)">
+      <div class="faq-item">
         <div class="faq-question">¿Qué garantía tienen los muebles?<span class="faq-icon"><i class="fa-solid fa-chevron-down"></i></span></div>
         <div class="faq-answer">Todos nuestros muebles cuentan con garantía de 1 año contra defectos de fabricación. Además, ofrecemos 30 días de garantía de satisfacción: si no estás conforme con tu compra, trabajaremos contigo para resolver cualquier inconformidad.</div>
       </div>
 
-      <div class="faq-item" onclick="toggleFAQ(this)">
+      <div class="faq-item">
         <div class="faq-question">¿Puedo ver ejemplos antes de decidir?<span class="faq-icon"><i class="fa-solid fa-chevron-down"></i></span></div>
         <div class="faq-answer">Sí, puedes agendar una cita para visitar nuestro showroom o solicitar que uno de nuestros asesores visite tu hogar con muestras de materiales, acabados y fotos de proyectos anteriores.</div>
       </div>
 
-      <div class="faq-item" onclick="toggleFAQ(this)">
+      <div class="faq-item">
         <div class="faq-question">¿Cuánto tiempo tarda la fabricación?<span class="faq-icon"><i class="fa-solid fa-chevron-down"></i></span></div>
         <div class="faq-answer">Los tiempos varían según la complejidad del proyecto. Generalmente, los muebles personalizados tienen un tiempo de fabricación de 2-4 semanas. Te proporcionaremos un cronograma específico en tu cotización.</div>
       </div>
 
-      <div class="faq-item" onclick="toggleFAQ(this)">
+      <div class="faq-item">
         <div class="faq-question">¿Aceptan pagos en parcialidades?<span class="faq-icon"><i class="fa-solid fa-chevron-down"></i></span></div>
         <div class="faq-answer">Sí, aceptamos pagos a meses sin intereses con tarjetas de crédito participantes: 3, 6, 9 y 12 meses sin intereses en compras mayores a $5,000. También manejamos esquemas de pago: 50% anticipo y 50% al recibir.</div>
       </div>
 
-      <div class="faq-item" onclick="toggleFAQ(this)">
+      <div class="faq-item">
         <div class="faq-question">¿Qué tipo de maderas utilizan?<span class="faq-icon"><i class="fa-solid fa-chevron-down"></i></span></div>
         <div class="faq-answer">Trabajamos con diversas maderas de calidad: pino, encino, cedro, MDF, triplay y melamina. Durante la consulta inicial te asesoraremos sobre el mejor material para tu proyecto según uso, presupuesto y estilo.</div>
       </div>
 
-      <div class="faq-item" onclick="toggleFAQ(this)">
+      <div class="faq-item">
         <div class="faq-question">¿La cotización tiene costo?<span class="faq-icon"><i class="fa-solid fa-chevron-down"></i></span></div>
         <div class="faq-answer">No, la cotización es completamente gratuita y sin compromiso. Incluye visita a domicilio, toma de medidas, diseño preliminar y propuesta detallada con precios transparentes.</div>
       </div>
@@ -507,7 +477,7 @@ if (!empty($_SESSION['_flash'])) {
         </span>
         <span>Carrito</span>
       </a>
-      <button class="mbn-item" onclick="AuthModal.openMenuMovil(this)">
+      <button class="mbn-item" data-auth-action="openMenuMovil">
         <i class="fa-solid fa-user"></i>
         <span>Mi cuenta</span>
       </button>
@@ -515,14 +485,14 @@ if (!empty($_SESSION['_flash'])) {
   </nav>
 
   <!-- ══ GUÍA FLOTANTE "¿Cómo comprar?" ══════════════════════════════ -->
-  <button class="wh-guide-btn" id="whGuideBtn" aria-label="¿Cómo comprar?" onclick="document.getElementById('whGuideModal').classList.add('open')">
+  <button class="wh-guide-btn" id="whGuideBtn" aria-label="¿Cómo comprar?" data-open-modal="whGuideModal">
     <i class="fa-solid fa-circle-question"></i>
     <span class="wh-guide-btn-label">¿Cómo comprar?</span>
   </button>
 
-  <div class="wh-guide-modal" id="whGuideModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="wh-guide-modal" id="whGuideModal">
     <div class="wh-guide-content" role="dialog" aria-modal="true" aria-labelledby="whGuideHeading">
-      <button class="wh-guide-close" onclick="document.getElementById('whGuideModal').classList.remove('open')" aria-label="Cerrar">×</button>
+      <button class="wh-guide-close" data-close-modal="whGuideModal" aria-label="Cerrar">×</button>
       <h2 class="wh-guide-title" id="whGuideHeading"><i class="fa-solid fa-cart-shopping"></i> ¿Cómo comprar?</h2>
       <p class="wh-guide-subtitle">Es muy fácil, sigue estos 4 pasos:</p>
       <div class="wh-guide-steps">
@@ -560,10 +530,10 @@ if (!empty($_SESSION['_flash'])) {
         </div>
       </div>
       <div class="wh-guide-actions">
-        <a href="/catalogo" class="wh-guide-cta" onclick="document.getElementById('whGuideModal').classList.remove('open')">
+        <a href="/catalogo" class="wh-guide-cta" data-close-modal="whGuideModal">
           <i class="fa-solid fa-store"></i> Ver Catálogo
         </a>
-        <a href="/solicitudes" class="wh-guide-cta wh-guide-cta--alt" onclick="document.getElementById('whGuideModal').classList.remove('open')">
+        <a href="/solicitudes" class="wh-guide-cta wh-guide-cta--alt" data-close-modal="whGuideModal">
           <i class="fa-solid fa-file-invoice"></i> Pedir Cotización
         </a>
       </div>
@@ -571,36 +541,12 @@ if (!empty($_SESSION['_flash'])) {
     </div>
   </div>
 
-  <script>
-    document.addEventListener('keydown', function(e){
-      if(e.key === 'Escape') document.getElementById('whGuideModal').classList.remove('open');
-    });
-  </script>
-
   <script src="./assets/js/firebase-config.js"></script>
   <script src="./assets/js/modal-auth.js?v=9"></script>
   <script src="./assets/js/index.js?v=2"></script>
-
-  <script>
-    if (new URLSearchParams(location.search).get('registro') === '1') {
-      window.addEventListener('load', function () {
-        setTimeout(function () {
-          if (window.AuthModal && typeof AuthModal.openRegistro === 'function') {
-            AuthModal.openRegistro();
-          }
-        }, 400);
-      });
-    }
-    if (new URLSearchParams(location.search).get('auth') === '1') {
-      window.addEventListener('load', function () {
-        setTimeout(function () {
-          if (window.AuthModal && typeof AuthModal.open === 'function') {
-            AuthModal.open();
-          }
-        }, 400);
-      });
-    }
-  </script>
+  <script src="./assets/js/event-delegation.js"></script>
+  <script src="./assets/js/page-init.js"></script>
+  <script src="./assets/js/animations.js"></script>
 
 </body>
 </html>

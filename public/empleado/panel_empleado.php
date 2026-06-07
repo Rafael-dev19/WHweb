@@ -26,6 +26,7 @@ unset($_usuario);
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
   <link rel="stylesheet" href="../assets/css/panel_empleado.css">
+  <link rel="stylesheet" href="../assets/css/animations.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous" defer></script>
 </head>
@@ -51,7 +52,7 @@ unset($_usuario);
       <div class="user-info">
         <div class="user-avatar">JP</div>
         <span id="empNombreHeader">Cargando...</span>
-        <button class="logout-btn" onclick="logout()">Salir</button>
+        <button class="logout-btn" data-call="logout">Salir</button>
       </div>
     </div>
   </div>
@@ -63,8 +64,8 @@ unset($_usuario);
         Notificaciones
       </div>
       <div class="notif-head-actions">
-        <button class="btn btn-secondary btn-small" onclick="markAllNotifRead()" title="Marcar todas como leídas"><i class="fa-solid fa-check-double"></i></button>
-        <button class="btn btn-secondary btn-small" onclick="clearAllNotifs()" title="Limpiar todo" style="color:var(--danger,#e57373);"><i class="fa-solid fa-trash"></i></button>
+        <button class="btn btn-secondary btn-small" data-call="markAllNotifRead" title="Marcar todas como leídas"><i class="fa-solid fa-check-double"></i></button>
+        <button class="btn btn-secondary btn-small" data-call="clearAllNotifs" title="Limpiar todo" style="color:var(--danger,#e57373);"><i class="fa-solid fa-trash"></i></button>
       </div>
     </div>
     <div class="notif-body" id="notifBody"></div>
@@ -83,29 +84,29 @@ unset($_usuario);
 
   <div class="container">
     <aside class="sidebar" id="sidebarDesktop">
-      <div class="sidebar-item active" onclick="showSection('dashboard')">
+      <div class="sidebar-item active" data-section="dashboard">
         <span class="icon"><i class="fa-solid fa-chart-bar"></i></span>
         <span>Dashboard</span>
       </div>
 
       <div class="sidebar-section">GESTIÓN</div>
 
-      <div class="sidebar-item" onclick="showSection('pedidos')">
+      <div class="sidebar-item" data-section="pedidos">
         <span class="icon"><i class="fa-solid fa-box"></i></span>
         <span>Gestión de Pedidos</span>
       </div>
 
-      <div class="sidebar-item" onclick="showSection('citas')">
+      <div class="sidebar-item" data-section="citas">
         <span class="icon"><i class="fa-solid fa-calendar-days"></i></span>
         <span>Citas Programadas</span>
       </div>
 
-      <div class="sidebar-item" onclick="showSection('cotizaciones')">
+      <div class="sidebar-item" data-section="cotizaciones">
         <span class="icon"><i class="fa-solid fa-briefcase"></i></span>
         <span>Cotizaciones</span>
       </div>
 
-      <div class="sidebar-item" onclick="showSection('calendario')">
+      <div class="sidebar-item" data-section="calendario">
         <span class="icon"><i class="fa-solid fa-calendar-check"></i></span>
         <span>Mi Calendario</span>
       </div>
@@ -120,14 +121,14 @@ unset($_usuario);
         <div class="row row-cols-2 row-cols-md-3 g-3 stats-grid">
           <div class="col">
             <div class="stat-card">
-              <div class="stat-title">Pedidos Pendientes</div>
+              <div class="stat-title">Pedidos Pendientes <span class="wh-help" data-tip="Pedidos en estado 'pendiente' o 'en producción' que requieren seguimiento. Haz clic para ir a Gestión de Pedidos.">?</span></div>
               <div class="stat-value" id="kpiPendientes">—</div>
               <div class="stat-subtitle">Requieren atención</div>
             </div>
           </div>
           <div class="col">
             <div class="stat-card">
-              <div class="stat-title">Citas Hoy</div>
+              <div class="stat-title">Citas Hoy <span class="wh-help" data-tip="Citas agendadas para hoy. Incluye visitas a domicilio y citas de medición.">?</span></div>
               <div class="stat-value" id="kpiCitasHoy">—</div>
               <div class="stat-subtitle">Programadas para hoy</div>
             </div>
@@ -167,10 +168,10 @@ unset($_usuario);
 
           <div class="table-container">
             <div class="table-filters">
-              <button class="filter-btn active" onclick="filterTable('all', event)">Todos</button>
-              <button class="filter-btn" onclick="filterTable('pending', event)">Pendientes</button>
-              <button class="filter-btn" onclick="filterTable('progress', event)">En Proceso</button>
-              <button class="filter-btn" onclick="filterTable('completed', event)">Completados</button>
+              <button class="filter-btn active" data-filter="all">Todos</button>
+              <button class="filter-btn" data-filter="pending">Pendientes</button>
+              <button class="filter-btn" data-filter="progress">En Proceso</button>
+              <button class="filter-btn" data-filter="completed">Completados</button>
             </div>
 
             <div style="overflow:auto;">
@@ -204,7 +205,7 @@ unset($_usuario);
         <div class="section">
           <div class="section-header">
             <h2 class="section-title">Próximas Citas</h2>
-            <button class="btn btn-primary btn-small" onclick="openModal('nuevaCita')">+ Nueva cita</button>
+            <button class="btn btn-primary btn-small" data-call="openModal" data-args='["nuevaCita"]'>+ Nueva cita</button>
           </div>
 
           <div class="table-container">
@@ -240,7 +241,7 @@ unset($_usuario);
         <div class="section">
           <div class="section-header">
             <h2 class="section-title">Cotizaciones Activas</h2>
-            <button class="btn btn-primary btn-small" onclick="openModal('nuevaCotizacion')">+ Nueva cotización</button>
+            <button class="btn btn-primary btn-small" data-call="openModal" data-args='["nuevaCotizacion"]'>+ Nueva cotización</button>
           </div>
 
           <div class="table-container">
@@ -277,10 +278,10 @@ unset($_usuario);
             <div class="calendar-toolbar">
               <div class="cal-title" id="calTitle">—</div>
               <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                <button class="btn btn-secondary" onclick="prevMonth()">← Mes</button>
-                <button class="btn btn-secondary" onclick="goToday()">Hoy</button>
-                <button class="btn btn-secondary" onclick="nextMonth()">Mes →</button>
-                <button class="btn btn-primary" onclick="openAddEventModal()">+ Evento</button>
+                <button class="btn btn-secondary" data-call="prevMonth">← Mes</button>
+                <button class="btn btn-secondary" data-call="goToday">Hoy</button>
+                <button class="btn btn-secondary" data-call="nextMonth">Mes →</button>
+                <button class="btn btn-primary" data-call="openAddEventModal">+ Evento</button>
               </div>
             </div>
 
@@ -321,14 +322,14 @@ unset($_usuario);
           <i class="fa-solid fa-box"></i> Detalle del Pedido
           <span id="emp_ped_folio" style="font-weight:900;margin-left:8px;opacity:.85;"></span>
         </h3>
-        <button class="modal-close" onclick="closeModal('empPedidoDetalleModal')" style="color:#fff;">×</button>
+        <button class="modal-close" data-dismiss="empPedidoDetalleModal" style="color:#fff;">×</button>
       </div>
       <div id="emp_ped_body" style="max-height:70vh;overflow-y:auto;overflow-x:hidden;">
         <div style="text-align:center;padding:40px;color:var(--muted);"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;padding:12px 0 0;margin-top:4px;border-top:1px solid var(--border);">
-        <button class="btn btn-secondary" onclick="closeModal('empPedidoDetalleModal')">Cerrar</button>
-        <button class="btn btn-primary" onclick="openUpdateFromPedidoModal()">
+        <button class="btn btn-secondary" data-dismiss="empPedidoDetalleModal">Cerrar</button>
+        <button class="btn btn-primary" data-call="openUpdateFromPedidoModal">
           <i class="fa-solid fa-pen"></i> Actualizar Estado
         </button>
       </div>
@@ -343,17 +344,17 @@ unset($_usuario);
           <i class="fa-solid fa-calendar-days"></i> Detalle de Cita
           <span id="emp_cita_folio" style="font-weight:900;margin-left:8px;opacity:.85;"></span>
         </h3>
-        <button class="modal-close" onclick="closeModal('empCitaDetalleModal')" style="color:#fff;">×</button>
+        <button class="modal-close" data-dismiss="empCitaDetalleModal" style="color:#fff;">×</button>
       </div>
       <div id="emp_cita_body" style="max-height:70vh;overflow-y:auto;overflow-x:hidden;">
         <div style="text-align:center;padding:40px;color:var(--muted);"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:center;padding:12px 0 0;margin-top:4px;border-top:1px solid var(--border);">
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-secondary btn-small" onclick="confirmarCita(window._empCitaId);closeModal('empCitaDetalleModal');cargarCitasAPI();">✅ Confirmar</button>
-          <button class="btn btn-secondary btn-small" onclick="completarCita(window._empCitaId);closeModal('empCitaDetalleModal');cargarCitasAPI();">🏁 Completar</button>
+          <button class="btn btn-secondary btn-small" data-emp-cita-action="confirmar">✅ Confirmar</button>
+          <button class="btn btn-secondary btn-small" data-emp-cita-action="completar">🏁 Completar</button>
         </div>
-        <button class="btn btn-secondary" onclick="closeModal('empCitaDetalleModal')">Cerrar</button>
+        <button class="btn btn-secondary" data-dismiss="empCitaDetalleModal">Cerrar</button>
       </div>
     </div>
   </div>
@@ -366,17 +367,17 @@ unset($_usuario);
           <i class="fa-solid fa-briefcase"></i> Detalle de Cotización
           <span id="emp_cot_folio" style="font-weight:900;margin-left:8px;opacity:.85;"></span>
         </h3>
-        <button class="modal-close" onclick="closeModal('empCotDetalleModal')" style="color:#fff;">×</button>
+        <button class="modal-close" data-dismiss="empCotDetalleModal" style="color:#fff;">×</button>
       </div>
       <div id="emp_cot_body" style="max-height:70vh;overflow-y:auto;overflow-x:hidden;">
         <div style="text-align:center;padding:40px;color:var(--muted);"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:center;padding:12px 0 0;margin-top:4px;border-top:1px solid var(--border);">
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-secondary btn-small" onclick="actualizarCotizacion(window._empCotId,'en_revision');closeModal('empCotDetalleModal');cargarCotizacionesAPI();">📋 En Revisión</button>
-          <button class="btn btn-secondary btn-small" onclick="actualizarCotizacion(window._empCotId,'respondida');closeModal('empCotDetalleModal');cargarCotizacionesAPI();">✅ Respondida</button>
+          <button class="btn btn-secondary btn-small" data-emp-cot-estado="en_revision">📋 En Revisión</button>
+          <button class="btn btn-secondary btn-small" data-emp-cot-estado="respondida">✅ Respondida</button>
         </div>
-        <button class="btn btn-secondary" onclick="closeModal('empCotDetalleModal')">Cerrar</button>
+        <button class="btn btn-secondary" data-dismiss="empCotDetalleModal">Cerrar</button>
       </div>
     </div>
   </div>
@@ -386,7 +387,7 @@ unset($_usuario);
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title">Actualizar Pedido <span id="uId" style="color:var(--muted2); font-weight:900;"></span></h3>
-        <button class="modal-close" onclick="closeModal('updatePedidoModal')">×</button>
+        <button class="modal-close" data-dismiss="updatePedidoModal">×</button>
       </div>
 
       <div class="form-group">
@@ -410,7 +411,7 @@ unset($_usuario);
         <textarea class="form-textarea" id="uNotas" placeholder="Ej: Cliente pidió cambio de horario / material..."></textarea>
       </div>
 
-      <button class="btn btn-primary" style="width:100%;" onclick="applyPedidoUpdate()">Guardar cambios</button>
+      <button class="btn btn-primary" style="width:100%;" data-call="applyPedidoUpdate">Guardar cambios</button>
     </div>
   </div>
 
@@ -419,7 +420,7 @@ unset($_usuario);
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title">Nueva Cita</h3>
-        <button class="modal-close" onclick="closeModal('nuevaCita')">×</button>
+        <button class="modal-close" data-dismiss="nuevaCita">×</button>
       </div>
       <div class="form-group">
         <label class="form-label">Cliente</label>
@@ -440,7 +441,7 @@ unset($_usuario);
           <option value="inst">Instalación</option>
         </select>
       </div>
-      <button class="btn btn-primary" style="width:100%;" onclick="saveCita()">Agendar</button>
+      <button class="btn btn-primary" style="width:100%;" data-call="saveCita">Agendar</button>
     </div>
   </div>
 
@@ -449,7 +450,7 @@ unset($_usuario);
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title">Nueva Cotización</h3>
-        <button class="modal-close" onclick="closeModal('nuevaCotizacion')">×</button>
+        <button class="modal-close" data-dismiss="nuevaCotizacion">×</button>
       </div>
       <div class="form-group">
         <label class="form-label">Cliente</label>
@@ -463,7 +464,7 @@ unset($_usuario);
         <label class="form-label">Monto</label>
         <input type="number" class="form-input" placeholder="0.00" />
       </div>
-      <button class="btn btn-primary" style="width:100%;" onclick="saveCotizacion()">Crear</button>
+      <button class="btn btn-primary" style="width:100%;" data-call="saveCotizacion">Crear</button>
     </div>
   </div>
 
@@ -472,7 +473,7 @@ unset($_usuario);
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title">Actualizar Stock</h3>
-        <button class="modal-close" onclick="closeModal('stockModal')">×</button>
+        <button class="modal-close" data-dismiss="stockModal">×</button>
       </div>
 
       <div class="form-group">
@@ -515,7 +516,7 @@ unset($_usuario);
         </select>
       </div>
 
-      <button class="btn btn-primary" style="width:100%;" onclick="applyStockChange()">Guardar movimiento</button>
+      <button class="btn btn-primary" style="width:100%;" data-call="applyStockChange">Guardar movimiento</button>
     </div>
   </div>
 
@@ -524,7 +525,7 @@ unset($_usuario);
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title">Agregar Insumo</h3>
-        <button class="modal-close" onclick="closeModal('addItemModal')">×</button>
+        <button class="modal-close" data-dismiss="addItemModal">×</button>
       </div>
 
       <div class="form-group">
@@ -575,7 +576,7 @@ unset($_usuario);
         <input type="number" class="form-input" id="newCost" placeholder="Ej: 12" min="0" />
       </div>
 
-      <button class="btn btn-primary" style="width:100%;" onclick="addInventoryItem()">Guardar insumo</button>
+      <button class="btn btn-primary" style="width:100%;" data-call="addInventoryItem">Guardar insumo</button>
     </div>
   </div>
 
@@ -584,7 +585,7 @@ unset($_usuario);
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title">Agregar Evento</h3>
-        <button class="modal-close" onclick="closeModal('addEventModal')">×</button>
+        <button class="modal-close" data-dismiss="addEventModal">×</button>
       </div>
 
       <div class="form-group">
@@ -616,7 +617,7 @@ unset($_usuario);
         <textarea class="form-textarea" id="evNotes" placeholder="Detalles opcionales..."></textarea>
       </div>
 
-      <button class="btn btn-primary" style="width:100%;" onclick="saveCalendarEvent()">Guardar evento</button>
+      <button class="btn btn-primary" style="width:100%;" data-call="saveCalendarEvent">Guardar evento</button>
     </div>
   </div>
 
@@ -626,5 +627,7 @@ unset($_usuario);
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script src="../assets/js/firebase-config.js"></script>
   <script src="../assets/js/panel_empleado.js"></script>
+  <script src="../assets/js/event-delegation.js"></script>
+  <script src="../assets/js/animations.js"></script>
 </body>
 </html>

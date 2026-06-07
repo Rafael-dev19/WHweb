@@ -1,0 +1,282 @@
+/* ================================================================
+   WOODEN HOUSE — ANIMATIONS.CSS
+   Animaciones y micro-interacciones globales
+   ================================================================ */
+
+/* ── Keyframes base ──────────────────────────────────────────────── */
+@keyframes wh-fade-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes wh-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes wh-slide-left {
+  from { opacity: 0; transform: translateX(-24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes wh-slide-right {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes wh-zoom-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes wh-pulse-border {
+  0%   { box-shadow: 0 0 0 0   rgba(139, 115, 85, 0.5); }
+  70%  { box-shadow: 0 0 0 12px rgba(139, 115, 85, 0); }
+  100% { box-shadow: 0 0 0 0   rgba(139, 115, 85, 0); }
+}
+
+@keyframes wh-shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+@keyframes wh-bounce-in {
+  0%   { opacity: 0; transform: scale(0.7); }
+  50%  { opacity: 1; transform: scale(1.06); }
+  75%  { transform: scale(0.97); }
+  100% { transform: scale(1); }
+}
+
+@keyframes wh-float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-6px); }
+}
+
+@keyframes wh-spin-slow {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Clases de animación por scroll (JS agrega .wh-animate) ─────── */
+.wh-reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.55s ease, transform 0.55s ease;
+}
+.wh-reveal.wh-animate {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.wh-reveal-left {
+  opacity: 0;
+  transform: translateX(-28px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.wh-reveal-left.wh-animate {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.wh-reveal-right {
+  opacity: 0;
+  transform: translateX(28px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.wh-reveal-right.wh-animate {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.wh-reveal-zoom {
+  opacity: 0;
+  transform: scale(0.93);
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+.wh-reveal-zoom.wh-animate {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Delays escalonados para grupos de tarjetas */
+.wh-reveal:nth-child(2), .wh-reveal-zoom:nth-child(2) { transition-delay: 0.08s; }
+.wh-reveal:nth-child(3), .wh-reveal-zoom:nth-child(3) { transition-delay: 0.16s; }
+.wh-reveal:nth-child(4), .wh-reveal-zoom:nth-child(4) { transition-delay: 0.24s; }
+.wh-reveal:nth-child(5), .wh-reveal-zoom:nth-child(5) { transition-delay: 0.30s; }
+.wh-reveal:nth-child(6), .wh-reveal-zoom:nth-child(6) { transition-delay: 0.36s; }
+
+/* ── Animación de entrada de página ──────────────────────────────── */
+.wh-page-enter {
+  animation: wh-fade-up 0.45s ease both;
+}
+
+/* ── Hover enhancements globales ─────────────────────────────────── */
+.wh-lift {
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+.wh-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+}
+
+.wh-lift-sm {
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.wh-lift-sm:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.28);
+}
+
+/* ── Botones — ripple effect en click ───────────────────────────── */
+.wh-btn-ripple {
+  position: relative;
+  overflow: hidden;
+}
+.wh-btn-ripple::after {
+  content: '';
+  display: block;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0; left: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle, #fff 10%, transparent 10.01%);
+  background-repeat: no-repeat;
+  background-position: 50%;
+  transform: scale(10, 10);
+  opacity: 0;
+  transition: transform 0.4s, opacity 0.6s;
+}
+.wh-btn-ripple:active::after {
+  transform: scale(0, 0);
+  opacity: 0.18;
+  transition: 0s;
+}
+
+/* ── Pulse accent — llamada a la acción ──────────────────────────── */
+.wh-pulse {
+  animation: wh-pulse-border 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ── Floating icons ──────────────────────────────────────────────── */
+.wh-float {
+  animation: wh-float 3s ease-in-out infinite;
+}
+
+/* ── Skeleton loading ─────────────────────────────────────────────── */
+.wh-skeleton {
+  background: linear-gradient(90deg, #2a2a2a 25%, #333 50%, #2a2a2a 75%);
+  background-size: 200% 100%;
+  animation: wh-shimmer 1.4s infinite;
+  border-radius: 6px;
+}
+
+/* ── Transiciones suaves en tarjetas de servicio / proceso ───────── */
+.service-card,
+.reason-card,
+.process-step,
+.contact-card,
+.faq-item,
+.work-card {
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+.service-card:hover,
+.reason-card:hover,
+.process-step:hover,
+.contact-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.faq-item {
+  transition: background 0.2s ease, transform 0.18s ease;
+}
+.faq-item:hover {
+  transform: translateX(4px);
+}
+
+/* ── Filter buttons hover ────────────────────────────────────────── */
+.filter-btn {
+  transition: background 0.18s ease, color 0.18s ease, transform 0.12s ease;
+}
+.filter-btn:hover:not(.active) {
+  transform: translateY(-1px);
+}
+.filter-btn.active {
+  animation: wh-bounce-in 0.3s ease;
+}
+
+/* ── Sidebar item hover ──────────────────────────────────────────── */
+.sidebar-item {
+  transition: background 0.18s ease, border-left-color 0.18s ease, padding-left 0.18s ease;
+}
+
+/* ── Badge entrada ───────────────────────────────────────────────── */
+.badge, .product-badge {
+  animation: wh-zoom-in 0.25s ease;
+}
+
+/* ── Modal entrada ───────────────────────────────────────────────── */
+.modal.active .modal-content {
+  animation: wh-zoom-in 0.25s ease;
+}
+
+/* ── Page section headers ────────────────────────────────────────── */
+.page-title {
+  animation: wh-fade-up 0.4s ease;
+}
+.page-subtitle {
+  animation: wh-fade-up 0.5s ease 0.06s both;
+}
+
+/* ── Tooltip fade ────────────────────────────────────────────────── */
+.wh-help::after {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+/* ── Input focus glow ────────────────────────────────────────────── */
+input:focus,
+select:focus,
+textarea:focus {
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+/* ── Step indicator progress ─────────────────────────────────────── */
+.step.active .step-number {
+  animation: wh-pulse-border 2s ease infinite;
+}
+.step.completed .step-number {
+  animation: wh-zoom-in 0.3s ease;
+}
+
+/* ── Notif dot pulse ─────────────────────────────────────────────── */
+.badge-dot.on {
+  animation: wh-pulse-border 1.8s ease infinite;
+}
+
+/* ── Quick action cards hover ────────────────────────────────────── */
+.quick-action-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.quick-action-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+
+/* ── Reduce motion accessibility ────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .wh-reveal,
+  .wh-reveal-left,
+  .wh-reveal-right,
+  .wh-reveal-zoom {
+    opacity: 1;
+    transform: none;
+  }
+}

@@ -83,8 +83,7 @@ function showSection(section){
 
   document.querySelectorAll('.sidebar-item').forEach(item => item.classList.remove('active'));
   document.querySelectorAll('.sidebar-item').forEach(item => {
-    const onclick = item.getAttribute('onclick') || '';
-    if (onclick.includes(`showSection('${section}'`)) item.classList.add('active');
+    if (item.dataset.section === section) item.classList.add('active');
   });
 
   window._currentSection = section;
@@ -1060,7 +1059,7 @@ async function cargarPedidosEmpleadoAPI() {
     tbody.innerHTML = (data.pedidos || []).map(p => `
       <tr data-status="${p.estado}" data-id="${p.id}" data-entrega="${p.fecha_estimada||''}">
         <td>${p.numero_pedido}</td>
-        <td>${escapeHtml(p.nombre_cliente)}${p.cliente_id?` <span style="background:#e8f5e9;color:#2E7D32;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700;vertical-align:middle;" title="Cliente registrado #${p.cliente_id}"><i class="fa-solid fa-user-check"></i> #${p.cliente_id}</span>`:''}</td>
+        <td>${escapeHtml(p.nombre_cliente)}${p.cliente_id?` <span class="status-badge status-active" style="font-size:10px;padding:2px 8px;" title="Cliente registrado #${p.cliente_id}"><i class="fa-solid fa-user-check"></i> #${p.cliente_id}</span>`:''}</td>
         <td>${p.correo_cliente}</td>
         <td>${p.fecha_estimada || '—'}</td>
         <td><span class="status-badge ${clsMap[p.estado] || ''}">${labMap[p.estado] || p.estado}</span></td>
@@ -1108,7 +1107,7 @@ async function cargarCitasAPI() {
       <tr>
         <td>${c.numero_cita}</td>
         <td>${escapeHtml(c.nombre_cliente)}</td>
-        <td>${c.cliente_id ? `<span style="background:#e8f5e9;color:#2E7D32;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700;"><i class="fa-solid fa-user-check"></i> #${c.cliente_id}</span>` : '<span style="color:#aaa;font-size:11px;">—</span>'}</td>
+        <td>${c.cliente_id ? `<span class="status-badge status-active" style="font-size:10px;padding:2px 8px;"><i class="fa-solid fa-user-check"></i> #${c.cliente_id}</span>` : '<span style="color:#aaa;font-size:11px;">—</span>'}</td>
         <td>${c.fecha_cita}</td>
         <td>${c.rango_horario || '—'}</td>
         <td>${c.tipo}</td>
@@ -1156,7 +1155,7 @@ async function cargarCotizacionesAPI() {
       <tr>
         <td>${c.numero_cotizacion}</td>
         <td>${escapeHtml(c.nombre_cliente)}</td>
-        <td>${cid ? `<span style="background:#e8f5e9;color:#2E7D32;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700;"><i class="fa-solid fa-user-check"></i> #${cid}</span>` : '<span style="color:#aaa;font-size:11px;">—</span>'}</td>
+        <td>${cid ? `<span class="status-badge status-active" style="font-size:10px;padding:2px 8px;"><i class="fa-solid fa-user-check"></i> #${cid}</span>` : '<span style="color:#aaa;font-size:11px;">—</span>'}</td>
         <td>${escapeHtml(tipo)}</td>
         <td>${c.rango_presupuesto || '—'}</td>
         <td><span class="status-badge ${clsMap[c.estado]||''}">${estadoLabels[c.estado]||c.estado}</span></td>
@@ -1200,10 +1199,10 @@ async function verDetallePedidoEmp(id) {
       currentPedidoRow.dataset.entrega = p.tipo_entrega || '';
     }
 
-    const estadoLabels = { pendiente:'Pendiente',pagado:'Pagado ✓',en_produccion:'En Producción 🔨',listo:'Listo 📦',entregado:'Entregado ✅',cancelado:'Cancelado ❌' };
-    const estadoColors = { pendiente:'#c8860a',pagado:'#4a7c8b',en_produccion:'#7c5c8b',listo:'#3d8b6a',entregado:'#4a8b5a',cancelado:'#8b4a4a' };
+    const estadoLabels = { pendiente:'Pendiente',pagado:'Pagado ✓',en_produccion:'En Producción',listo:'Listo para entrega',entregado:'Entregado',cancelado:'Cancelado' };
+    const estadoClass  = { pendiente:'status-pending',pagado:'status-progress',en_produccion:'status-producing',listo:'status-ready',entregado:'status-completed',cancelado:'status-cancelled' };
     const est   = p.estado || 'pendiente';
-    const color = estadoColors[est] || 'var(--accent)';
+    const cls   = estadoClass[est]  || 'status-pending';
     const label = estadoLabels[est] || est;
 
     let entrega;
@@ -1251,7 +1250,7 @@ async function verDetallePedidoEmp(id) {
 
     body.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:18px;">
-        <span style="background:${color}30;color:${color};padding:5px 14px;border-radius:20px;font-weight:700;font-size:13px;border:1px solid ${color}50;">${label}</span>
+        <span class="status-badge ${cls}">${label}</span>
         <div style="text-align:right;">
           <div style="font-size:22px;font-weight:900;color:var(--accent);">${money(p.total)}</div>
           <div style="font-size:11px;color:var(--muted);">Sub ${money(p.subtotal)} + Envío ${money(p.costo_envio)} + Inst. ${money(p.costo_instalacion)}</div>
@@ -1300,14 +1299,14 @@ async function verDetalleCitaEmp(id) {
     const c = data.cita;
     folio.textContent = c.numero_cita;
 
-    const estLabels = { nueva:'Nueva 🆕',confirmada:'Confirmada ✅',completada:'Completada 🏁',cancelada:'Cancelada ❌' };
-    const estColors = { nueva:'#4a7c8b',confirmada:'#4a8b5a',completada:'#8b7355',cancelada:'#8b4a4a' };
+    const estLabels = { nueva:'Nueva',confirmada:'Confirmada',completada:'Completada',cancelada:'Cancelada' };
+    const estClass  = { nueva:'status-new',confirmada:'status-progress',completada:'status-completed',cancelada:'status-cancelled' };
     const tipoLabels = { medicion:'Medición 📐',instalacion:'Instalación 🔧',otro:'Otro' };
     const est = c.estado || 'nueva';
 
     body.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:18px;">
-        <span style="background:${estColors[est]||'var(--accent)'}30;color:${estColors[est]||'var(--accent)'};padding:5px 14px;border-radius:20px;font-weight:700;font-size:13px;border:1px solid ${estColors[est]||'var(--accent)'}50;">${estLabels[est]||est}</span>
+        <span class="status-badge ${estClass[est]||'status-new'}">${estLabels[est]||est}</span>
         <span style="font-size:11px;color:var(--muted);">Registrada: ${(c.fecha_creacion||'').substring(0,10)}</span>
       </div>
 
@@ -1351,13 +1350,13 @@ async function verDetalleCotEmp(id) {
     const cot = data.cotizacion;
     folio.textContent = cot.numero_cotizacion;
 
-    const estLabels = { nueva:'Nueva 🆕',en_revision:'En Revisión 📋',respondida:'Respondida ✅',cerrada:'Cerrada 🔒' };
-    const estColors = { nueva:'#4a7c8b',en_revision:'#8b7355',respondida:'#4a8b5a',cerrada:'#555' };
+    const estLabels = { nueva:'Nueva',en_revision:'En Revisión',respondida:'Respondida',cerrada:'Cerrada' };
+    const estClass  = { nueva:'status-new',en_revision:'status-pending',respondida:'status-replied',cerrada:'status-disabled' };
     const est = cot.estado || 'nueva';
 
     body.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:18px;">
-        <span style="background:${estColors[est]||'var(--accent)'}30;color:${estColors[est]||'var(--accent)'};padding:5px 14px;border-radius:20px;font-weight:700;font-size:13px;border:1px solid ${estColors[est]||'var(--accent)'}50;">${estLabels[est]||est}</span>
+        <span class="status-badge ${estClass[est]||'status-new'}">${estLabels[est]||est}</span>
         <span style="font-size:11px;color:var(--muted);">Creada: ${(cot.fecha_creacion||'').substring(0,10)}</span>
       </div>
 

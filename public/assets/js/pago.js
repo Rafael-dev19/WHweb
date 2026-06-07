@@ -1,6 +1,15 @@
 // ── Wooden House — Pago (Stripe + PayPal) ────────────────────────
 const API_BASE = '/api';
 
+// Leer credenciales desde data attributes (sin inline script)
+(function () {
+  var cfg = document.getElementById('payment-config');
+  if (cfg) {
+    window.STRIPE_PK  = cfg.dataset.stripePk  || '';
+    window.PAYPAL_ENV = cfg.dataset.paypalEnv || 'sandbox';
+  }
+})();
+
 function esc(str) {
   return String(str ?? '')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
@@ -15,7 +24,6 @@ let orderData    = null;
 initMenuHamburguesa();
 document.addEventListener('DOMContentLoaded', () => {
   cargarResumen();
-  initMetodosPago();
 });
 
 // ── Resumen del pedido ────────────────────────────────────────────
@@ -294,23 +302,8 @@ async function crearPedidoEnBD() {
   }
 }
 
-// ── Métodos de pago ───────────────────────────────────────────────
-function initMetodosPago() {
-  document.querySelectorAll('.payment-option').forEach(opt => {
-    opt.addEventListener('click', () => {
-      document.querySelectorAll('.payment-option').forEach(o => o.classList.remove('selected'));
-      opt.classList.add('selected');
-      metodoPago = opt.dataset.method;
-      document.getElementById('stripe-section').style.display  = metodoPago === 'card'   ? 'block' : 'none';
-      document.getElementById('paypal-section').style.display  = metodoPago === 'paypal' ? 'block' : 'none';
-      const errEl = document.getElementById('card-errors');
-      if (errEl) { errEl.textContent = ''; errEl.style.display = 'none'; }
-    });
-  });
-
-  const defaultOpt = document.querySelector('.payment-option[data-method="card"]');
-  if (defaultOpt) defaultOpt.click();
-}
+// ── Métodos de pago (ambas pasarelas visibles simultáneamente) ────
+// Los bloques Stripe y PayPal son siempre visibles; no hay selector de método.
 
 // ── Confirmación ──────────────────────────────────────────────────
 function irAConfirmacion() {

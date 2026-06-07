@@ -181,6 +181,33 @@
       setUnreadCount(getUnreadCount());
       setTimeout(fetchNotificationsFromAPI, 1000);
       setInterval(fetchNotificationsFromAPI, 60000);
+
+      // Drag-drop zona de imágenes (reemplaza ondragover/ondragleave/ondrop inline)
+      var dropZone = document.getElementById('imgDropZone');
+      if (dropZone) {
+        dropZone.addEventListener('dragover', function(e) {
+          e.preventDefault(); e.stopPropagation();
+          this.style.borderColor = 'var(--accent)';
+          this.style.background  = 'rgba(139,115,85,0.08)';
+        });
+        dropZone.addEventListener('dragleave', function(e) {
+          e.stopPropagation();
+          this.style.borderColor = 'var(--border)';
+          this.style.background  = '';
+        });
+        dropZone.addEventListener('drop', function(e) {
+          handleImgDrop(e);
+          this.style.background = '';
+        });
+      }
+
+      // Input de archivos (reemplaza onchange inline)
+      var fileInput = document.getElementById('p_imgs_files');
+      if (fileInput) {
+        fileInput.addEventListener('change', function() {
+          if (typeof previewImages === 'function') previewImages(this.files);
+        });
+      }
     });
 
     /* =========================
@@ -223,7 +250,7 @@
       const sid = ev?.target?.closest?.('.sidebar-item');
       if (sid) sid.classList.add('active');
       else {
-        const fallback = document.querySelector(`.sidebar-item[onclick*="${section}"]`);
+        const fallback = document.querySelector(`.sidebar-item[data-section="${section}"]`);
         if (fallback) fallback.classList.add('active');
       }
 
@@ -555,7 +582,7 @@
           <tr>
             <td style="font-size:11px;color:var(--muted);">${escapeHtml(c.id)}</td>
             <td>${escapeHtml(c.cliente)}</td>
-            <td>${cid ? `<span style="background:#2d6a3f20;color:#2d6a3f;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700;"><i class="fa-solid fa-user-check"></i> #${cid}</span>` : '<span style="color:var(--muted);font-size:11px;">—</span>'}</td>
+            <td>${cid ? `<span class="status-badge status-active" style="font-size:10px;padding:2px 8px;"><i class="fa-solid fa-user-check"></i> #${cid}</span>` : '<span style="color:var(--muted);font-size:11px;">—</span>'}</td>
             <td>${fmtDMY(c.date)}</td>
             <td>${escapeHtml(c.time)}</td>
             <td>${tipoMap[c.tipo] || c.tipo}</td>
@@ -1949,7 +1976,7 @@ async function cargarPedidosAPI() {
     tbody.innerHTML = (data.pedidos || []).map(p => `
       <tr data-status="${p.estado}" data-id="${p.id}">
         <td>${p.numero_pedido}</td>
-        <td>${escapeHtml(p.nombre_cliente)}${p.cliente_id?` <span style="background:#2d6a3f20;color:#2d6a3f;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700;vertical-align:middle;" title="Cliente registrado #${p.cliente_id}"><i class="fa-solid fa-user-check"></i> #${p.cliente_id}</span>`:''}</td>
+        <td>${escapeHtml(p.nombre_cliente)}${p.cliente_id?` <span class="status-badge status-active" style="font-size:10px;padding:2px 8px;" title="Cliente registrado #${p.cliente_id}"><i class="fa-solid fa-user-check"></i> #${p.cliente_id}</span>`:''}</td>
         <td>${escapeHtml(p.correo_cliente)}</td>
         <td>${p.fecha_estimada || '—'}</td>
         <td><span class="status-badge ${statusMap[p.estado] || ''}">${labelMap[p.estado] || p.estado}</span></td>
@@ -2058,11 +2085,11 @@ async function verDetallePedidoAdmin(id) {
     folio.textContent = p.numero_pedido;
     window._admPedId  = id;
 
-    const estadoLabels = { pendiente:'Pendiente',pagado:'Pagado ✓',en_produccion:'En Producción 🔨',listo:'Listo 📦',entregado:'Entregado ✅',cancelado:'Cancelado ❌' };
-    const estadoColors = { pendiente:'#c8860a',pagado:'#4a7c8b',en_produccion:'#7c5c8b',listo:'#3d8b6a',entregado:'#4a8b5a',cancelado:'#8b4a4a' };
+    const estadoLabels = { pendiente:'Pendiente',pagado:'Pagado ✓',en_produccion:'En Producción',listo:'Listo para entrega',entregado:'Entregado',cancelado:'Cancelado' };
+    const estadoClass  = { pendiente:'status-pending',pagado:'status-progress',en_produccion:'status-producing',listo:'status-ready',entregado:'status-completed',cancelado:'status-cancelled' };
     const est   = p.estado || 'pendiente';
-    const color = estadoColors[est] || 'var(--accent)';
     const label = estadoLabels[est] || est;
+    const cls   = estadoClass[est]  || 'status-pending';
 
     let entrega;
     if (p.tipo_entrega === 'recoger') {
@@ -2109,7 +2136,7 @@ async function verDetallePedidoAdmin(id) {
 
     body.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:18px;">
-        <span style="background:${color}30;color:${color};padding:5px 14px;border-radius:20px;font-weight:700;font-size:13px;border:1px solid ${color}50;">${label}</span>
+        <span class="status-badge ${cls}">${label}</span>
         <div style="text-align:right;">
           <div style="font-size:22px;font-weight:900;color:var(--accent);">${money(p.total)}</div>
           <div style="font-size:11px;color:var(--muted);">Sub ${money(p.subtotal)} + Envío ${money(p.costo_envio)} + Inst. ${money(p.costo_instalacion)}</div>
@@ -2144,13 +2171,11 @@ async function verDetallePedidoAdmin(id) {
         <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Cambiar Estado</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
           ${['pendiente','pagado','en_produccion','listo','entregado','cancelado'].map(s=>{
-            const c2=estadoColors[s]||'var(--accent)';
             const l2=estadoLabels[s]||s;
+            const c2=estadoClass[s]||'status-pending';
             const isActive=s===est;
             return `<button onclick="actualizarEstadoPedido(${id},'${s}');closeModal('adminPedidoDetalleModal');cargarPedidosAPI();"
-              style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;
-              background:${isActive?c2:'transparent'};color:${isActive?'#fff':c2};
-              border:1px solid ${c2};">${l2}</button>`;
+              class="status-badge ${c2}" style="cursor:pointer;border:none;opacity:${isActive?'1':'0.45'};transition:opacity .2s;">${l2}</button>`;
           }).join('')}
         </div>
       </div>
@@ -2175,14 +2200,14 @@ async function verDetalleCitaAdmin(id) {
     const c = data.cita;
     folio.textContent = c.numero_cita;
 
-    const estLabels = { nueva:'Nueva 🆕',confirmada:'Confirmada ✅',completada:'Completada 🏁',cancelada:'Cancelada ❌' };
-    const estColors = { nueva:'#4a7c8b',confirmada:'#4a8b5a',completada:'#8b7355',cancelada:'#8b4a4a' };
+    const estLabels = { nueva:'Nueva',confirmada:'Confirmada',completada:'Completada',cancelada:'Cancelada' };
+    const estClass  = { nueva:'status-new',confirmada:'status-progress',completada:'status-completed',cancelada:'status-cancelled' };
     const tipoLabels = { medicion:'Medición 📐',instalacion:'Instalación 🔧',otro:'Otro' };
     const est = c.estado || 'nueva';
 
     body.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:18px;">
-        <span style="background:${estColors[est]||'var(--accent)'}30;color:${estColors[est]||'var(--accent)'};padding:5px 14px;border-radius:20px;font-weight:700;font-size:13px;border:1px solid ${estColors[est]||'var(--accent)'}50;">${estLabels[est]||est}</span>
+        <span class="status-badge ${estClass[est]||'status-new'}">${estLabels[est]||est}</span>
         <span style="font-size:11px;color:var(--muted);">Registrada: ${(c.fecha_creacion||'').substring(0,10)}</span>
       </div>
 
@@ -2242,13 +2267,13 @@ async function verDetalleCotAdmin(id) {
     const cot = data.cotizacion;
     folio.textContent = cot.numero_cotizacion;
 
-    const estLabels = { nueva:'Nueva 🆕',en_revision:'En Revisión 📋',respondida:'Respondida ✅',cerrada:'Cerrada 🔒' };
-    const estColors = { nueva:'#4a7c8b',en_revision:'#8b7355',respondida:'#4a8b5a',cerrada:'#555' };
+    const estLabels = { nueva:'Nueva',en_revision:'En Revisión',respondida:'Respondida',cerrada:'Cerrada' };
+    const estClass  = { nueva:'status-new',en_revision:'status-pending',respondida:'status-replied',cerrada:'status-disabled' };
     const est = cot.estado || 'nueva';
 
     body.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:18px;">
-        <span style="background:${estColors[est]||'var(--accent)'}30;color:${estColors[est]||'var(--accent)'};padding:5px 14px;border-radius:20px;font-weight:700;font-size:13px;border:1px solid ${estColors[est]||'var(--accent)'}50;">${estLabels[est]||est}</span>
+        <span class="status-badge ${estClass[est]||'status-new'}">${estLabels[est]||est}</span>
         <span style="font-size:11px;color:var(--muted);">Creada: ${(cot.fecha_creacion||'').substring(0,10)}</span>
       </div>
 
@@ -2300,16 +2325,12 @@ async function cargarCotizacionesAPI() {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted)">Sin cotizaciones registradas</td></tr>';
         return;
       }
-      const estadoColors = {
-        'nueva':'#1565C0','en_revision':'#F57F17','respondida':'#2E7D32','cerrada':'#757575'
-      };
-      const estadoLabels = {
-        'nueva':'Nueva','en_revision':'En revisión','respondida':'Respondida','cerrada':'Cerrada'
-      };
+      const estadoCotClass  = { nueva:'status-new', en_revision:'status-pending', respondida:'status-replied', cerrada:'status-disabled' };
+      const estadoCotLabels = { nueva:'Nueva', en_revision:'En revisión', respondida:'Respondida', cerrada:'Cerrada' };
       tbody.innerHTML = cots.map(c => {
-        const est = c.estado || 'nueva';
-        const color = estadoColors[est] || '#757575';
-        const label = estadoLabels[est] || est;
+        const est   = c.estado || 'nueva';
+        const cls   = estadoCotClass[est]  || 'status-new';
+        const label = estadoCotLabels[est] || est;
         const fecha = (c.fecha_creacion || '').substring(0, 10);
         const modeloLabels = {
           sevilla:'Modelo Sevilla', roma:'Modelo Roma', edinburgo:'Modelo Edinburgo',
@@ -2326,11 +2347,11 @@ async function cargarCotizacionesAPI() {
         return `<tr>
           <td><strong>${escapeHtml(c.numero_cotizacion || '')}</strong></td>
           <td>${escapeHtml(c.nombre_cliente || '')}</td>
-          <td>${cid ? `<span style="background:#2d6a3f20;color:#2d6a3f;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700;"><i class="fa-solid fa-user-check"></i> #${cid}</span>` : '<span style="color:var(--muted);font-size:11px;">—</span>'}</td>
+          <td>${cid ? `<span class="status-badge status-active" style="font-size:10px;padding:2px 8px;"><i class="fa-solid fa-user-check"></i> #${cid}</span>` : '<span style="color:var(--muted);font-size:11px;">—</span>'}</td>
           <td>${escapeHtml(c.correo_cliente || '')}</td>
           <td>${escapeHtml(tipo)}</td>
           <td>${escapeHtml(fecha)}</td>
-          <td><span style="background:${color}22;color:${color};padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;">${label}</span></td>
+          <td><span class="status-badge ${cls}">${label}</span></td>
           <td>
             <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;">
               <button onclick="verDetalleCotAdmin(${c.id})" class="btn btn-primary btn-small" title="Ver detalle"><i class='fa-solid fa-eye'></i> Ver</button>

@@ -486,7 +486,7 @@
   tr:hover td{ background:var(--panel); }
 
   .status-badge{
-    padding:3px 8px;
+    padding:4px 10px;
     border-radius:999px;
     font-size:10px;
     font-weight:900;
@@ -494,9 +494,18 @@
     white-space:nowrap;
     display:inline-block;
   }
-  .status-pending{ background:var(--warn); color:#fff; }
-  .status-progress{ background:var(--info); color:#fff; }
-  .status-completed{ background:var(--ok); color:#fff; }
+  /* ── Status badges — fondo sólido + texto claro legible ── */
+  .status-pending    { background:#7a5c2e; color:#ffd98a; }
+  .status-progress   { background:#1e5c7a; color:#90d8f5; }
+  .status-producing  { background:#4a3570; color:#d4baff; }
+  .status-ready      { background:#1e5c3a; color:#90f5bc; }
+  .status-completed  { background:#1a5c2a; color:#7af5a0; }
+  .status-cancelled  { background:#6a2020; color:#ffaaaa; }
+  .status-disabled   { background:#3a3a3a; color:#b0b0b0; }
+  .status-new        { background:#2a5c6a; color:#90d4e8; }
+  .status-replied    { background:#1e5c3a; color:#90f5bc; }
+  .status-info       { background:#1e5c7a; color:#90d8f5; }
+  .status-active     { background:#1a5c2a; color:#7af5a0; }
 
   /* FORM INPUTS */
   .form-group{ margin-bottom:14px; }
@@ -876,3 +885,25 @@
     .section { padding: 12px; }
     table { min-width: 600px; }
   }
+
+  /* ── wh-help tooltip ─────────────────────────────────────── */
+  .wh-help {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: rgba(201,169,110,0.15); border: 1px solid rgba(201,169,110,0.4);
+    color: #c9a96e; font-size: 11px; font-weight: 700; cursor: help;
+    position: relative; flex-shrink: 0; vertical-align: middle; margin-left: 4px;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .wh-help:hover { background: rgba(201,169,110,0.3); border-color: #c9a96e; }
+  .wh-help::after {
+    content: attr(data-tip);
+    position: absolute; bottom: calc(100% + 8px); left: 50%;
+    transform: translateX(-50%);
+    background: #333; color: #e0e0e0; font-size: 12px; font-weight: 400;
+    padding: 8px 12px; border-radius: 8px; width: 220px; line-height: 1.5;
+    white-space: normal; pointer-events: none; z-index: 9999;
+    opacity: 0; visibility: hidden; transition: opacity 0.18s;
+    border: 1px solid #444; box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  }
+  .wh-help:hover::after { opacity: 1; visibility: visible; }

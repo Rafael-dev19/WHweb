@@ -68,7 +68,7 @@ header('Content-Type: text/html; charset=utf-8');
     <div class="mc-noauth-icon"><i class="fa-solid fa-user-lock"></i></div>
     <h1>Inicia sesión para ver tu cuenta</h1>
     <p>Accede a tu historial de pedidos, cotizaciones y datos personales.</p>
-    <button class="btn-mc-primary" onclick="AuthModal.open(() => location.reload())">
+    <button class="btn-mc-primary" data-auth-action="openAndReload">
       <i class="fa-solid fa-right-to-bracket"></i> Iniciar sesión
     </button>
   </div>
@@ -82,16 +82,16 @@ header('Content-Type: text/html; charset=utf-8');
         <p class="mc-correo" id="mcCorreo">—</p>
         <span class="mc-badge">Cliente registrado</span>
       </div>
-      <button class="mc-logout-btn" onclick="AuthModal.logout()" title="Cerrar sesión">
+      <button class="mc-logout-btn" data-auth-action="logout" title="Cerrar sesión">
         <i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión
       </button>
     </div>
 
     <div class="mc-tabs">
-      <button class="mc-tab active" data-tab="pedidos" onclick="mcShowTab('pedidos')">
+      <button class="mc-tab active" data-tab="pedidos" data-call="mcShowTab" data-args='["pedidos"]'>
         <i class="fa-solid fa-box"></i> Mis pedidos
       </button>
-      <button class="mc-tab" data-tab="perfil" onclick="mcShowTab('perfil')">
+      <button class="mc-tab" data-tab="perfil" data-call="mcShowTab" data-args='["perfil"]'>
         <i class="fa-solid fa-user-pen"></i> Mi perfil
       </button>
     </div>
@@ -196,7 +196,7 @@ header('Content-Type: text/html; charset=utf-8');
     <a href="/catalogo" class="mbn-item"><i class="fa-solid fa-store"></i><span>Catálogo</span></a>
     <a href="/solicitudes" class="mbn-item"><i class="fa-solid fa-file-invoice"></i><span>Cotización</span></a>
     <a href="/carrito" class="mbn-item"><span class="mbn-icon-wrap"><i class="fa-solid fa-cart-shopping"></i><span class="mbn-cart-badge"></span></span><span>Carrito</span></a>
-    <button class="mbn-item mbn-item--active" onclick="AuthModal.openMenuMovil(this)"><i class="fa-solid fa-user"></i><span>Mi cuenta</span></button>
+    <button class="mbn-item mbn-item--active" data-auth-action="openMenuMovil"><i class="fa-solid fa-user"></i><span>Mi cuenta</span></button>
   </div>
 </nav>
 
@@ -204,5 +204,7 @@ header('Content-Type: text/html; charset=utf-8');
 <script src="./assets/js/firebase-config.js"></script>
 <script src="./assets/js/modal-auth.js?v=9"></script>
 <script src="./assets/js/mi-cuenta.js"></script>
+<script src="./assets/js/event-delegation.js"></script>
+<script src="./assets/js/animations.js"></script>
 </body>
 </html>

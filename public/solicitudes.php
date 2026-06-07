@@ -25,6 +25,7 @@ if (empty($_SESSION['cliente_email_verified'])) {
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
   <link rel="stylesheet" href="./assets/css/variables.css">
   <link rel="stylesheet" href="./assets/css/solicitudes.css?v=3">
+  <link rel="stylesheet" href="./assets/css/animations.css">
   <link rel="stylesheet" href="./assets/css/modal-auth.css?v=4">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous" defer></script>
@@ -54,43 +55,75 @@ if (empty($_SESSION['cliente_email_verified'])) {
   <div class="container">
     <h1 class="page-title"><i class="fa-solid fa-clipboard-list"></i> Centro de Solicitudes</h1>
     <p class="page-subtitle">
-      Solicita asesoría y cotización personalizada o agenda una visita técnica para medición de tu proyecto
+      ¿No sabes qué opción elegir? Usa la guía rápida de abajo.
     </p>
 
     <div id="alertMessage" class="alert"></div>
 
-    <div class="tab-navigation">
+    <!-- ── Decisor visual: ¿qué necesitas hoy? ───────────────────── -->
+    <div class="sol-decision-grid wh-reveal">
+      <div class="sol-decision-card sol-decision-card--cot" data-tab-goto="cotizacion">
+        <div class="sol-dec-icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+        <div class="sol-dec-info">
+          <strong>Ya sé lo que quiero</strong>
+          <span>Tengo medidas o ideas y quiero un precio</span>
+        </div>
+        <div class="sol-dec-badge">Cotización →</div>
+        <div class="sol-dec-detail">
+          <i class="fa-solid fa-clock"></i> Respuesta en 24 horas por correo
+        </div>
+      </div>
+      <div class="sol-decision-card sol-decision-card--cita" data-tab-goto="cita">
+        <div class="sol-dec-icon"><i class="fa-solid fa-house-chimney-user"></i></div>
+        <div class="sol-dec-info">
+          <strong>Necesito asesoría presencial</strong>
+          <span>Quiero que vayan a medir y aconsejarme a mi domicilio</span>
+        </div>
+        <div class="sol-dec-badge">Agendar Cita →</div>
+        <div class="sol-dec-detail">
+          <i class="fa-solid fa-location-dot"></i> Vamos a tu domicilio · ZMG
+        </div>
+      </div>
+      <div class="sol-decision-card sol-decision-card--seg" data-tab-goto="seguimiento">
+        <div class="sol-dec-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
+        <div class="sol-dec-info">
+          <strong>Ya envié una solicitud</strong>
+          <span>Quiero ver el estado de mi pedido, cita o cotización</span>
+        </div>
+        <div class="sol-dec-badge">Ver estado →</div>
+        <div class="sol-dec-detail">
+          <i class="fa-solid fa-hashtag"></i> Busca por folio WH-, CIT- o COT-
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-navigation" style="margin-top:24px;">
       <button class="tab-btn active" data-tab="cotizacion">
-        <span class="tab-icon"><i class="fa-solid fa-tag"></i></span>
+        <span class="tab-icon"><i class="fa-solid fa-file-invoice-dollar"></i></span>
         <span>Cotización</span>
       </button>
       <button class="tab-btn" data-tab="cita">
-        <span class="tab-icon"><i class="fa-solid fa-calendar-days"></i></span>
-        <span>Agendar Cita</span>
+        <span class="tab-icon"><i class="fa-solid fa-house-chimney-user"></i></span>
+        <span>Visita a domicilio</span>
       </button>
       <button class="tab-btn" data-tab="seguimiento">
         <span class="tab-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
         <span>Seguimiento</span>
       </button>
     </div>
-    <div class="wh-info-box" style="margin-bottom:0;">
-      <i class="fa-solid fa-circle-info"></i>
-      <span><strong>¿Qué sección usar?</strong> — <strong>Cotización:</strong> si ya sabes lo que quieres y necesitas precio. <strong>Agendar Cita:</strong> si prefieres que vayamos a medir y asesorarte en persona. <strong>Seguimiento:</strong> para consultar el estado de una solicitud ya enviada.</span>
-    </div>
 
     <!-- TAB 1: COTIZACIÓN -->
     <div id="tab-cotizacion" class="tab-content active">
       <div class="info-box">
-        <h4><i class="fa-solid fa-bullseye"></i> ¿Qué incluye nuestra asesoría de cotización?</h4>
-        <p>Si ya tienes las medidas y una idea clara de lo que necesitas, podemos ayudarte con:</p>
-        <ul>
-          <li>Asesoría profesional sobre materiales y acabados ideales</li>
-          <li>Recomendaciones de diseño y optimización de espacios</li>
-          <li>Orientación sobre estilos que se adapten a tu proyecto</li>
-          <li>Cotización detallada basada en tus especificaciones</li>
-          <li>Renders 3D conceptuales de tu proyecto (opcional)</li>
-          <li>Propuesta de presupuesto sin compromiso</li>
-        </ul>
+        <h4><i class="fa-solid fa-file-invoice-dollar"></i> Cotización en línea — respuesta en 24 horas</h4>
+        <p><strong>¿Cuándo usar esta opción?</strong> Cuando ya tienes una idea del mueble que necesitas y quieres saber el precio antes de comprometerte.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><i class="fa-solid fa-check" style="color:#8b7355;"></i> No requiere visita</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><i class="fa-solid fa-check" style="color:#8b7355;"></i> Cotización detallada</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><i class="fa-solid fa-check" style="color:#8b7355;"></i> Respuesta en 24 hrs</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><i class="fa-solid fa-check" style="color:#8b7355;"></i> Sin compromiso</div>
+        </div>
+        <p style="margin-top:10px;font-size:13px;color:#888;"><i class="fa-solid fa-circle-info"></i> Si no tienes medidas exactas, no te preocupes — indícalas aproximadas y nuestro equipo te orientará.</p>
       </div>
 
       <form id="formCotizacion" autocomplete="off">
@@ -237,23 +270,22 @@ if (empty($_SESSION['cliente_email_verified'])) {
       </form>
       <div class="tab-nav-bottom">
         <a href="/inicio" class="btn-tab-nav btn-tab-back"><i class="fa-solid fa-arrow-left"></i> Volver al inicio</a>
-        <button type="button" class="btn-tab-nav btn-tab-next" onclick="document.querySelector('.tab-btn[data-tab=cita]').click()">Agendar Cita <i class="fa-solid fa-arrow-right"></i></button>
+        <button type="button" class="btn-tab-nav btn-tab-next" data-tab-goto="cita">Agendar Cita <i class="fa-solid fa-arrow-right"></i></button>
       </div>
     </div>
 
     <!-- TAB 2: AGENDAR CITA -->
     <div id="tab-cita" class="tab-content">
-      <div class="info-box">
-        <h4><i class="fa-solid fa-building-construction"></i> Visita Técnica Profesional</h4>
-        <p>Agenda una visita de nuestros expertos a tu domicilio para:</p>
-        <ul>
-          <li>Toma de medidas exactas y profesionales en el lugar</li>
-          <li>Análisis del espacio y estudio de viabilidad</li>
-          <li>Evaluación de instalaciones (luz, contactos, estructuras)</li>
-          <li>Recomendaciones personalizadas de diseño y materiales</li>
-          <li>Asesoría técnica sobre la mejor solución para tu espacio</li>
-        </ul>
-        <p style="margin-top: 15px;"><strong>Nota:</strong> Después de la visita, recibirás una cotización detallada con especificaciones y renders.</p>
+      <div class="info-box" style="border-left-color:#5b9aad;">
+        <h4 style="color:#7ec4d8;"><i class="fa-solid fa-house-chimney-user"></i> Visita a tu domicilio — asesoría completa en persona</h4>
+        <p><strong>¿Cuándo usar esta opción?</strong> Cuando prefieres que vayamos a tu casa a medir, evaluar el espacio y darte recomendaciones de diseño en persona.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><i class="fa-solid fa-check" style="color:#5b9aad;"></i> Medición profesional</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><i class="fa-solid fa-check" style="color:#5b9aad;"></i> Asesoría en persona</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><i class="fa-solid fa-check" style="color:#5b9aad;"></i> Evaluación del espacio</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><i class="fa-solid fa-check" style="color:#5b9aad;"></i> Cotización después</div>
+        </div>
+        <p style="margin-top:10px;font-size:13px;color:#888;"><i class="fa-solid fa-location-dot"></i> Atendemos toda la Zona Metropolitana de Guadalajara (ZMG).</p>
       </div>
 
       <form id="formCita" autocomplete="off">
@@ -313,7 +345,7 @@ if (empty($_SESSION['cliente_email_verified'])) {
               <label>Fecha Preferida <span class="required">*</span>
                 <span class="wh-help" data-tip="Elige el día que más te convenga. Solo aparecen días hábiles (lunes a viernes). Si necesitas fin de semana, contáctanos directamente.">?</span>
               </label>
-              <input type="date" name="fecha" id="fechaCita" required onchange="cargarSlotsDisponibles(this.value)">
+              <input type="date" name="fecha" id="fechaCita" required data-onchange="cargarSlotsDisponibles">
             </div>
 
             <div class="col-12 form-group">
@@ -343,8 +375,8 @@ if (empty($_SESSION['cliente_email_verified'])) {
         <button type="submit" class="btn-submit"><i class="fa-solid fa-calendar-days"></i> Agendar Visita Técnica</button>
       </form>
       <div class="tab-nav-bottom">
-        <button type="button" class="btn-tab-nav btn-tab-back" onclick="document.querySelector('.tab-btn[data-tab=cotizacion]').click()"><i class="fa-solid fa-arrow-left"></i> Cotización</button>
-        <button type="button" class="btn-tab-nav btn-tab-next" onclick="document.querySelector('.tab-btn[data-tab=seguimiento]').click()">Seguimiento <i class="fa-solid fa-arrow-right"></i></button>
+        <button type="button" class="btn-tab-nav btn-tab-back" data-tab-goto="cotizacion"><i class="fa-solid fa-arrow-left"></i> Cotización</button>
+        <button type="button" class="btn-tab-nav btn-tab-next" data-tab-goto="seguimiento">Seguimiento <i class="fa-solid fa-arrow-right"></i></button>
       </div>
     </div>
 
@@ -369,7 +401,7 @@ if (empty($_SESSION['cliente_email_verified'])) {
               placeholder="WH-2026-000001 · CIT-2026-000001 · COT-2026-000001"
               maxlength="25" autocomplete="off" autocapitalize="characters">
           </div>
-          <button class="btn-track" onclick="trackOrder()">
+          <button class="btn-track" data-call="trackOrder">
             <i class="fa-solid fa-search"></i> Buscar
           </button>
         </div>
@@ -404,7 +436,7 @@ if (empty($_SESSION['cliente_email_verified'])) {
 
       </div>
       <div class="tab-nav-bottom">
-        <button type="button" class="btn-tab-nav btn-tab-back" onclick="document.querySelector('.tab-btn[data-tab=cita]').click()"><i class="fa-solid fa-arrow-left"></i> Agendar Cita</button>
+        <button type="button" class="btn-tab-nav btn-tab-back" data-tab-goto="cita"><i class="fa-solid fa-arrow-left"></i> Agendar Cita</button>
       </div>
     </div>
   </div>
@@ -429,7 +461,7 @@ if (empty($_SESSION['cliente_email_verified'])) {
       <a href="/catalogo" class="mbn-item"><i class="fa-solid fa-store"></i><span>Catálogo</span></a>
       <a href="/solicitudes" class="mbn-item mbn-item--active"><i class="fa-solid fa-file-invoice"></i><span>Cotización</span></a>
       <a href="/carrito" class="mbn-item"><span class="mbn-icon-wrap"><i class="fa-solid fa-cart-shopping"></i><span class="mbn-cart-badge"></span></span><span>Carrito</span></a>
-      <button class="mbn-item" onclick="AuthModal.openMenuMovil(this)"><i class="fa-solid fa-user"></i><span>Mi cuenta</span></button>
+      <button class="mbn-item" data-auth-action="openMenuMovil"><i class="fa-solid fa-user"></i><span>Mi cuenta</span></button>
     </div>
   </nav>
 
@@ -437,5 +469,7 @@ if (empty($_SESSION['cliente_email_verified'])) {
   <script src="./assets/js/firebase-config.js"></script>
   <script src="./assets/js/modal-auth.js?v=9"></script>
   <script src="./assets/js/solicitudes.js"></script>
+  <script src="./assets/js/event-delegation.js"></script>
+  <script src="./assets/js/animations.js"></script>
 </body>
 </html>

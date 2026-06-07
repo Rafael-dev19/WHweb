@@ -1,6 +1,16 @@
 <?php
 require_once __DIR__ . '/_helpers.php';
 
+function validarUrlImagen(string $url): bool {
+    if (empty($url) || strlen($url) > 2048) return false;
+    if (!filter_var($url, FILTER_VALIDATE_URL)) return false;
+    $parsed = parse_url($url);
+    if (($parsed['scheme'] ?? '') !== 'https') return false;
+    $host = $parsed['host'] ?? '';
+    $allowedHosts = ['firebasestorage.googleapis.com', 'storage.googleapis.com'];
+    return in_array($host, $allowedHosts, true) || str_ends_with($host, '.firebasestorage.app');
+}
+
 $method = requestMethod();
 $id = isset($_GET['id']) ? sanitizeInt($_GET['id']) : null;
 
@@ -138,7 +148,7 @@ switch ($method) {
         if (!empty($body['imagenes']) && is_array($body['imagenes'])) {
             foreach ($body['imagenes'] as $i => $img) {
                 $url = sanitize($img['url'] ?? $img);
-                if ($url) {
+                if ($url && validarUrlImagen($url)) {
                     dbInsert('imagenes_producto', [
                         'producto_id'  => $productoId,
                         'url_imagen'   => $url,
@@ -192,7 +202,7 @@ switch ($method) {
             dbQuery("DELETE FROM imagenes_producto WHERE producto_id = ?", [$id]);
             foreach ($body['imagenes'] as $i => $img) {
                 $url = sanitize($img['url'] ?? $img);
-                if ($url) {
+                if ($url && validarUrlImagen($url)) {
                     dbInsert('imagenes_producto', [
                         'producto_id'  => $id,
                         'url_imagen'   => $url,

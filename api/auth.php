@@ -11,7 +11,7 @@ switch ($action) {
     case 'login':
         if ($method !== 'POST') jsonError('Método no permitido', 405);
 
-        checkRateLimit('auth_login', 10, 60);
+        checkRateLimit('auth_login', 5, 900);
 
         $body = getJsonBody();
 
@@ -95,7 +95,7 @@ switch ($action) {
     // ── Registro de cliente ───────────────────────────────────────
     case 'cliente-registro':
         if ($method !== 'POST') jsonError('Método no permitido', 405);
-        checkRateLimit('cliente_registro', 5, 60);
+        checkRateLimit('cliente_registro', 3, 900);
         $body = getJsonBody();
         checkHoneypot($body);
         $firebaseToken = trim($body['firebase_token'] ?? '');
@@ -128,7 +128,7 @@ switch ($action) {
     // ── Login de cliente ──────────────────────────────────────────
     case 'cliente-login':
         if ($method !== 'POST') jsonError('Método no permitido', 405);
-        checkRateLimit('cliente_login', 10, 60);
+        checkRateLimit('cliente_login', 5, 900);
         $body = getJsonBody();
         checkHoneypot($body);
         $firebaseToken = trim($body['firebase_token'] ?? '');

@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="./assets/css/styles.css?v=4">
   <link rel="stylesheet" href="./assets/css/catalogo.css?v=6">
   <link rel="stylesheet" href="./assets/css/modal-auth.css?v=4">
+  <link rel="stylesheet" href="./assets/css/animations.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous" defer></script>
 </head>
@@ -50,7 +51,7 @@
 
       <div class="d-flex align-items-center flex-wrap gap-3 filters-row">
         <div id="categorias-filtro" class="d-flex flex-wrap gap-2 filters">
-          <button class="filter-btn active" onclick="filtrarPorCategoria(null, this)">Todos</button>
+          <button class="filter-btn active" data-cat-filter="">Todos</button>
         </div>
         <div style="display:flex;align-items:center;gap:4px;">
           <select id="ordenar-por" class="select-ordenar">
@@ -98,19 +99,19 @@
       <a href="/catalogo" class="mbn-item mbn-item--active"><i class="fa-solid fa-store"></i><span>Catálogo</span></a>
       <a href="/solicitudes" class="mbn-item"><i class="fa-solid fa-file-invoice"></i><span>Cotización</span></a>
       <a href="/carrito" class="mbn-item"><span class="mbn-icon-wrap"><i class="fa-solid fa-cart-shopping"></i><span class="mbn-cart-badge"></span></span><span>Carrito</span></a>
-      <button class="mbn-item" onclick="AuthModal.openMenuMovil(this)"><i class="fa-solid fa-user"></i><span>Mi cuenta</span></button>
+      <button class="mbn-item" data-auth-action="openMenuMovil"><i class="fa-solid fa-user"></i><span>Mi cuenta</span></button>
     </div>
   </nav>
 
   <!-- ══ GUÍA FLOTANTE "¿Cómo comprar?" ══════════════════════════════ -->
-  <button class="wh-guide-btn" id="whGuideBtn" aria-label="¿Cómo comprar?" onclick="document.getElementById('whGuideCatModal').classList.add('open')">
+  <button class="wh-guide-btn" id="whGuideBtn" aria-label="¿Cómo comprar?" data-open-modal="whGuideCatModal">
     <i class="fa-solid fa-circle-question"></i>
     <span class="wh-guide-btn-label">¿Cómo comprar?</span>
   </button>
 
-  <div class="wh-guide-modal" id="whGuideCatModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="wh-guide-modal" id="whGuideCatModal">
     <div class="wh-guide-content" role="dialog" aria-modal="true">
-      <button class="wh-guide-close" onclick="document.getElementById('whGuideCatModal').classList.remove('open')" aria-label="Cerrar">×</button>
+      <button class="wh-guide-close" data-close-modal="whGuideCatModal" aria-label="Cerrar">×</button>
       <h2 class="wh-guide-title"><i class="fa-solid fa-cart-shopping"></i> ¿Cómo comprar?</h2>
       <p class="wh-guide-subtitle">Estás en el catálogo. Aquí puedes ver todos los muebles:</p>
       <div class="wh-guide-steps">
@@ -148,7 +149,7 @@
         </div>
       </div>
       <div class="wh-guide-actions">
-        <a href="/solicitudes" class="wh-guide-cta wh-guide-cta--alt" onclick="document.getElementById('whGuideCatModal').classList.remove('open')">
+        <a href="/solicitudes" class="wh-guide-cta wh-guide-cta--alt" data-close-modal="whGuideCatModal">
           <i class="fa-solid fa-file-invoice"></i> ¿Prefiero cotizar primero
         </a>
       </div>
@@ -157,14 +158,11 @@
   </div>
 
   </main>
-  <script>
-    document.addEventListener('keydown', function(e){
-      if(e.key === 'Escape') document.getElementById('whGuideCatModal').classList.remove('open');
-    });
-  </script>
-
   <script src="./assets/js/firebase-config.js"></script>
   <script src="./assets/js/modal-auth.js?v=9"></script>
   <script src="./assets/js/catalogo.js?v=2"></script>
+  <script src="./assets/js/event-delegation.js"></script>
+  <script src="./assets/js/page-init.js"></script>
+  <script src="./assets/js/animations.js"></script>
 </body>
 </html>

@@ -539,16 +539,8 @@ async function trackOrder() {
       en_revision:'En revisión', respondida:'Respondida', cerrada:'Cerrada',
       confirmada:'Confirmada', completada:'Completada'
     };
-    const estadoColors = {
-      nueva:'#4a7c8b', pendiente:'#8b7355', pagado:'#4a7c8b',
-      en_produccion:'#6d5a8b', listo:'#3d7a5a', entregado:'#4a8b5a',
-      cancelado:'#8b4a4a', en_revision:'#8b7355', respondida:'#4a8b5a',
-      cerrada:'#555', confirmada:'#4a8b5a', completada:'#3d7a5a'
-    };
-
     const est         = item.estado || 'nueva';
     const label       = estadoLabels[est] || est;
-    const color       = estadoColors[est] || '#8b7355';
     const fechaCreada = (item.fecha_creacion || '').substring(0, 10);
 
     let timelineHtml = '';
@@ -635,7 +627,7 @@ async function trackOrder() {
               <div class="track-tipo">${tipo}</div>
               <div class="track-folio">${escapeHtml(folio)}</div>
             </div>
-            <span class="track-status-badge" style="background:${color}30;color:${color};border:1px solid ${color}50;">
+            <span class="track-status-badge st-${est}">
               ${escapeHtml(label)}
             </span>
           </div>

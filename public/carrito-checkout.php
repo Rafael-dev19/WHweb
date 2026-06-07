@@ -26,6 +26,7 @@ header('Content-Type: text/html; charset=utf-8');
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
     <link rel="stylesheet" href="./assets/css/variables.css">
     <link rel="stylesheet" href="./assets/css/carrito.css?v=4">
+    <link rel="stylesheet" href="./assets/css/animations.css">
     <link rel="stylesheet" href="./assets/css/modal-auth.css?v=4">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous" defer></script>
@@ -90,7 +91,7 @@ header('Content-Type: text/html; charset=utf-8');
                   <span class="wh-help" data-tip="Elige cómo quieres recibir tus muebles. Puedes recogerlos gratis en nuestra sucursal o solicitar envío a domicilio dentro del área metropolitana de Guadalajara.">?</span>
                 </h2>
                 <div class="delivery-options">
-                    <div class="option-card selected" id="optionRecoger" onclick="seleccionarEntrega('recoger')">
+                    <div class="option-card selected" id="optionRecoger" data-entrega="recoger">
                         <input type="radio" name="tipoEntrega" value="recoger" checked>
                         <div class="option-content">
                             <div class="option-header">
@@ -103,7 +104,7 @@ header('Content-Type: text/html; charset=utf-8');
                         </div>
                     </div>
 
-                    <div class="option-card" id="optionEnvio" onclick="seleccionarEntrega('envio')">
+                    <div class="option-card" id="optionEnvio" data-entrega="envio">
                         <input type="radio" name="tipoEntrega" value="envio">
                         <div class="option-content">
                             <div class="option-header">
@@ -125,7 +126,7 @@ header('Content-Type: text/html; charset=utf-8');
                 </h2>
                 <div class="delivery-options">
 
-                    <div class="option-card selected" id="optionSinInstalacion" onclick="seleccionarInstalacion(false)">
+                    <div class="option-card selected" id="optionSinInstalacion" data-instalacion="false">
                         <input type="radio" name="tipoInstalacion" value="sin_instalacion" checked>
                         <div class="option-content">
                             <div class="option-header">
@@ -138,7 +139,7 @@ header('Content-Type: text/html; charset=utf-8');
                         </div>
                     </div>
 
-                    <div class="option-card" id="optionConInstalacion" onclick="seleccionarInstalacion(true)">
+                    <div class="option-card" id="optionConInstalacion" data-instalacion="true">
                         <input type="radio" name="tipoInstalacion" value="con_instalacion">
                         <div class="option-content">
                             <div class="option-header">
@@ -306,11 +307,11 @@ header('Content-Type: text/html; charset=utf-8');
                 <span id="fechaResumenTexto">—</span>
             </div>
 
-            <button class="btn-checkout" id="btnCheckout" onclick="procederAlPago()">
+            <button class="btn-checkout" id="btnCheckout" data-call="procederAlPago">
                 Proceder al pago <i class="fa-solid fa-credit-card"></i>
             </button>
 
-            <button class="btn-vaciar-carrito" id="btnVaciarCarrito" onclick="confirmarVaciarCarrito()">
+            <button class="btn-vaciar-carrito" id="btnVaciarCarrito" data-call="confirmarVaciarCarrito">
                 <i class="fa-solid fa-trash"></i> Vaciar carrito
             </button>
 
@@ -342,7 +343,7 @@ header('Content-Type: text/html; charset=utf-8');
     <a href="/catalogo" class="mbn-item"><i class="fa-solid fa-store"></i><span>Catálogo</span></a>
     <a href="/solicitudes" class="mbn-item"><i class="fa-solid fa-file-invoice"></i><span>Cotización</span></a>
     <a href="/carrito" class="mbn-item mbn-item--active"><span class="mbn-icon-wrap"><i class="fa-solid fa-cart-shopping"></i><span class="mbn-cart-badge"></span></span><span>Carrito</span></a>
-    <button class="mbn-item" onclick="AuthModal.openMenuMovil(this)"><i class="fa-solid fa-user"></i><span>Mi cuenta</span></button>
+    <button class="mbn-item" data-auth-action="openMenuMovil"><i class="fa-solid fa-user"></i><span>Mi cuenta</span></button>
   </div>
 </nav>
 
@@ -352,5 +353,7 @@ header('Content-Type: text/html; charset=utf-8');
 <script src="./assets/js/modal-auth.js?v=9"></script>
 <script src="./assets/js/carrito.js"></script>
 <script src="./assets/js/checkout.js"></script>
+<script src="./assets/js/event-delegation.js"></script>
+<script src="./assets/js/animations.js"></script>
 </body>
 </html>

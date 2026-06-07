@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="/assets/css/variables.css">
   <link rel="stylesheet" href="/assets/css/styles.css?v=4">
   <link rel="stylesheet" href="/assets/css/detalle_producto.css?v=2">
+  <link rel="stylesheet" href="/assets/css/animations.css">
   <link rel="stylesheet" href="/assets/css/modal-auth.css?v=4">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous" defer></script>
@@ -55,7 +56,7 @@
       <div class="col-md-6 gallery">
         <div class="main-image" id="mainImageBox">
           <div class="placeholder-img" id="imgPlaceholder"><i class="fa-solid fa-tree"></i></div>
-          <img id="mainImage" alt="Imagen principal" style="display:none;" onerror="this.style.display='none';document.getElementById('imgPlaceholder').style.display='flex'">
+          <img id="mainImage" alt="Imagen principal" style="display:none;" data-img-fallback="imgPlaceholder">
         </div>
         <div class="row row-cols-4 g-2 mt-2 thumbnails" id="thumbs"></div>
       </div>
@@ -87,9 +88,9 @@
             <span>Cantidad:
               <span class="wh-help" data-tip="Selecciona cuántas unidades necesitas. Cada mueble se fabrica individualmente bajo pedido.">?</span>
             </span>
-            <button class="quantity-btn" id="btnMinus" type="button" onclick="cambiarCantidad(-1)">−</button>
+            <button class="quantity-btn" id="btnMinus" type="button" data-call="cambiarCantidad" data-args="[-1]">−</button>
             <input type="number" class="quantity-input" id="cantidad" value="1" min="1" max="99">
-            <button class="quantity-btn" id="btnPlus" type="button" onclick="cambiarCantidad(1)">+</button>
+            <button class="quantity-btn" id="btnPlus" type="button" data-call="cambiarCantidad" data-args="[1]">+</button>
           </div>
           <button class="btn-add-cart" id="btnAddCart" type="button"><i class="fa-solid fa-cart-shopping"></i> Agregar al Carrito</button>
           <a href="/carrito" class="btn-ver-carrito" style="display:none;" id="btnVerCarrito">Ver Carrito →</a>
@@ -137,7 +138,7 @@
       <a href="/catalogo" class="mbn-item mbn-item--active"><i class="fa-solid fa-store"></i><span>Catálogo</span></a>
       <a href="/solicitudes" class="mbn-item"><i class="fa-solid fa-file-invoice"></i><span>Cotización</span></a>
       <a href="/carrito" class="mbn-item"><span class="mbn-icon-wrap"><i class="fa-solid fa-cart-shopping"></i><span class="mbn-cart-badge"></span></span><span>Carrito</span></a>
-      <button class="mbn-item" onclick="AuthModal.openMenuMovil(this)"><i class="fa-solid fa-user"></i><span>Mi cuenta</span></button>
+      <button class="mbn-item" data-auth-action="openMenuMovil"><i class="fa-solid fa-user"></i><span>Mi cuenta</span></button>
     </div>
   </nav>
 
@@ -145,5 +146,7 @@
   <script src="/assets/js/firebase-config.js"></script>
   <script src="/assets/js/modal-auth.js?v=9"></script>
   <script src="/assets/js/detalle_producto.js"></script>
+  <script src="/assets/js/event-delegation.js"></script>
+  <script src="/assets/js/animations.js"></script>
 </body>
 </html>

@@ -6,6 +6,12 @@ Options -Indexes
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
+    # ── Forzar HTTPS (excepto localhost y 127.0.0.1) ─────────────
+    RewriteCond %{HTTPS} off
+    RewriteCond %{HTTP_HOST} !^localhost$ [NC]
+    RewriteCond %{HTTP_HOST} !^127\.0\.0\.1$
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
     # Bloquear carpetas internas sensibles
     RewriteRule ^(includes|database|logs|firebase|\.git|vendor|backup|tmp)(/|$) - [F,L]
 

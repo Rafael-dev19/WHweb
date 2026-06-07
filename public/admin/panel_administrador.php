@@ -28,6 +28,7 @@ unset($_usuario);
   
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
   <link rel="stylesheet" href="../assets/css/panel_administrador.css">
+  <link rel="stylesheet" href="../assets/css/animations.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous" defer></script>
 </head>
@@ -50,7 +51,7 @@ unset($_usuario);
       </button>
       <div class="user-avatar">AD</div>
       <span>Administrador</span>
-      <button class="logout-btn" onclick="logoutAdmin()">Salir</button>
+      <button class="logout-btn" data-call="logoutAdmin">Salir</button>
     </div>
   </div>
 
@@ -61,8 +62,8 @@ unset($_usuario);
         Notificaciones
       </div>
       <div class="notif-head-actions">
-        <button class="btn btn-secondary btn-small" onclick="markAllNotifRead()" title="Marcar todas como leídas"><i class="fa-solid fa-check-double"></i></button>
-        <button class="btn btn-secondary btn-small" onclick="clearAllNotifs()" title="Limpiar todo" style="color:var(--danger,#e57373);"><i class="fa-solid fa-trash"></i></button>
+        <button class="btn btn-secondary btn-small" data-call="markAllNotifRead" title="Marcar todas como leídas"><i class="fa-solid fa-check-double"></i></button>
+        <button class="btn btn-secondary btn-small" data-call="clearAllNotifs" title="Limpiar todo" style="color:var(--danger,#e57373);"><i class="fa-solid fa-trash"></i></button>
       </div>
     </div>
     <div class="notif-body" id="notifBody"></div>
@@ -74,43 +75,43 @@ unset($_usuario);
       <button class="nav-close" id="navClose" aria-label="Cerrar menú">×</button>
     </div>
 
-    <a href="#" data-section="dashboard" class="active" onclick="showSection('dashboard', event)"><span class="icon"><i class="fa-solid fa-chart-bar"></i></span> Dashboard</a>
+    <a href="#" data-section="dashboard" class="active"><span class="icon"><i class="fa-solid fa-chart-bar"></i></span> Dashboard</a>
 
-    <a href="#" data-section="pedidos" onclick="showSection('pedidos', event)"><span class="icon"><i class="fa-solid fa-box"></i></span> Todos los Pedidos</a>
-    <a href="#" data-section="citas" onclick="showSection('citas', event)"><span class="icon"><i class="fa-solid fa-calendar-days"></i></span> Calendario de Citas</a>
-    <a href="#" data-section="cotizaciones" onclick="showSection('cotizaciones', event)"><span class="icon"><i class="fa-solid fa-briefcase"></i></span> Cotizaciones</a>
+    <a href="#" data-section="pedidos"><span class="icon"><i class="fa-solid fa-box"></i></span> Todos los Pedidos</a>
+    <a href="#" data-section="citas"><span class="icon"><i class="fa-solid fa-calendar-days"></i></span> Calendario de Citas</a>
+    <a href="#" data-section="cotizaciones"><span class="icon"><i class="fa-solid fa-briefcase"></i></span> Cotizaciones</a>
 
-    <a href="#" data-section="catalogo" onclick="showSection('catalogo', event)"><span class="icon"><i class="fa-solid fa-gear"></i></span> Gestionar Catálogo</a>
-    <a href="#" data-section="empleados" onclick="showSection('empleados', event)"><span class="icon"><i class="fa-solid fa-briefcase"></i></span> Gestionar Empleados</a>
-    <a href="#" data-section="reportes" onclick="showSection('reportes', event)"><span class="icon"><i class="fa-solid fa-chart-bar"></i></span> Reportes Avanzados</a>
-    <a href="#" data-section="financiero" onclick="showSection('financiero', event)"><span class="icon"><i class="fa-solid fa-tag"></i></span> Análisis Financiero</a>
-    <a href="#" data-section="clientes" onclick="showSection('clientes', event)"><span class="icon"><i class="fa-solid fa-users"></i></span> Clientes Registrados</a>
-    <a href="#" data-section="ofertas" onclick="showSection('ofertas', event)"><span class="icon"><i class="fa-solid fa-tag"></i></span> Ofertas & Marketing</a>
+    <a href="#" data-section="catalogo"><span class="icon"><i class="fa-solid fa-gear"></i></span> Gestionar Catálogo</a>
+    <a href="#" data-section="empleados"><span class="icon"><i class="fa-solid fa-briefcase"></i></span> Gestionar Empleados</a>
+    <a href="#" data-section="reportes"><span class="icon"><i class="fa-solid fa-chart-bar"></i></span> Reportes Avanzados</a>
+    <a href="#" data-section="financiero"><span class="icon"><i class="fa-solid fa-tag"></i></span> Análisis Financiero</a>
+    <a href="#" data-section="clientes"><span class="icon"><i class="fa-solid fa-users"></i></span> Clientes Registrados</a>
+    <a href="#" data-section="ofertas"><span class="icon"><i class="fa-solid fa-tag"></i></span> Ofertas & Marketing</a>
   </div>
 
   <div class="container">
     <aside class="sidebar">
-      <div class="sidebar-item active" onclick="showSection('dashboard', event)">
+      <div class="sidebar-item active" data-section="dashboard">
         <span class="icon"><i class="fa-solid fa-chart-bar"></i></span><span>Dashboard</span>
       </div>
 
       <div class="sidebar-section">GESTIÓN</div>
-      <div class="sidebar-item" onclick="showSection('pedidos', event)"><span class="icon"><i class="fa-solid fa-box"></i></span><span>Todos los Pedidos</span></div>
-      <div class="sidebar-item" onclick="showSection('citas', event)"><span class="icon"><i class="fa-solid fa-calendar-days"></i></span><span>Calendario de Citas</span></div>
-      <div class="sidebar-item" onclick="showSection('cotizaciones', event)"><span class="icon"><i class="fa-solid fa-briefcase"></i></span><span>Cotizaciones</span></div>
+      <div class="sidebar-item" data-section="pedidos"><span class="icon"><i class="fa-solid fa-box"></i></span><span>Todos los Pedidos</span></div>
+      <div class="sidebar-item" data-section="citas"><span class="icon"><i class="fa-solid fa-calendar-days"></i></span><span>Calendario de Citas</span></div>
+      <div class="sidebar-item" data-section="cotizaciones"><span class="icon"><i class="fa-solid fa-briefcase"></i></span><span>Cotizaciones</span></div>
 
       <div class="sidebar-section">ADMIN</div>
-      <div class="sidebar-item" onclick="showSection('catalogo', event)"><span class="icon"><i class="fa-solid fa-gear"></i></span><span>Gestionar Catálogo</span></div>
-      <div class="sidebar-item" onclick="showSection('empleados', event)"><span class="icon"><i class="fa-solid fa-briefcase"></i></span><span>Gestionar Empleados</span></div>
-      <div class="sidebar-item" onclick="showSection('reportes', event)"><span class="icon"><i class="fa-solid fa-chart-bar"></i></span><span>Reportes Avanzados</span></div>
-      <div class="sidebar-item" onclick="showSection('financiero', event)"><span class="icon"><i class="fa-solid fa-tag"></i></span><span>Análisis Financiero</span></div>
+      <div class="sidebar-item" data-section="catalogo"><span class="icon"><i class="fa-solid fa-gear"></i></span><span>Gestionar Catálogo</span></div>
+      <div class="sidebar-item" data-section="empleados"><span class="icon"><i class="fa-solid fa-briefcase"></i></span><span>Gestionar Empleados</span></div>
+      <div class="sidebar-item" data-section="reportes"><span class="icon"><i class="fa-solid fa-chart-bar"></i></span><span>Reportes Avanzados</span></div>
+      <div class="sidebar-item" data-section="financiero"><span class="icon"><i class="fa-solid fa-tag"></i></span><span>Análisis Financiero</span></div>
 
       <div class="sidebar-section">CLIENTES & MARKETING</div>
-      <div class="sidebar-item" onclick="showSection('clientes', event)"><span class="icon"><i class="fa-solid fa-users"></i></span><span>Clientes Registrados</span></div>
-      <div class="sidebar-item" onclick="showSection('ofertas', event)"><span class="icon"><i class="fa-solid fa-tag"></i></span><span>Ofertas & Marketing</span></div>
+      <div class="sidebar-item" data-section="clientes"><span class="icon"><i class="fa-solid fa-users"></i></span><span>Clientes Registrados</span></div>
+      <div class="sidebar-item" data-section="ofertas"><span class="icon"><i class="fa-solid fa-tag"></i></span><span>Ofertas & Marketing</span></div>
 
       <div class="sidebar-section">PRODUCCIÓN</div>
-      <div class="sidebar-item" onclick="showSection('capacidad', event)"><span class="icon"><i class="fa-solid fa-industry"></i></span><span>Capacidad del Taller</span></div>
+      <div class="sidebar-item" data-section="capacidad"><span class="icon"><i class="fa-solid fa-industry"></i></span><span>Capacidad del Taller</span></div>
     </aside>
 
     <main class="main-content">
@@ -122,14 +123,14 @@ unset($_usuario);
         <div class="row row-cols-2 row-cols-md-4 g-3 stats-grid">
           <div class="col">
             <div class="stat-card">
-              <div class="stat-title">Ventas del Mes</div>
+              <div class="stat-title">Ventas del Mes <span class="wh-help" data-tip="Total de ingresos por pedidos pagados en el mes actual (desde el día 1 hasta hoy).">?</span></div>
               <div class="stat-value" id="kpiVentasMes">$0</div>
               <div class="stat-subtitle" id="kpiVentasHint">—</div>
             </div>
           </div>
           <div class="col">
             <div class="stat-card">
-              <div class="stat-title">Pedidos Totales</div>
+              <div class="stat-title">Pedidos Totales <span class="wh-help" data-tip="Número total de pedidos registrados en el sistema (todos los estados: pendiente, en producción, entregado, etc.).">?</span></div>
               <div class="stat-value" id="kpiPedidos">0</div>
               <div class="stat-subtitle" id="kpiPedidosHint">—</div>
             </div>
@@ -179,56 +180,56 @@ unset($_usuario);
           <div class="section-header"><h2 class="section-title">Acciones Rápidas</h2></div>
           <div class="row row-cols-2 row-cols-md-4 g-3 actions-grid">
             <div class="col">
-              <div class="action-card h-100" onclick="showSection('pedidos', event)">
+              <div class="action-card h-100" data-section="pedidos">
                 <div class="action-icon"><i class="fa-solid fa-cart-shopping"></i></div>
                 <div class="action-title">Ver Pedidos</div>
                 <div class="action-subtitle">Control total</div>
               </div>
             </div>
             <div class="col">
-              <div class="action-card h-100" onclick="showSection('citas', event)">
+              <div class="action-card h-100" data-section="citas">
                 <div class="action-icon"><i class="fa-solid fa-calendar-days"></i></div>
                 <div class="action-title">Citas</div>
                 <div class="action-subtitle">Agenda y calendario</div>
               </div>
             </div>
             <div class="col">
-              <div class="action-card h-100" onclick="showSection('cotizaciones', event)">
+              <div class="action-card h-100" data-section="cotizaciones">
                 <div class="action-icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
                 <div class="action-title">Cotizaciones</div>
                 <div class="action-subtitle">Solicitudes recibidas</div>
               </div>
             </div>
             <div class="col">
-              <div class="action-card h-100" onclick="showSection('catalogo', event)">
+              <div class="action-card h-100" data-section="catalogo">
                 <div class="action-icon"><i class="fa-solid fa-box"></i></div>
                 <div class="action-title">Gestionar Catálogo</div>
                 <div class="action-subtitle">Productos y servicios</div>
               </div>
             </div>
             <div class="col">
-              <div class="action-card h-100" onclick="showSection('empleados', event)">
+              <div class="action-card h-100" data-section="empleados">
                 <div class="action-icon"><i class="fa-solid fa-users"></i></div>
                 <div class="action-title">Empleados</div>
                 <div class="action-subtitle">Usuarios y permisos</div>
               </div>
             </div>
             <div class="col">
-              <div class="action-card h-100" onclick="showSection('clientes', event)">
+              <div class="action-card h-100" data-section="clientes">
                 <div class="action-icon"><i class="fa-solid fa-user-group"></i></div>
                 <div class="action-title">Clientes</div>
                 <div class="action-subtitle">Cuentas registradas</div>
               </div>
             </div>
             <div class="col">
-              <div class="action-card h-100" onclick="showSection('ofertas', event)">
+              <div class="action-card h-100" data-section="ofertas">
                 <div class="action-icon"><i class="fa-solid fa-tag"></i></div>
                 <div class="action-title">Ofertas</div>
                 <div class="action-subtitle">Promociones activas</div>
               </div>
             </div>
             <div class="col">
-              <div class="action-card h-100" onclick="showSection('reportes', event)">
+              <div class="action-card h-100" data-section="reportes">
                 <div class="action-icon"><i class="fa-solid fa-chart-bar"></i></div>
                 <div class="action-title">Reportes</div>
                 <div class="action-subtitle">Exportar datos</div>
@@ -257,10 +258,10 @@ unset($_usuario);
 
           <div class="table-container">
             <div class="table-filters">
-              <button class="filter-btn active" onclick="filterTable('all', event)">Todos</button>
-              <button class="filter-btn" onclick="filterTable('pending', event)">Pendientes</button>
-              <button class="filter-btn" onclick="filterTable('progress', event)">En Proceso</button>
-              <button class="filter-btn" onclick="filterTable('completed', event)">Completados</button>
+              <button class="filter-btn active" data-filter="all">Todos</button>
+              <button class="filter-btn" data-filter="pending">Pendientes</button>
+              <button class="filter-btn" data-filter="progress">En Proceso</button>
+              <button class="filter-btn" data-filter="completed">Completados</button>
             </div>
             <div style="overflow:auto;">
               <table>
@@ -294,8 +295,8 @@ unset($_usuario);
           <div class="section-header">
             <h2 class="section-title">Agenda</h2>
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
-              <button class="btn btn-secondary" onclick="prevMonth()"><i class="fa-solid fa-chevron-left"></i></button>
-              <button class="btn btn-secondary" onclick="nextMonth()"><i class="fa-solid fa-chevron-right"></i></button>
+              <button class="btn btn-secondary" data-call="prevMonth"><i class="fa-solid fa-chevron-left"></i></button>
+              <button class="btn btn-secondary" data-call="nextMonth"><i class="fa-solid fa-chevron-right"></i></button>
             </div>
           </div>
 
@@ -362,7 +363,7 @@ unset($_usuario);
         <div class="section">
           <div class="section-header">
             <h2 class="section-title">Cotizaciones</h2>
-            <button class="btn btn-secondary btn-small" onclick="cargarCotizacionesAPI()">
+            <button class="btn btn-secondary btn-small" data-call="cargarCotizacionesAPI">
               <i class="fa-solid fa-rotate-right"></i> Actualizar
             </button>
           </div>
@@ -402,18 +403,18 @@ unset($_usuario);
           <div class="section-header">
             <h2 class="section-title">Productos</h2>
             <div class="cat-toolbar">
-              <button class="btn btn-primary" onclick="openProductoModal('create')">+ Nuevo Producto</button>
-              <button class="btn btn-ghost" onclick="toggleCatalogView()">Cambiar vista: <span id="viewModeLabel">Tarjetas</span></button>
+              <button class="btn btn-primary" data-call="openProductoModal" data-args='["create"]'>+ Nuevo Producto</button>
+              <button class="btn btn-ghost" data-call="toggleCatalogView">Cambiar vista: <span id="viewModeLabel">Tarjetas</span></button>
             </div>
           </div>
 
           <div class="table-filters" style="border:1px solid var(--border); border-radius:10px; margin-bottom:10px;">
             <div class="cat-search">
-              <input class="form-input" id="catSearch" placeholder="Buscar por nombre, categoría..." oninput="renderCatalogo()"/>
-              <select class="form-select" id="catCategory" onchange="renderCatalogo()" style="max-width:220px;">
+              <input class="form-input" id="catSearch" placeholder="Buscar por nombre, categoría..." data-oninput="renderCatalogo"/>
+              <select class="form-select" id="catCategory" data-onchange="renderCatalogo" style="max-width:220px;">
                 <option value="">Todas las categorías</option>
               </select>
-              <select class="form-select" id="catStatus" onchange="renderCatalogo()" style="max-width:200px;">
+              <select class="form-select" id="catStatus" data-onchange="renderCatalogo" style="max-width:200px;">
                 <option value="">Todos</option>
                 <option value="activo">Activos</option>
                 <option value="inactivo">Inactivos</option>
@@ -450,7 +451,7 @@ unset($_usuario);
         <div class="section">
           <div class="section-header">
             <h2 class="section-title">Personal</h2>
-            <button class="btn btn-primary" onclick="abrirNuevoEmpleado()">+ Nuevo Empleado</button>
+            <button class="btn btn-primary" data-call="abrirNuevoEmpleado">+ Nuevo Empleado</button>
           </div>
 
           <div class="table-container">
@@ -478,8 +479,8 @@ unset($_usuario);
           <div class="section-header">
             <h2 class="section-title">Controles</h2>
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
-              <button class="btn btn-secondary" onclick="exportReportXLSX()"><i class="fa-solid fa-file-excel"></i> Exportar Excel (.xlsx)</button>
-              <button class="btn btn-secondary" onclick="printReportPDF()"><i class="fa-solid fa-file-pdf"></i> Exportar PDF</button>
+              <button class="btn btn-secondary" data-call="exportReportXLSX"><i class="fa-solid fa-file-excel"></i> Exportar Excel (.xlsx)</button>
+              <button class="btn btn-secondary" data-call="printReportPDF"><i class="fa-solid fa-file-pdf"></i> Exportar PDF</button>
             </div>
           </div>
 
@@ -556,7 +557,7 @@ unset($_usuario);
         <div class="modal-content" style="max-width:700px;">
           <div class="modal-header">
             <h3 class="modal-title" id="productoModalTitle">Nuevo Producto</h3>
-            <button class="modal-close" onclick="closeModal('productoModal')">×</button>
+            <button class="modal-close" data-dismiss="productoModal">×</button>
           </div>
 
           <input type="hidden" id="p_mode" value="create"/>
@@ -661,17 +662,14 @@ unset($_usuario);
               cursor:pointer;
               transition:border-color .2s;
               margin-top:10px;
-            " onclick="document.getElementById('p_imgs_files').click()"
-               ondragover="event.preventDefault(); event.stopPropagation(); this.style.borderColor='var(--accent)'; this.style.background='rgba(139,115,85,0.08)';"
-               ondragleave="event.stopPropagation(); this.style.borderColor='var(--border)'; this.style.background='';"
-               ondrop="handleImgDrop(event); this.style.background='';">
+            " data-trigger-click="p_imgs_files">
               <i class="fa-solid fa-cloud-arrow-up" style="font-size:28px;color:var(--accent);"></i>
               <p style="margin:8px 0 4px;font-weight:600;color:#ddd;">Arrastra imágenes aquí o haz clic para seleccionar</p>
               <p style="color:var(--muted);font-size:12px;">JPG, PNG, WEBP — cualquier tamaño (se optimizan automáticamente)</p>
             </div>
 
             <input type="file" id="p_imgs_files" multiple accept="image/*"
-                   style="display:none" onchange="previewImages(this.files)"/>
+                   style="display:none" data-onchange-files="previewImages"/>
 
             <div id="imgUploadProgress" style="display:none;margin-top:12px;">
               <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
@@ -695,8 +693,8 @@ unset($_usuario);
           </div>
 
           <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;margin-top:18px;">
-            <button class="btn btn-secondary" onclick="closeModal('productoModal')">Cancelar</button>
-            <button class="btn btn-primary" id="btnGuardarProducto" onclick="saveProductoFull()">
+            <button class="btn btn-secondary" data-dismiss="productoModal">Cancelar</button>
+            <button class="btn btn-primary" id="btnGuardarProducto" data-call="saveProductoFull">
               <i class="fa-solid fa-floppy-disk"></i> Guardar
             </button>
           </div>
@@ -708,14 +706,14 @@ unset($_usuario);
         <div class="modal-content">
           <div class="modal-header">
             <h3 class="modal-title" id="detalleModalTitle">Detalle de producto</h3>
-            <button class="modal-close" onclick="closeModal('productoDetalleModal')">×</button>
+            <button class="modal-close" data-dismiss="productoDetalleModal">×</button>
           </div>
 
           <div id="detalleBody"></div>
 
           <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; margin-top:12px;">
-            <button class="btn btn-secondary" onclick="closeModal('productoDetalleModal')">Cerrar</button>
-            <button class="btn btn-primary" onclick="detailEditFromModal()">Editar este producto</button>
+            <button class="btn btn-secondary" data-dismiss="productoDetalleModal">Cerrar</button>
+            <button class="btn btn-primary" data-call="detailEditFromModal">Editar este producto</button>
           </div>
         </div>
       </div>
@@ -725,7 +723,7 @@ unset($_usuario);
         <div class="modal-content">
           <div class="modal-header">
             <h3 class="modal-title" id="empModalTitle">Nuevo Empleado</h3>
-            <button class="modal-close" onclick="closeModal('nuevoEmpleado')">×</button>
+            <button class="modal-close" data-dismiss="nuevoEmpleado">×</button>
           </div>
 
           <input type="hidden" id="emp_mode" value="create">
@@ -756,7 +754,7 @@ unset($_usuario);
 
           <div id="emp_error" style="display:none;color:#e05;font-size:13px;margin-bottom:12px;padding:10px;background:#2a0a0a;border-radius:6px;"></div>
 
-          <button class="btn btn-primary" style="width:100%;" id="emp_btn_guardar" onclick="guardarEmpleado()">
+          <button class="btn btn-primary" style="width:100%;" id="emp_btn_guardar" data-call="guardarEmpleado">
             Crear Empleado
           </button>
         </div>
@@ -804,7 +802,7 @@ unset($_usuario);
           <div class="table-card">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
               <h3 style="color:var(--accent);font-size:15px;font-weight:800;">Carga del Taller — Próximos 30 días hábiles</h3>
-              <button class="btn btn-sm btn-secondary" onclick="cargarCapacidad()">
+              <button class="btn btn-sm btn-secondary" data-call="cargarCapacidad">
                 <i class="fa-solid fa-rotate-right"></i> Actualizar
               </button>
             </div>
@@ -854,7 +852,7 @@ unset($_usuario);
                   placeholder="Ej: Día festivo, Vacaciones..."
                   style="font-size:13px;" maxlength="100">
               </div>
-              <button class="btn btn-danger" onclick="bloquearDia()" style="width:100%;">
+              <button class="btn btn-danger" data-call="bloquearDia" style="width:100%;">
                 <i class="fa-solid fa-lock"></i> Bloquear este día
               </button>
             </div>
@@ -882,8 +880,8 @@ unset($_usuario);
           <div class="section-header">
             <h2 class="section-title">Lista de clientes</h2>
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-              <input class="form-input" id="clientesSearch" placeholder="Buscar nombre, correo, ciudad..." style="max-width:260px;font-size:13px;" oninput="cargarClientesAdmin()">
-              <button class="btn btn-secondary btn-small" onclick="cargarClientesAdmin()">
+              <input class="form-input" id="clientesSearch" placeholder="Buscar nombre, correo, ciudad..." style="max-width:260px;font-size:13px;" data-oninput="cargarClientesAdmin">
+              <button class="btn btn-secondary btn-small" data-call="cargarClientesAdmin">
                 <i class="fa-solid fa-rotate-right"></i> Actualizar
               </button>
             </div>
@@ -938,13 +936,13 @@ unset($_usuario);
         <div class="modal-content" style="max-width:700px;">
           <div class="modal-header" style="background:var(--accent);color:#fff;border-radius:8px 8px 0 0;margin:-18px -18px 16px;padding:16px 18px;">
             <h3 class="modal-title" style="color:#fff;"><i class="fa-solid fa-user-circle"></i> Perfil del Cliente</h3>
-            <button class="modal-close" onclick="closeModal('clienteDetalleModal')" style="color:#fff;">×</button>
+            <button class="modal-close" data-dismiss="clienteDetalleModal" style="color:#fff;">×</button>
           </div>
           <div id="clienteDetalleBody" style="max-height:70vh;overflow-y:auto;">
             <div style="text-align:center;padding:40px;color:var(--muted);"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>
           </div>
           <div style="display:flex;justify-content:flex-end;padding:12px 0 0;border-top:1px solid var(--border);">
-            <button class="btn btn-secondary" onclick="closeModal('clienteDetalleModal')">Cerrar</button>
+            <button class="btn btn-secondary" data-dismiss="clienteDetalleModal">Cerrar</button>
           </div>
         </div>
       </div>
@@ -957,7 +955,7 @@ unset($_usuario);
         <div class="section">
           <div class="section-header">
             <h2 class="section-title">Campañas activas</h2>
-            <button class="btn btn-primary" onclick="abrirOfertaModal('create')">
+            <button class="btn btn-primary" data-call="abrirOfertaModal" data-args='["create"]'>
               <i class="fa-solid fa-plus"></i> Nueva Oferta
             </button>
           </div>
@@ -1003,7 +1001,7 @@ unset($_usuario);
         <div class="modal-content" style="max-width:560px;">
           <div class="modal-header">
             <h3 class="modal-title" id="ofertaModalTitle"><i class="fa-solid fa-tag"></i> Nueva Oferta</h3>
-            <button class="modal-close" onclick="closeModal('ofertaModal')">×</button>
+            <button class="modal-close" data-dismiss="ofertaModal">×</button>
           </div>
 
           <input type="hidden" id="of_id" value="">
@@ -1020,7 +1018,7 @@ unset($_usuario);
             </div>
             <div class="col-md-6 form-group">
               <label class="form-label">Tipo de descuento *</label>
-              <select class="form-select" id="of_tipo" onchange="actualizarValorLabel()">
+              <select class="form-select" id="of_tipo" data-onchange="actualizarValorLabel">
                 <option value="porcentaje">Porcentaje (%)</option>
                 <option value="monto_fijo">Monto fijo ($)</option>
                 <option value="envio_gratis">Envío gratis</option>
@@ -1056,8 +1054,8 @@ unset($_usuario);
           <div id="of_error" style="display:none;color:#e05;font-size:13px;margin-bottom:12px;padding:10px;background:#2a0a0a;border-radius:6px;"></div>
 
           <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;margin-top:16px;">
-            <button class="btn btn-secondary" onclick="closeModal('ofertaModal')">Cancelar</button>
-            <button class="btn btn-primary" id="of_btn_guardar" onclick="guardarOferta()">
+            <button class="btn btn-secondary" data-dismiss="ofertaModal">Cancelar</button>
+            <button class="btn btn-primary" id="of_btn_guardar" data-call="guardarOferta">
               <i class="fa-solid fa-floppy-disk"></i> Guardar Oferta
             </button>
           </div>
@@ -1085,14 +1083,14 @@ unset($_usuario);
           <i class="fa-solid fa-box"></i> Detalle del Pedido
           <span id="adm_ped_folio" style="font-weight:900;margin-left:8px;opacity:.85;"></span>
         </h3>
-        <button class="modal-close" onclick="closeModal('adminPedidoDetalleModal')" style="color:#fff;">×</button>
+        <button class="modal-close" data-dismiss="adminPedidoDetalleModal" style="color:#fff;">×</button>
       </div>
       <div id="adm_ped_body" style="max-height:70vh;overflow-y:auto;overflow-x:hidden;">
         <div style="text-align:center;padding:40px;color:var(--muted);"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;padding:12px 0 0;margin-top:4px;border-top:1px solid var(--border);">
-        <button class="btn btn-secondary" onclick="closeModal('adminPedidoDetalleModal')">Cerrar</button>
-        <button class="btn btn-primary" id="adm_ped_edit_btn" onclick="closeModal('adminPedidoDetalleModal')">
+        <button class="btn btn-secondary" data-dismiss="adminPedidoDetalleModal">Cerrar</button>
+        <button class="btn btn-primary" id="adm_ped_edit_btn" data-dismiss="adminPedidoDetalleModal">
           <i class="fa-solid fa-pen"></i> Cambiar Estado
         </button>
       </div>
@@ -1107,18 +1105,18 @@ unset($_usuario);
           <i class="fa-solid fa-calendar-days"></i> Detalle de Cita
           <span id="adm_cita_folio" style="font-weight:900;margin-left:8px;opacity:.85;"></span>
         </h3>
-        <button class="modal-close" onclick="closeModal('adminCitaDetalleModal')" style="color:#fff;">×</button>
+        <button class="modal-close" data-dismiss="adminCitaDetalleModal" style="color:#fff;">×</button>
       </div>
       <div id="adm_cita_body" style="max-height:70vh;overflow-y:auto;overflow-x:hidden;">
         <div style="text-align:center;padding:40px;color:var(--muted);"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:center;padding:12px 0 0;margin-top:4px;border-top:1px solid var(--border);">
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-secondary btn-small" onclick="cambiarEstadoCitaAdmin(window._admCitaId,'confirmada')">✅ Confirmar</button>
-          <button class="btn btn-secondary btn-small" onclick="cambiarEstadoCitaAdmin(window._admCitaId,'completada')">🏁 Completar</button>
-          <button class="btn btn-danger btn-small"    onclick="cambiarEstadoCitaAdmin(window._admCitaId,'cancelada')">❌ Cancelar</button>
+          <button class="btn btn-secondary btn-small" data-admin-cita-estado="confirmada">✅ Confirmar</button>
+          <button class="btn btn-secondary btn-small" data-admin-cita-estado="completada">🏁 Completar</button>
+          <button class="btn btn-danger btn-small"    data-admin-cita-estado="cancelada">❌ Cancelar</button>
         </div>
-        <button class="btn btn-secondary" onclick="closeModal('adminCitaDetalleModal')">Cerrar</button>
+        <button class="btn btn-secondary" data-dismiss="adminCitaDetalleModal">Cerrar</button>
       </div>
     </div>
   </div>
@@ -1131,22 +1129,24 @@ unset($_usuario);
           <i class="fa-solid fa-briefcase"></i> Detalle de Cotización
           <span id="adm_cot_folio" style="font-weight:900;margin-left:8px;opacity:.85;"></span>
         </h3>
-        <button class="modal-close" onclick="closeModal('adminCotDetalleModal')" style="color:#fff;">×</button>
+        <button class="modal-close" data-dismiss="adminCotDetalleModal" style="color:#fff;">×</button>
       </div>
       <div id="adm_cot_body" style="max-height:70vh;overflow-y:auto;overflow-x:hidden;">
         <div style="text-align:center;padding:40px;color:var(--muted);"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:center;padding:12px 0 0;margin-top:4px;border-top:1px solid var(--border);">
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-secondary btn-small" onclick="cambiarEstadoCotAdmin(window._admCotId,'en_revision')">📋 En Revisión</button>
-          <button class="btn btn-secondary btn-small" onclick="cambiarEstadoCotAdmin(window._admCotId,'respondida')">✅ Respondida</button>
-          <button class="btn btn-secondary btn-small" onclick="cambiarEstadoCotAdmin(window._admCotId,'cerrada')">🔒 Cerrar</button>
+          <button class="btn btn-secondary btn-small" data-admin-cot-estado="en_revision">📋 En Revisión</button>
+          <button class="btn btn-secondary btn-small" data-admin-cot-estado="respondida">✅ Respondida</button>
+          <button class="btn btn-secondary btn-small" data-admin-cot-estado="cerrada">🔒 Cerrar</button>
         </div>
-        <button class="btn btn-secondary" onclick="closeModal('adminCotDetalleModal')">Cerrar</button>
+        <button class="btn btn-secondary" data-dismiss="adminCotDetalleModal">Cerrar</button>
       </div>
     </div>
   </div>
 
   <script src="../assets/js/panel_administrador.js"></script>
+  <script src="../assets/js/event-delegation.js"></script>
+  <script src="../assets/js/animations.js"></script>
 </body>
 </html>

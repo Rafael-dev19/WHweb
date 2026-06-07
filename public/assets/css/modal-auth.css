@@ -565,6 +565,8 @@
   justify-content: space-around;
   align-items: stretch;
   min-height: 56px;
+  overflow: hidden;
+  width: 100%;
 }
 .mbn-item {
   display: flex;
@@ -572,21 +574,36 @@
   align-items: center;
   justify-content: center;
   gap: 3px;
-  padding: 10px 6px;
+  padding: 10px 4px;
   text-decoration: none;
   color: #777;
   font-size: 10px;
   font-weight: 600;
   flex: 1;
-  transition: color 0.15s;
   min-width: 0;
+  max-width: 20%;
+  overflow: hidden;
+  transition: color 0.15s;
   border: none;
   background: none;
   cursor: pointer;
   font-family: inherit;
 }
-.mbn-item i { font-size: 20px; transition: color 0.15s; }
+.mbn-item span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.mbn-item i { font-size: 20px; transition: color 0.15s; flex-shrink: 0; }
 .mbn-item:hover, .mbn-item:active { color: #c9a96e; }
+
+/* En pantallas muy pequeñas (< 360px), ocultar etiquetas y mostrar solo iconos */
+@media (max-width: 359px) {
+  .mbn-item span { display: none; }
+  .mbn-item { padding: 14px 4px; gap: 0; max-width: none; }
+  .mobile-bottom-nav-inner { justify-content: space-evenly; }
+}
 
 /* Página actual — barra indicadora + dorado */
 .mbn-item--active {

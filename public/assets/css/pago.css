@@ -840,6 +840,70 @@ body {
     border-color: #8b7355;
   }
 }
+/* ── Gateway header (nuevo) ─────────────────────────────── */
+.payment-gateway-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.payment-gateway-header > i {
+  font-size: 28px;
+  color: #8b7355;
+  flex-shrink: 0;
+}
+
+.payment-gateway-header h3 {
+  color: #e0e0e0;
+  font-size: 17px;
+  font-weight: 700;
+  margin: 0 0 2px;
+}
+
+.gateway-sub {
+  color: #888;
+  font-size: 12px;
+  margin: 0;
+}
+
+.gateway-badges {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.gateway-badges img {
+  height: 22px;
+  width: auto;
+  border-radius: 3px;
+  opacity: 0.75;
+  display: inline-block;
+}
+
+/* ── Divider entre pasarelas ─────────────────────────────── */
+.payment-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 24px 0;
+  color: #555;
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.payment-divider::before,
+.payment-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid #3d3d3d;
+  margin: 0 14px;
+}
+
 /* ── Customer confirmation section ────────────────────── */
 #seccion-cliente input {
   transition: border-color 0.2s;

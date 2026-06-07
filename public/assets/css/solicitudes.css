@@ -678,7 +678,50 @@ h1, h2, h3, h4, h5, h6 { margin-bottom: 0; }
   font-size: 13px;
   font-weight: 700;
   white-space: nowrap;
+  /* base: el JS ya no inyecta inline styles — se usan las clases de abajo */
+  color: #fff;
+  background: #555;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
+
+/* ── Clases de estado con contraste alto ─────────────────────── */
+/* Pedido */
+.st-pendiente    { background: #7a5c2e; color: #ffd98a; }
+.st-pagado       { background: #1e5c7a; color: #90d8f5; }
+.st-en_produccion{ background: #4a3570; color: #d4baff; }
+.st-listo        { background: #1e5c3a; color: #90f5bc; }
+.st-entregado    { background: #1a5c2a; color: #7af5a0; }
+.st-cancelado    { background: #6a2020; color: #ffaaaa; }
+/* Cotización */
+.st-nueva        { background: #2a5c6a; color: #90d4e8; }
+.st-en_revision  { background: #6a4c1a; color: #ffd090; }
+.st-respondida   { background: #1e5c3a; color: #90f5bc; }
+.st-cerrada      { background: #3a3a3a; color: #b0b0b0; }
+/* Cita */
+.st-confirmada   { background: #1e5c7a; color: #90d8f5; }
+.st-completada   { background: #1a5c2a; color: #7af5a0; }
+
+/* Ícono de estado en la badge */
+.track-status-badge::before {
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+  font-size: 10px;
+}
+.st-pendiente::before     { content: '\f017'; } /* clock */
+.st-pagado::before        { content: '\f00c'; } /* check */
+.st-en_produccion::before { content: '\f0ad'; } /* wrench */
+.st-listo::before         { content: '\f466'; } /* box-open */
+.st-entregado::before     { content: '\f58c'; } /* house */
+.st-cancelado::before     { content: '\f00d'; } /* x */
+.st-nueva::before         { content: '\f0e0'; } /* envelope */
+.st-en_revision::before   { content: '\f06e'; } /* eye */
+.st-respondida::before    { content: '\f058'; } /* check-circle */
+.st-cerrada::before       { content: '\f023'; } /* lock */
+.st-confirmada::before    { content: '\f073'; } /* calendar */
+.st-completada::before    { content: '\f00c'; } /* check */
 
 .track-result-body { padding: 24px 28px; }
 
@@ -915,4 +958,130 @@ h1, h2, h3, h4, h5, h6 { margin-bottom: 0; }
   .header-nav { padding: 16px; }
   /* Espacio para barra fija inferior */
   .footer, body > .footer { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* ===================================================
+   DECISOR VISUAL — ¿qué necesitas hoy?
+   =================================================== */
+.sol-decision-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 6px;
+}
+
+.sol-decision-card {
+  background: #2d2d2d;
+  border-radius: 14px;
+  border: 2px solid #3d3d3d;
+  padding: 20px 18px;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+.sol-decision-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+}
+
+.sol-decision-card--cot  { border-color: #4a3d2a; }
+.sol-decision-card--cita { border-color: #2a3a4a; }
+.sol-decision-card--seg  { border-color: #2a3a2a; }
+
+.sol-decision-card--cot:hover  { border-color: #8b7355; box-shadow: 0 8px 24px rgba(139,115,85,0.25); }
+.sol-decision-card--cita:hover { border-color: #5b9aad; box-shadow: 0 8px 24px rgba(91,154,173,0.25); }
+.sol-decision-card--seg:hover  { border-color: #6aad7a; box-shadow: 0 8px 24px rgba(106,173,122,0.25); }
+
+.sol-dec-icon {
+  font-size: 28px;
+}
+.sol-decision-card--cot  .sol-dec-icon { color: #8b7355; }
+.sol-decision-card--cita .sol-dec-icon { color: #5b9aad; }
+.sol-decision-card--seg  .sol-dec-icon { color: #6aad7a; }
+
+.sol-dec-info strong {
+  display: block;
+  color: #e0e0e0;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+.sol-dec-info span {
+  color: #888;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.sol-dec-badge {
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: auto;
+  padding: 5px 10px;
+  border-radius: 20px;
+  align-self: flex-start;
+}
+.sol-decision-card--cot  .sol-dec-badge { background: rgba(139,115,85,0.18); color: #c9a96e; }
+.sol-decision-card--cita .sol-dec-badge { background: rgba(91,154,173,0.18); color: #7ec4d8; }
+.sol-decision-card--seg  .sol-dec-badge { background: rgba(106,173,122,0.18); color: #8ad4a0; }
+
+.sol-dec-detail {
+  font-size: 11px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Accesibilidad: indicar que es clickeable */
+.sol-decision-card:focus-visible {
+  outline: 2px solid #8b7355;
+  outline-offset: 3px;
+}
+
+/* ── Tab diferenciada por tipo ──────────────────────────────────── */
+.tab-btn[data-tab="cita"].active {
+  background: #3d6070;
+  border-color: #5b9aad;
+}
+.tab-btn[data-tab="seguimiento"].active {
+  background: #3d6045;
+  border-color: #6aad7a;
+}
+
+/* ── Info box diferenciada por tab ─────────────────────────────── */
+#tab-cita .info-box {
+  border-left: 4px solid #5b9aad;
+}
+#tab-cita .info-box h4 { color: #7ec4d8; }
+
+#tab-seguimiento .tracking-section {
+  border-top: 3px solid #6aad7a;
+  padding-top: 20px;
+}
+
+@media (max-width: 768px) {
+  .sol-decision-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .sol-decision-card {
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+  }
+  .sol-dec-icon { font-size: 24px; flex-shrink: 0; }
+  .sol-dec-badge { display: none; }
+  .sol-dec-detail { display: none; }
+}
+
+@media (max-width: 480px) {
+  .sol-decision-card { padding: 12px 14px; }
+  .sol-dec-info strong { font-size: 13px; }
+  .sol-dec-info span { font-size: 11px; }
 }
