@@ -29,9 +29,7 @@ header('Content-Type: text/html; charset=utf-8');
     <div class="nav-links" id="navLinks">
       <a href="/inicio" title="Volver al inicio">Inicio</a>
       <a href="/catalogo" title="Ver todos los muebles y precios">Catálogo</a>
-      <a href="/solicitudes" title="Pedir cotización o agendar una cita de medición">
-        <span class="nav-link-desc">Cotización y Citas<small>Pide precio o agenda visita</small></span>
-      </a>
+      <a href="/solicitudes" title="Pedir cotización o agendar una cita de medición">Solicitar</a>
       <a href="/carrito" class="cart-icon" aria-label="Ver carrito" title="Ver mi carrito">
         <i class="fa-solid fa-cart-shopping"></i> <span class="cart-badge" id="cartCount">0</span>
       </a>
@@ -104,8 +102,8 @@ header('Content-Type: text/html; charset=utf-8');
     </div>
 
     <div style="text-align:center;margin-top:32px;padding-bottom:8px;">
-      <a href="/solicitudes" style="color:#8b7355;font-size:14px;">
-        <i class="fa-solid fa-arrow-left"></i> ¿Necesitas hacer una solicitud nueva? Ir a Cotización y Citas
+      <a href="/solicitudes" class="btn-tab-nav btn-tab-back">
+        <i class="fa-solid fa-arrow-left"></i> Ir a Solicitar
       </a>
     </div>
   </div>

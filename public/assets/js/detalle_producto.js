@@ -358,7 +358,7 @@ function formatCurrency(n) {
 
 function showToast(msg, type = 'success') {
   const toast = document.createElement('div');
-  toast.style.cssText = `position:fixed;top:20px;right:20px;padding:14px 20px;background:${type==='success'?'#22c55e':'#ef4444'};color:#fff;border-radius:8px;z-index:10000;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,.25);`;
+  toast.style.cssText = `position:fixed;top:90px;right:20px;padding:14px 20px;background:${type==='success'?'#22c55e':'#ef4444'};color:#fff;border-radius:8px;z-index:10000;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,.25);pointer-events:none;`;
   toast.textContent = msg;
   document.body.appendChild(toast);
   setTimeout(() => toast.remove(), 3000);

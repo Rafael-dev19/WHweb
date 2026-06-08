@@ -317,9 +317,9 @@ function irAConfirmacion() {
   localStorage.removeItem('wh_checkout_form');
 
   if (pedido?.token_seguimiento) {
-    window.location.href = `solicitudes.php?token=${pedido.token_seguimiento}&pedido=${pedido.numero_pedido}`;
+    window.location.href = `/seguimiento?token=${pedido.token_seguimiento}&pedido=${pedido.numero_pedido}`;
   } else {
-    window.location.href = '/solicitudes?pago=exitoso';
+    window.location.href = '/seguimiento?pago=exitoso';
   }
 }
 

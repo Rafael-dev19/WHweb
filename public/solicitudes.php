@@ -87,17 +87,6 @@ if (empty($_SESSION['cliente_email_verified'])) {
       </div>
     </div>
 
-    <div class="tab-navigation" style="margin-top:24px;">
-      <button class="tab-btn active" data-tab="cotizacion">
-        <span class="tab-icon"><i class="fa-solid fa-file-invoice-dollar"></i></span>
-        <span>Cotización</span>
-      </button>
-      <button class="tab-btn" data-tab="cita">
-        <span class="tab-icon"><i class="fa-solid fa-house-chimney-user"></i></span>
-        <span>Visita a domicilio</span>
-      </button>
-    </div>
-
     <!-- TAB 1: COTIZACIÓN -->
     <div id="tab-cotizacion" class="tab-content active">
       <div class="info-box">
