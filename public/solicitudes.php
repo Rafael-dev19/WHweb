@@ -42,6 +42,7 @@ if (empty($_SESSION['cliente_email_verified'])) {
     <div class="nav-links" id="navLinks">
       <a href="/inicio" title="Volver al inicio">Inicio</a>
       <a href="/catalogo" title="Ver todos los muebles y precios">Catálogo</a>
+      <a href="/seguimiento" title="Consulta el estado de tu pedido, cita o cotización">Seguimiento</a>
       <a href="/carrito" class="cart-icon" aria-label="Ver carrito" title="Ver mi carrito de compras">
         <i class="fa-solid fa-cart-shopping"></i> <span class="cart-badge" id="cartCount">0</span>
       </a>
@@ -455,11 +456,12 @@ if (empty($_SESSION['cliente_email_verified'])) {
     </p>
   </div>
 
+  <?php $esSeguimiento = (strpos($_SERVER['REQUEST_URI'], 'seguimiento') !== false); ?>
   <nav class="mobile-bottom-nav" aria-label="Navegación rápida">
     <div class="mobile-bottom-nav-inner">
-      <a href="/inicio" class="mbn-item"><i class="fa-solid fa-house"></i><span>Inicio</span></a>
       <a href="/catalogo" class="mbn-item"><i class="fa-solid fa-store"></i><span>Catálogo</span></a>
-      <a href="/solicitudes" class="mbn-item mbn-item--active"><i class="fa-solid fa-file-invoice"></i><span>Cotización</span></a>
+      <a href="/solicitudes" class="mbn-item<?= !$esSeguimiento ? ' mbn-item--active' : '' ?>"><i class="fa-solid fa-file-invoice"></i><span>Solicitar</span></a>
+      <a href="/seguimiento" class="mbn-item<?= $esSeguimiento ? ' mbn-item--active' : '' ?>"><i class="fa-solid fa-magnifying-glass"></i><span>Seguimiento</span></a>
       <a href="/carrito" class="mbn-item"><span class="mbn-icon-wrap"><i class="fa-solid fa-cart-shopping"></i><span class="mbn-cart-badge"></span></span><span>Carrito</span></a>
       <button class="mbn-item" data-auth-action="openMenuMovil"><i class="fa-solid fa-user"></i><span>Mi cuenta</span></button>
     </div>

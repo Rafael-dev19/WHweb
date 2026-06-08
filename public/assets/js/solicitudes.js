@@ -72,6 +72,13 @@ function checkURLParams() {
     const trackInput = document.getElementById('trackingNumber');
     if (trackInput) { trackInput.value = pedido; trackOrder(); }
   }
+  // Abrir tab seguimiento si URL es /seguimiento o tiene hash #seguimiento
+  if (!tab && !pedido) {
+    if (window.location.pathname === '/seguimiento' || window.location.hash === '#seguimiento') {
+      const btn = document.querySelector('.tab-btn[data-tab="seguimiento"]');
+      if (btn) btn.click();
+    }
+  }
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────

@@ -67,6 +67,7 @@ if (!empty($_SESSION['_flash'])) {
       <a href="/solicitudes" title="Pedir cotización o agendar una cita de medición">
         <span class="nav-link-desc">Cotización y Citas<small>Pide precio o agenda visita</small></span>
       </a>
+      <a href="/seguimiento" title="Consulta el estado de tu pedido, cita o cotización">Seguimiento</a>
 
       <a href="/carrito" class="cart-icon" id="cartIcon" aria-label="Ver carrito">
         <i class="fa-solid fa-cart-shopping"></i>
@@ -458,29 +459,11 @@ if (!empty($_SESSION['_flash'])) {
   <!-- ── Barra de navegación fija móvil ──────────────────────────── -->
   <nav class="mobile-bottom-nav" aria-label="Navegación rápida">
     <div class="mobile-bottom-nav-inner">
-      <a href="/catalogo" class="mbn-item">
-        <i class="fa-solid fa-store"></i>
-        <span>Catálogo</span>
-      </a>
-      <a href="/solicitudes" class="mbn-item">
-        <i class="fa-solid fa-file-invoice"></i>
-        <span>Cotización</span>
-      </a>
-      <a href="/solicitudes#cita" class="mbn-item">
-        <i class="fa-solid fa-calendar-check"></i>
-        <span>Cita</span>
-      </a>
-      <a href="/carrito" class="mbn-item">
-        <span class="mbn-icon-wrap">
-          <i class="fa-solid fa-cart-shopping"></i>
-          <span class="mbn-cart-badge"></span>
-        </span>
-        <span>Carrito</span>
-      </a>
-      <button class="mbn-item" data-auth-action="openMenuMovil">
-        <i class="fa-solid fa-user"></i>
-        <span>Mi cuenta</span>
-      </button>
+      <a href="/catalogo" class="mbn-item"><i class="fa-solid fa-store"></i><span>Catálogo</span></a>
+      <a href="/solicitudes" class="mbn-item"><i class="fa-solid fa-file-invoice"></i><span>Solicitar</span></a>
+      <a href="/seguimiento" class="mbn-item"><i class="fa-solid fa-magnifying-glass"></i><span>Seguimiento</span></a>
+      <a href="/carrito" class="mbn-item"><span class="mbn-icon-wrap"><i class="fa-solid fa-cart-shopping"></i><span class="mbn-cart-badge"></span></span><span>Carrito</span></a>
+      <button class="mbn-item" data-auth-action="openMenuMovil"><i class="fa-solid fa-user"></i><span>Mi cuenta</span></button>
     </div>
   </nav>
 
