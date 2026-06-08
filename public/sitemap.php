@@ -13,10 +13,10 @@ $hoy      = date('Y-m-d');
 
 // Páginas estáticas
 $estaticas = [
-    ['loc' => '/',           'lastmod' => $hoy,         'freq' => 'weekly',  'pri' => '1.0'],
-    ['loc' => '/catalogo',   'lastmod' => $hoy,         'freq' => 'daily',   'pri' => '0.9'],
-    ['loc' => '/solicitudes','lastmod' => $hoy,         'freq' => 'weekly',  'pri' => '0.8'],
-    ['loc' => '/terminos',   'lastmod' => '2026-03-14', 'freq' => 'yearly',  'pri' => '0.3'],
+    ['loc' => '/',            'lastmod' => $hoy,         'freq' => 'weekly',  'pri' => '1.0'],
+    ['loc' => '/catalogo',    'lastmod' => $hoy,         'freq' => 'daily',   'pri' => '0.9'],
+    ['loc' => '/seguimiento', 'lastmod' => $hoy,         'freq' => 'monthly', 'pri' => '0.6'],
+    ['loc' => '/terminos',    'lastmod' => '2026-03-14', 'freq' => 'yearly',  'pri' => '0.3'],
 ];
 
 // Productos activos con su imagen principal
