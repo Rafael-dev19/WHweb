@@ -127,6 +127,8 @@ function notificarNuevoPedido(array $pedido): void {
                 'telefono_cliente'  => $pedido['telefono_cliente'] ?? '',
                 'total'             => (float)($pedido['total'] ?? 0),
                 'subtotal'          => (float)($pedido['subtotal'] ?? 0),
+                'tipo_pago'         => $pedido['tipo_pago']    ?? 'completo',
+                'monto_pagado'      => (float)($pedido['monto_pagado'] ?? 0),
                 'tipo_entrega'      => $pedido['tipo_entrega'] ?? 'envio',
                 'direccion_envio'   => $pedido['direccion_envio'] ?? '',
                 'colonia_envio'     => $pedido['colonia_envio']   ?? '',
@@ -162,6 +164,9 @@ function notificarCambioPedido(array $pedido, string $estadoAnterior): void {
                 'correo_cliente'    => $pedido['correo_cliente'],
                 'estado'            => $pedido['estado'],
                 'estado_anterior'   => $estadoAnterior,
+                'total'             => (float)($pedido['total'] ?? 0),
+                'tipo_pago'         => $pedido['tipo_pago']    ?? 'completo',
+                'monto_pagado'      => (float)($pedido['monto_pagado'] ?? 0),
             ]),
         ]
     );

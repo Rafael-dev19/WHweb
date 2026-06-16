@@ -3,6 +3,7 @@ const estado = {
     items:       [],
     tipoEntrega: 'recoger',
     instalacion: false,
+    tipoPago:    'completo',
     semana:      null,
     costos: { envio: 500, instalacion: 1500 },
 };
@@ -202,6 +203,7 @@ function guardarFormulario() {
         notas:       sanitizeText(document.getElementById('clienteNotas')?.value      || '', 500),
         tipoEntrega: estado.tipoEntrega,
         instalacion: estado.instalacion,
+        tipoPago:    estado.tipoPago,
     };
     localStorage.setItem(FORM_KEY, JSON.stringify(datos));
 }
@@ -223,6 +225,7 @@ function restaurarFormulario() {
         set('clienteNotas',     datos.notas);
         if (datos.tipoEntrega) seleccionarEntrega(datos.tipoEntrega, false);
         if (typeof datos.instalacion === 'boolean') seleccionarInstalacion(datos.instalacion);
+        if (datos.tipoPago) seleccionarTipoPago(datos.tipoPago);
     } catch { /* silent */ }
 }
 
@@ -530,12 +533,30 @@ function seleccionarInstalacion(conInstalacion) {
     guardarFormulario();
 }
 
+function seleccionarTipoPago(tipo) {
+    estado.tipoPago = tipo === 'anticipo' ? 'anticipo' : 'completo';
+
+    const cardCompleto = document.getElementById('optionPagoCompleto');
+    const cardAnticipo = document.getElementById('optionAnticipo');
+    cardCompleto?.classList.toggle('selected', estado.tipoPago === 'completo');
+    cardAnticipo?.classList.toggle('selected', estado.tipoPago === 'anticipo');
+
+    const radioCompleto = cardCompleto?.querySelector('input[type="radio"]');
+    const radioAnticipo = cardAnticipo?.querySelector('input[type="radio"]');
+    if (radioCompleto) radioCompleto.checked = estado.tipoPago === 'completo';
+    if (radioAnticipo) radioAnticipo.checked = estado.tipoPago === 'anticipo';
+
+    actualizarTotales();
+    guardarFormulario();
+}
+
 function actualizarTotales() {
     const subtotal       = estado.items.reduce((s, i) => s + i.precio * i.cantidad, 0);
     const totalMuebles   = estado.items.reduce((s, i) => s + i.cantidad, 0);
     const costoEnvio     = estado.tipoEntrega === 'envio' ? estado.costos.envio : 0;
     const costoInstUnit  = estado.costos.instalacion;
     const costoInst      = estado.instalacion ? costoInstUnit * totalMuebles : 0;
+    const total          = subtotal + costoEnvio + costoInst;
 
     const el      = document.getElementById('totalFinal');
     const elEnvio = document.getElementById('totalEnvio');
@@ -543,9 +564,22 @@ function actualizarTotales() {
     const elInstLabel = document.getElementById('labelInstalacionQty');
     const elInstPrecio = document.getElementById('precioInstalacionLabel');
     const elNota  = document.getElementById('notaInstalacion');
+    const lineaAnticipo = document.getElementById('lineaAnticipo');
+    const lineaSaldo    = document.getElementById('lineaSaldoPendiente');
 
-    if (el)      el.textContent = fmt(subtotal + costoEnvio + costoInst);
+    if (el)      el.textContent = fmt(total);
     if (elEnvio) elEnvio.textContent = costoEnvio > 0 ? fmt(costoEnvio) : 'Gratis';
+
+    const esAnticipo = estado.tipoPago === 'anticipo';
+    if (lineaAnticipo) lineaAnticipo.style.display = esAnticipo ? 'flex' : 'none';
+    if (lineaSaldo)    lineaSaldo.style.display    = esAnticipo ? 'flex' : 'none';
+    if (esAnticipo) {
+        const montoAnticipo = Math.round(total * 0.5 * 100) / 100;
+        const elAnticipo = document.getElementById('montoAnticipo');
+        const elSaldo    = document.getElementById('montoSaldoPendiente');
+        if (elAnticipo) elAnticipo.textContent = fmt(montoAnticipo);
+        if (elSaldo)    elSaldo.textContent    = fmt(total - montoAnticipo);
+    }
 
     if (elInstTotal) elInstTotal.textContent = fmt(costoInst);
     if (elInstLabel && totalMuebles > 1) {
@@ -782,6 +816,7 @@ function procederAlPago() {
         ciudad_envio:        ciudad,
         municipio_envio:     municipio,
         cp_envio:            cp,
+        tipo_pago:           estado.tipoPago,
         notas:        sanitizeText(document.getElementById('clienteNotas')?.value || '', 500) || null,
         subtotal, costo_envio: costoEnvio, costo_instalacion: costoInst,
         total: subtotal + costoEnvio + costoInst,
@@ -844,6 +879,7 @@ function _mostrarSugerenciaLoginCheckout() {
 // ── Exports ───────────────────────────────────────────────────────
 window.seleccionarEntrega     = seleccionarEntrega;
 window.seleccionarInstalacion = seleccionarInstalacion;
+window.seleccionarTipoPago    = seleccionarTipoPago;
 window.seleccionarSemana      = seleccionarSemana;
 window.seleccionarDia         = seleccionarDia;
 window.procederAlPago         = procederAlPago;

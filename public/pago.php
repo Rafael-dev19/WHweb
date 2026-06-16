@@ -97,6 +97,7 @@ if (!$paypalId)  error_log('[pago.php] PAYPAL_CLIENT_ID vacío o no definido');
           <strong><i class="fa-solid fa-triangle-exclamation"></i> No hay datos del carrito.</strong><br>
           <a href="/catalogo">Regresa al catálogo</a> para seleccionar productos.
         </div>
+        <div id="tipoPagoBanner" style="display:none; background:rgba(139,115,85,0.12); border:1px solid #8b7355; border-radius:10px; padding:12px 16px; margin-bottom:20px; color:#e0c9a6; font-size:13px;"></div>
 
 
 

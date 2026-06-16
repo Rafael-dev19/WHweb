@@ -3,6 +3,44 @@ require_once __DIR__ . '/_helpers.php';
 require_once dirname(__DIR__) . '/includes/stripe.php';
 require_once dirname(__DIR__) . '/includes/paypal.php';
 
+// ── Anticipo (50%) / pago completo ─────────────────────────────────
+// Calcula cuánto se debe cobrar EN ESTE PAGO: 50% si es el primer pago de
+// un anticipo, o el saldo restante (segundo pago, o pago completo normal).
+function montoPendienteAPagar(array $pedido): float {
+    $total       = (float)$pedido['total'];
+    $montoPagado = (float)($pedido['monto_pagado'] ?? 0);
+    $tipoPago    = $pedido['tipo_pago'] ?? 'completo';
+    if ($tipoPago === 'anticipo' && $montoPagado <= 0.009) {
+        return round($total * 0.5, 2);
+    }
+    return round(max(0, $total - $montoPagado), 2);
+}
+
+// Acumula un pago aprobado en el pedido y avanza su estado.
+// Si el pedido queda completamente liquidado tras venir de 'anticipo_pagado',
+// notifica el cambio de estado (dispara el correo de saldo liquidado).
+function registrarPagoAprobado(int $pedidoId, float $montoPago): void {
+    $pedido = dbRow("SELECT total, monto_pagado, estado, tipo_pago FROM pedidos WHERE id = ?", [$pedidoId]);
+    if (!$pedido) return;
+
+    $estadoPrevio     = $pedido['estado'];
+    $total            = (float)$pedido['total'];
+    $nuevoMontoPagado = round((float)$pedido['monto_pagado'] + $montoPago, 2);
+    $liquidado        = $nuevoMontoPagado >= ($total - 0.01);
+    $nuevoEstado      = $liquidado ? 'pagado' : 'anticipo_pagado';
+
+    dbUpdate('pedidos', ['monto_pagado' => $nuevoMontoPagado, 'estado' => $nuevoEstado], 'id = ?', [$pedidoId]);
+
+    if ($liquidado && $estadoPrevio === 'anticipo_pagado') {
+        try {
+            $pedidoActualizado = dbRow("SELECT * FROM pedidos WHERE id = ?", [$pedidoId]);
+            if ($pedidoActualizado) notificarCambioPedido($pedidoActualizado, 'anticipo_pagado');
+        } catch (Exception $e) {
+            appLog('warning', 'Notif saldo liquidado error', ['error' => $e->getMessage()]);
+        }
+    }
+}
+
 $method    = requestMethod();
 $_rawBody  = file_get_contents('php://input');
 $_jsonBody = json_decode($_rawBody, true) ?? [];
@@ -15,11 +53,14 @@ if ($action === 'stripe_intent') {
     requireFields($body, ['pedido_id']);
     $pedidoId = sanitizeInt($body['pedido_id']);
     if ($pedidoId <= 0) jsonError('pedido_id inválido', 422);
-    $pedido   = dbRow("SELECT id, numero_pedido, nombre_cliente, correo_cliente, total FROM pedidos WHERE id = ?", [$pedidoId]);
+    $pedido   = dbRow("SELECT id, numero_pedido, nombre_cliente, correo_cliente, total, tipo_pago, monto_pagado FROM pedidos WHERE id = ?", [$pedidoId]);
     if (!$pedido) jsonError('Pedido no encontrado', 404);
 
+    $montoACobrar = montoPendienteAPagar($pedido);
+    if ($montoACobrar <= 0) jsonError('Este pedido ya está liquidado', 400);
+
     try {
-        $amountCentavos = (int)round($pedido['total'] * 100);
+        $amountCentavos = (int)round($montoACobrar * 100);
         $intent = stripe()->crearPaymentIntent($amountCentavos, 'mxn', [
             'pedido_id'      => (string)$pedidoId,
             'numero_pedido'  => $pedido['numero_pedido'],
@@ -30,7 +71,7 @@ if ($action === 'stripe_intent') {
             'pedido_id'          => $pedidoId,
             'metodo'             => 'stripe',
             'referencia_externa' => $intent['id'],
-            'monto'              => $pedido['total'],
+            'monto'              => $montoACobrar,
             'moneda'             => 'MXN',
             'estado'             => 'pendiente',
         ]);
@@ -38,7 +79,7 @@ if ($action === 'stripe_intent') {
         jsonSuccess([
             'client_secret'     => $intent['client_secret'],
             'payment_intent_id' => $intent['id'],
-            'monto'             => $pedido['total'],
+            'monto'             => $montoACobrar,
         ]);
     } catch (RuntimeException $e) {
         appLog('error', 'Stripe intent error', ['error' => $e->getMessage()]);
@@ -58,8 +99,11 @@ if ($action === 'stripe_confirm') {
         $status = $intent['status'] ?? '';
 
         if ($status === 'succeeded') {
-            dbQuery("UPDATE pagos SET estado = 'aprobado' WHERE referencia_externa = ?", [$piId]);
-            dbUpdate('pedidos', ['estado' => 'pagado'], 'id = ?', [$pedidoId]);
+            $filasNuevas = dbUpdate('pagos', ['estado' => 'aprobado'], 'referencia_externa = ? AND estado != ?', [$piId, 'aprobado']);
+            if ($filasNuevas > 0) {
+                $pago = dbRow("SELECT monto FROM pagos WHERE referencia_externa = ?", [$piId]);
+                if ($pago) registrarPagoAprobado($pedidoId, (float)$pago['monto']);
+            }
             $pedido = dbRow("SELECT * FROM pedidos WHERE id = ?", [$pedidoId]);
             // Atómico: solo el primer proceso que llegue envía la notificación (evita duplicados)
             if ($pedido && dbUpdate('pedidos', ['notificacion_enviada' => 1], 'id = ? AND notificacion_enviada = 0', [$pedidoId]) > 0) {
@@ -98,10 +142,10 @@ if ($action === 'stripe_webhook') {
 
         if ($type === 'payment_intent.succeeded') {
             $piId = $object['id'];
-            dbQuery("UPDATE pagos SET estado = 'aprobado' WHERE referencia_externa = ?", [$piId]);
-            $pago = dbRow("SELECT pedido_id FROM pagos WHERE referencia_externa = ?", [$piId]);
+            $filasNuevas = dbUpdate('pagos', ['estado' => 'aprobado'], 'referencia_externa = ? AND estado != ?', [$piId, 'aprobado']);
+            $pago = dbRow("SELECT pedido_id, monto FROM pagos WHERE referencia_externa = ?", [$piId]);
             if ($pago) {
-                dbUpdate('pedidos', ['estado' => 'pagado'], 'id = ?', [$pago['pedido_id']]);
+                if ($filasNuevas > 0) registrarPagoAprobado((int)$pago['pedido_id'], (float)$pago['monto']);
                 $pedido = dbRow("SELECT * FROM pedidos WHERE id = ?", [$pago['pedido_id']]);
                 if ($pedido && dbUpdate('pedidos', ['notificacion_enviada' => 1], 'id = ? AND notificacion_enviada = 0', [$pago['pedido_id']]) > 0) {
                     try {
@@ -147,11 +191,12 @@ if ($action === 'paypal_webhook') {
             $orderId   = $resource['supplementary_data']['related_ids']['order_id'] ?? $resource['id'] ?? '';
             $captureId = $resource['id'] ?? '';
             if (strtoupper($resource['status'] ?? '') === 'COMPLETED' && $orderId) {
+                $pagoPrevio = dbRow("SELECT pedido_id, monto, estado FROM pagos WHERE referencia_externa = ?", [$orderId]);
+                $yaAprobado = $pagoPrevio && $pagoPrevio['estado'] === 'aprobado';
                 dbQuery("UPDATE pagos SET estado = 'aprobado', referencia_externa = ? WHERE referencia_externa = ?", [$captureId, $orderId]);
-                $pago = dbRow("SELECT pedido_id FROM pagos WHERE referencia_externa = ?", [$captureId])
-                     ?? dbRow("SELECT pedido_id FROM pagos WHERE referencia_externa = ?", [$orderId]);
+                $pago = $pagoPrevio ?? dbRow("SELECT pedido_id, monto FROM pagos WHERE referencia_externa = ?", [$captureId]);
                 if ($pago) {
-                    dbUpdate('pedidos', ['estado' => 'pagado'], 'id = ?', [$pago['pedido_id']]);
+                    if (!$yaAprobado) registrarPagoAprobado((int)$pago['pedido_id'], (float)$pago['monto']);
                     $pedido = dbRow("SELECT * FROM pedidos WHERE id = ?", [$pago['pedido_id']]);
                     if ($pedido && dbUpdate('pedidos', ['notificacion_enviada' => 1], 'id = ? AND notificacion_enviada = 0', [$pago['pedido_id']]) > 0) {
                         try {
@@ -206,11 +251,14 @@ if ($action === 'paypal_orden') {
     $pedido   = dbRow("SELECT * FROM pedidos WHERE id = ?", [$pedidoId]);
     if (!$pedido) jsonError('Pedido no encontrado', 404);
 
+    $montoACobrar = montoPendienteAPagar($pedido);
+    if ($montoACobrar <= 0) jsonError('Este pedido ya está liquidado', 400);
+
     $returnUrl = APP_URL . '/pago?status=success&pedido_id=' . $pedidoId;
     $cancelUrl = APP_URL . '/pago?status=cancel';
 
     try {
-        $order      = paypal()->crearOrden((float)$pedido['total'], $pedido['numero_pedido'], $returnUrl, $cancelUrl);
+        $order      = paypal()->crearOrden($montoACobrar, $pedido['numero_pedido'], $returnUrl, $cancelUrl);
         $orderId    = $order['id'] ?? '';
         $approveUrl = paypal()->getApproveUrl($order);
 
@@ -218,7 +266,7 @@ if ($action === 'paypal_orden') {
             'pedido_id'          => $pedidoId,
             'metodo'             => 'paypal',
             'referencia_externa' => $orderId,
-            'monto'              => $pedido['total'],
+            'monto'              => $montoACobrar,
             'moneda'             => 'MXN',
             'estado'             => 'pendiente',
         ]);
@@ -242,8 +290,11 @@ if ($action === 'paypal_capturar') {
         $status  = $capture['status'] ?? '';
 
         if ($status === 'COMPLETED') {
-            dbQuery("UPDATE pagos SET estado = 'aprobado' WHERE referencia_externa = ?", [$orderId]);
-            dbUpdate('pedidos', ['estado' => 'pagado'], 'id = ?', [$pedidoId]);
+            $filasNuevas = dbUpdate('pagos', ['estado' => 'aprobado'], 'referencia_externa = ? AND estado != ?', [$orderId, 'aprobado']);
+            if ($filasNuevas > 0) {
+                $pago = dbRow("SELECT monto FROM pagos WHERE referencia_externa = ?", [$orderId]);
+                if ($pago) registrarPagoAprobado($pedidoId, (float)$pago['monto']);
+            }
             $pedido = dbRow("SELECT * FROM pedidos WHERE id = ?", [$pedidoId]);
             // Atómico: solo el primer proceso que llegue envía la notificación (evita duplicados)
             if ($pedido && dbUpdate('pedidos', ['notificacion_enviada' => 1], 'id = ? AND notificacion_enviada = 0', [$pedidoId]) > 0) {
@@ -265,6 +316,32 @@ if ($action === 'paypal_capturar') {
     } catch (RuntimeException $e) {
         jsonError('Error capturando pago PayPal: ' . $e->getMessage(), 500);
     }
+}
+
+// ── Liquidar saldo manualmente (efectivo/transferencia/terminal) ──
+if ($action === 'marcar_saldo_manual') {
+    if ($method !== 'POST') jsonError('Método no permitido', 405);
+    requerirEmpleado();
+    $body     = $_jsonBody;
+    requireFields($body, ['pedido_id']);
+    $pedidoId = sanitizeInt($body['pedido_id']);
+    $pedido   = dbRow("SELECT id, total, monto_pagado, estado FROM pedidos WHERE id = ?", [$pedidoId]);
+    if (!$pedido) jsonError('Pedido no encontrado', 404);
+
+    $saldo = round((float)$pedido['total'] - (float)$pedido['monto_pagado'], 2);
+    if ($saldo <= 0) jsonError('Este pedido ya está liquidado', 400);
+
+    dbInsert('pagos', [
+        'pedido_id'          => $pedidoId,
+        'metodo'             => 'tarjeta',
+        'referencia_externa' => 'manual-' . date('YmdHis'),
+        'monto'              => $saldo,
+        'moneda'             => 'MXN',
+        'estado'             => 'aprobado',
+    ]);
+    registrarPagoAprobado($pedidoId, $saldo);
+
+    jsonSuccess(['mensaje' => 'Saldo registrado como pagado', 'monto' => $saldo]);
 }
 
 // ── GET: Listar pagos (admin/empleado) ────────────────

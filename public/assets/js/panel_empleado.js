@@ -1062,8 +1062,8 @@ async function cargarPedidosEmpleadoAPI() {
     const data = await apiFetch(`${API_BASE}/pedidos.php?limit=30`);
     if (!data.success) return;
 
-    const labMap = { pendiente:'Pendiente', pagado:'Pagado', en_produccion:'En Producción', listo:'Listo', entregado:'Entregado', cancelado:'Cancelado' };
-    const clsMap = { pendiente:'status-pending', pagado:'status-progress', en_produccion:'status-progress', listo:'status-info', entregado:'status-completed', cancelado:'status-disabled' };
+    const labMap = { pendiente:'Pendiente', anticipo_pagado:'Anticipo pagado', pagado:'Pagado', en_produccion:'En Producción', listo:'Listo', entregado:'Entregado', cancelado:'Cancelado' };
+    const clsMap = { pendiente:'status-pending', anticipo_pagado:'status-pending', pagado:'status-progress', en_produccion:'status-progress', listo:'status-info', entregado:'status-completed', cancelado:'status-disabled' };
 
     tbody.innerHTML = (data.pedidos || []).map(p => `
       <tr data-status="${p.estado}" data-id="${p.id}" data-entrega="${p.fecha_estimada||''}">
@@ -1078,7 +1078,7 @@ async function cargarPedidosEmpleadoAPI() {
             <i class="fa-solid fa-eye"></i> Ver
           </button>
           <select class="form-select" style="width:120px;font-size:12px;" data-onchange="actualizarEstadoPedidoEmp" data-id="${p.id}">
-            ${['pendiente','pagado','en_produccion','listo','entregado'].map(s =>
+            ${['pendiente','anticipo_pagado','pagado','en_produccion','listo','entregado'].map(s =>
               `<option value="${s}" ${s===p.estado?'selected':''}>${labMap[s]}</option>`
             ).join('')}
           </select>
@@ -1208,8 +1208,8 @@ async function verDetallePedidoEmp(id) {
       currentPedidoRow.dataset.entrega = p.tipo_entrega || '';
     }
 
-    const estadoLabels = { pendiente:'Pendiente',pagado:'Pagado ✓',en_produccion:'En Producción',listo:'Listo para entrega',entregado:'Entregado',cancelado:'Cancelado' };
-    const estadoClass  = { pendiente:'status-pending',pagado:'status-progress',en_produccion:'status-producing',listo:'status-ready',entregado:'status-completed',cancelado:'status-cancelled' };
+    const estadoLabels = { pendiente:'Pendiente',anticipo_pagado:'Anticipo pagado',pagado:'Pagado ✓',en_produccion:'En Producción',listo:'Listo para entrega',entregado:'Entregado',cancelado:'Cancelado' };
+    const estadoClass  = { pendiente:'status-pending',anticipo_pagado:'status-pending',pagado:'status-progress',en_produccion:'status-producing',listo:'status-ready',entregado:'status-completed',cancelado:'status-cancelled' };
     const est   = p.estado || 'pendiente';
     const cls   = estadoClass[est]  || 'status-pending';
     const label = estadoLabels[est] || est;
@@ -1257,6 +1257,17 @@ async function verDetallePedidoEmp(id) {
         </div>`).join('')
       : '<p style="color:var(--muted);font-style:italic;font-size:12px;padding:6px 0;">Sin pagos registrados</p>';
 
+    const saldoPendiente = p.tipo_pago === 'anticipo' ? Math.max(0, (p.total||0) - (p.monto_pagado||0)) : 0;
+    const saldoHtml = p.tipo_pago === 'anticipo'
+      ? `<div style="background:var(--bg);border-left:3px solid #c9a96e;border-radius:6px;padding:12px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+          <div>
+            <div style="font-weight:700;color:#c9a96e;margin-bottom:4px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Anticipo (50%)</div>
+            <div style="font-size:12px;color:var(--muted2);">Pagado: <strong>${money(p.monto_pagado||0)}</strong>${saldoPendiente>0?` · Saldo pendiente: <strong style="color:#c9a96e;">${money(saldoPendiente)}</strong>`:' · <strong style="color:var(--ok);">Liquidado</strong>'}</div>
+          </div>
+          ${saldoPendiente>0?`<button class="btn btn-secondary btn-small" data-call="marcarSaldoManualEmp" data-args="[${id}]"><i class="fa-solid fa-hand-holding-dollar"></i> Marcar saldo pagado</button>`:''}
+        </div>`
+      : '';
+
     body.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:18px;">
         <span class="status-badge ${cls}">${label}</span>
@@ -1280,6 +1291,8 @@ async function verDetallePedidoEmp(id) {
         </div>
       </div>
 
+      ${saldoHtml}
+
       <div style="margin-bottom:14px;">
         <div style="font-weight:700;color:var(--accent);margin-bottom:6px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Productos del Pedido</div>
         ${itemsHtml}
@@ -1292,6 +1305,25 @@ async function verDetallePedidoEmp(id) {
     `;
   } catch(e) {
     body.innerHTML = `<div style="color:var(--danger);padding:20px;text-align:center;"><i class="fa-solid fa-circle-exclamation"></i> Error: ${e.message}</div>`;
+  }
+}
+
+async function marcarSaldoManualEmp(id) {
+  if (!confirm('¿Confirmas que el saldo restante se cobró en efectivo, transferencia o terminal? Esto marcará el pedido como pagado.')) return;
+  try {
+    const data = await apiFetch(`${API_BASE}/pagos.php?action=marcar_saldo_manual`, {
+      method: 'POST',
+      body: JSON.stringify({ pedido_id: id }),
+    });
+    if (data.success) {
+      showNotification('<i class="fa-solid fa-circle-check"></i> Saldo registrado como pagado', 'success');
+      verDetallePedidoEmp(id);
+      cargarPedidosEmpleadoAPI();
+    } else {
+      showNotification('<i class="fa-solid fa-circle-xmark"></i> ' + (data.error || 'Error'), 'error');
+    }
+  } catch(e) {
+    showNotification('<i class="fa-solid fa-circle-xmark"></i> Error de conexión', 'error');
   }
 }
 
@@ -1490,5 +1522,6 @@ window.actualizarCotizacion = actualizarCotizacion;
 window.openStockModal     = openStockModal;
 window.deleteEvent        = deleteEvent;
 window.verDetallePedidoEmp = verDetallePedidoEmp;
+window.marcarSaldoManualEmp = marcarSaldoManualEmp;
 window.verDetalleCitaEmp  = verDetalleCitaEmp;
 window.verDetalleCotEmp   = verDetalleCotEmp;

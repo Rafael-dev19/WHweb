@@ -1992,15 +1992,16 @@ async function cargarPedidosAPI() {
     if (!data.success) return;
 
     const statusMap = {
-      pendiente:     'status-pending',
-      pagado:        'status-progress',
-      en_produccion: 'status-progress',
-      listo:         'status-info',
-      entregado:     'status-completed',
-      cancelado:     'status-disabled',
+      pendiente:       'status-pending',
+      anticipo_pagado: 'status-pending',
+      pagado:          'status-progress',
+      en_produccion:   'status-progress',
+      listo:           'status-info',
+      entregado:       'status-completed',
+      cancelado:       'status-disabled',
     };
     const labelMap = {
-      pendiente: 'Pendiente', pagado: 'Pagado', en_produccion: 'En Producción',
+      pendiente: 'Pendiente', anticipo_pagado: 'Anticipo pagado', pagado: 'Pagado', en_produccion: 'En Producción',
       listo: 'Listo', entregado: 'Entregado', cancelado: 'Cancelado',
     };
 
@@ -2017,7 +2018,7 @@ async function cargarPedidosAPI() {
             <i class="fa-solid fa-eye"></i> Ver
           </button>
           <select class="form-select" style="width:130px;font-size:12px;" data-onchange="actualizarEstadoPedido" data-id="${p.id}">
-            ${['pendiente','pagado','en_produccion','listo','entregado','cancelado'].map(s =>
+            ${['pendiente','anticipo_pagado','pagado','en_produccion','listo','entregado','cancelado'].map(s =>
               `<option value="${s}" ${s === p.estado ? 'selected' : ''}>${labelMap[s]}</option>`
             ).join('')}
           </select>
@@ -2129,8 +2130,8 @@ async function verDetallePedidoAdmin(id) {
     folio.textContent = p.numero_pedido;
     window._admPedId  = id;
 
-    const estadoLabels = { pendiente:'Pendiente',pagado:'Pagado ✓',en_produccion:'En Producción',listo:'Listo para entrega',entregado:'Entregado',cancelado:'Cancelado' };
-    const estadoClass  = { pendiente:'status-pending',pagado:'status-progress',en_produccion:'status-producing',listo:'status-ready',entregado:'status-completed',cancelado:'status-cancelled' };
+    const estadoLabels = { pendiente:'Pendiente',anticipo_pagado:'Anticipo pagado',pagado:'Pagado ✓',en_produccion:'En Producción',listo:'Listo para entrega',entregado:'Entregado',cancelado:'Cancelado' };
+    const estadoClass  = { pendiente:'status-pending',anticipo_pagado:'status-pending',pagado:'status-progress',en_produccion:'status-producing',listo:'status-ready',entregado:'status-completed',cancelado:'status-cancelled' };
     const est   = p.estado || 'pendiente';
     const label = estadoLabels[est] || est;
     const cls   = estadoClass[est]  || 'status-pending';
@@ -2170,6 +2171,17 @@ async function verDetallePedidoAdmin(id) {
         </table>`
       : '<p style="color:var(--muted);font-style:italic;font-size:12px;padding:8px 0;">Sin productos registrados</p>';
 
+    const saldoPendiente = p.tipo_pago === 'anticipo' ? Math.max(0, (p.total||0) - (p.monto_pagado||0)) : 0;
+    const saldoHtml = p.tipo_pago === 'anticipo'
+      ? `<div style="background:var(--bg);border-left:3px solid #c9a96e;border-radius:6px;padding:12px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+          <div>
+            <div style="font-weight:700;color:#c9a96e;margin-bottom:4px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Anticipo (50%)</div>
+            <div style="font-size:12px;color:var(--muted2);">Pagado: <strong>${money(p.monto_pagado||0)}</strong>${saldoPendiente>0?` · Saldo pendiente: <strong style="color:#c9a96e;">${money(saldoPendiente)}</strong>`:' · <strong style="color:var(--ok);">Liquidado</strong>'}</div>
+          </div>
+          ${saldoPendiente>0?`<button class="btn btn-secondary btn-small" data-call="marcarSaldoManualAdmin" data-args="[${id}]"><i class="fa-solid fa-hand-holding-dollar"></i> Marcar saldo pagado</button>`:''}
+        </div>`
+      : '';
+
     const pagos = p.pagos || [];
     const pagosHtml = pagos.length
       ? pagos.map(pg=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:1px solid var(--border);color:var(--muted2);">
@@ -2201,6 +2213,8 @@ async function verDetallePedidoAdmin(id) {
         </div>
       </div>
 
+      ${saldoHtml}
+
       <div style="margin-bottom:14px;">
         <div style="font-weight:700;color:var(--accent);margin-bottom:6px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Productos del Pedido</div>
         ${itemsHtml}
@@ -2214,7 +2228,7 @@ async function verDetallePedidoAdmin(id) {
       <div style="padding-top:14px;border-top:1px solid var(--border);">
         <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Cambiar Estado</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          ${['pendiente','pagado','en_produccion','listo','entregado','cancelado'].map(s=>{
+          ${['pendiente','anticipo_pagado','pagado','en_produccion','listo','entregado','cancelado'].map(s=>{
             const l2=estadoLabels[s]||s;
             const c2=estadoClass[s]||'status-pending';
             const isActive=s===est;
@@ -2226,6 +2240,25 @@ async function verDetallePedidoAdmin(id) {
     `;
   } catch(e) {
     body.innerHTML = `<div style="color:var(--danger);padding:20px;text-align:center;"><i class="fa-solid fa-circle-exclamation"></i> Error: ${e.message}</div>`;
+  }
+}
+
+async function marcarSaldoManualAdmin(id) {
+  if (!confirm('¿Confirmas que el saldo restante se cobró en efectivo, transferencia o terminal? Esto marcará el pedido como pagado.')) return;
+  try {
+    const data = await apiFetch(`${API_BASE}/pagos.php?action=marcar_saldo_manual`, {
+      method: 'POST',
+      body: JSON.stringify({ pedido_id: id }),
+    });
+    if (data.success) {
+      showNotification('✅ Saldo registrado como pagado', 'success');
+      verDetallePedidoAdmin(id);
+      cargarPedidosAPI();
+    } else {
+      showNotification('<i class="fa-solid fa-xmark"></i> ' + (data.error || 'Error'), 'error');
+    }
+  } catch(e) {
+    showNotification('<i class="fa-solid fa-xmark"></i> Error de conexión', 'error');
   }
 }
 
@@ -3241,6 +3274,7 @@ window.showSection = function(section, ev) {
 
 // ── Exponer funciones para event-delegation.js (data-call) ────
 window.verDetallePedidoAdmin  = verDetallePedidoAdmin;
+window.marcarSaldoManualAdmin = marcarSaldoManualAdmin;
 window.verDetalleCitaAdmin    = verDetalleCitaAdmin;
 window.cargarPedidosAPI       = cargarPedidosAPI;
 window.cambiarEstadoCotAdmin  = cambiarEstadoCotAdmin;

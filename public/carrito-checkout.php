@@ -158,6 +158,42 @@ header('Content-Type: text/html; charset=utf-8');
                 </div>
             </div>
 
+            <div class="section-card">
+                <h2 class="section-title">
+                  <span class="section-icon"><i class="fa-solid fa-money-bill-wave"></i></span> Forma de pago
+                  <span class="wh-help" data-tip="Puedes pagar tu pedido completo ahora, o solo el 50% de anticipo para iniciar la fabricación y liquidar el resto después (en línea o al recibir tu pedido).">?</span>
+                </h2>
+                <div class="delivery-options">
+
+                    <div class="option-card selected" id="optionPagoCompleto" data-tipopago="completo">
+                        <input type="radio" name="tipoPago" value="completo" checked>
+                        <div class="option-content">
+                            <div class="option-header">
+                                <span class="option-title">Pago completo</span>
+                                <span class="option-price">100%</span>
+                            </div>
+                            <div class="option-description">
+                                Pagas el total de tu pedido ahora.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="option-card" id="optionAnticipo" data-tipopago="anticipo">
+                        <input type="radio" name="tipoPago" value="anticipo">
+                        <div class="option-content">
+                            <div class="option-header">
+                                <span class="option-title">Anticipo del 50%</span>
+                                <span class="option-price" id="precioAnticipoLabel">50%</span>
+                            </div>
+                            <div class="option-description">
+                                Pagas la mitad ahora para iniciar la fabricación. El resto se liquida después, antes de la entrega.
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
             <!-- ── SELECTOR DE FECHA ──────────────────────────── -->
             <div class="section-card">
                 <h2 class="section-title">
@@ -298,8 +334,16 @@ header('Content-Type: text/html; charset=utf-8');
                 <span id="costoInstalacionTotal">$1,500</span>
             </div>
             <div class="summary-total">
-                <span>Total a pagar</span>
+                <span>Total del pedido</span>
                 <span id="totalFinal">$0</span>
+            </div>
+            <div class="summary-item" id="lineaAnticipo" style="display:none">
+                <span><i class="fa-solid fa-circle-info" style="color:#8b7355;"></i> Pagas ahora (anticipo 50%)</span>
+                <span id="montoAnticipo">$0</span>
+            </div>
+            <div class="summary-item" id="lineaSaldoPendiente" style="display:none">
+                <span>Saldo pendiente (después)</span>
+                <span id="montoSaldoPendiente">$0</span>
             </div>
 
             <div class="fecha-resumen-box" id="fechaResumenBox">

@@ -102,6 +102,13 @@
       return;
     }
 
+    // [data-tipopago="completo|anticipo"] → seleccionarTipoPago() en carrito
+    t = e.target.closest('[data-tipopago]');
+    if (t) {
+      if (typeof window.seleccionarTipoPago === 'function') window.seleccionarTipoPago(t.dataset.tipopago);
+      return;
+    }
+
     // [data-tab-goto="tabName"] → activa el tab directamente
     t = e.target.closest('[data-tab-goto]');
     if (t) {

@@ -103,7 +103,7 @@ async function trackOrder() {
     const folio = item.numero_pedido || item.numero_cita || item.numero_cotizacion || trackingNumber;
 
     const estadoLabels = {
-      nueva:'Nueva', pendiente:'Pendiente', pagado:'Pago confirmado',
+      nueva:'Nueva', pendiente:'Pendiente', anticipo_pagado:'Anticipo pagado', pagado:'Pago confirmado',
       en_produccion:'En producción', listo:'Listo para entrega',
       entregado:'Entregado', cancelado:'Cancelado',
       en_revision:'En revisión', respondida:'Respondida', cerrada:'Cerrada',
@@ -117,7 +117,7 @@ async function trackOrder() {
     if (data.pedido && est !== 'cancelado') {
       const stages      = ['pendiente','pagado','en_produccion','listo','entregado'];
       const stageLabels = ['Recibido','Pagado','En fab.','Listo','Entregado'];
-      const stageIdx    = stages.indexOf(est);
+      const stageIdx    = stages.indexOf(est === 'anticipo_pagado' ? 'pendiente' : est);
       timelineHtml = `
         <div class="track-timeline">
           <div class="track-timeline-label">Progreso del pedido</div>
@@ -160,6 +160,22 @@ async function trackOrder() {
             ${new Intl.NumberFormat('es-MX', { style:'currency', currency:'MXN' }).format(item.total)}
           </div>
         </div>`;
+
+      if (item.tipo_pago === 'anticipo') {
+        const saldoPendiente = Math.max(0, (item.total || 0) - (item.monto_pagado || 0));
+        infoItems += `
+          <div class="track-info-item">
+            <div class="track-info-label">Pagado</div>
+            <div class="track-info-value">${new Intl.NumberFormat('es-MX', { style:'currency', currency:'MXN' }).format(item.monto_pagado || 0)}</div>
+          </div>`;
+        if (saldoPendiente > 0.009) infoItems += `
+          <div class="track-info-item">
+            <div class="track-info-label">Saldo pendiente</div>
+            <div class="track-info-value" style="color:#e0a050;font-size:16px;">
+              ${new Intl.NumberFormat('es-MX', { style:'currency', currency:'MXN' }).format(saldoPendiente)}
+            </div>
+          </div>`;
+      }
     }
 
     if (data.cita) {
@@ -189,6 +205,14 @@ async function trackOrder() {
         </div>`;
     }
 
+    const saldoPendienteBtn = (data.pedido && item.tipo_pago === 'anticipo' && Math.max(0, (item.total || 0) - (item.monto_pagado || 0)) > 0.009)
+      ? `<div style="text-align:center;margin-top:16px;">
+           <a href="/pago?modo=saldo&numero=${encodeURIComponent(item.numero_pedido)}" class="btn-track" style="display:inline-flex;text-decoration:none;">
+             <i class="fa-solid fa-credit-card"></i> Pagar saldo pendiente
+           </a>
+         </div>`
+      : '';
+
     if (resultBox) {
       resultBox.innerHTML = `
         <div class="track-result-card">
@@ -204,6 +228,7 @@ async function trackOrder() {
           <div class="track-result-body">
             ${timelineHtml}
             <div class="track-info-grid">${infoItems}</div>
+            ${saldoPendienteBtn}
           </div>
           <div class="track-result-footer">
             <i class="fa-solid fa-envelope"></i>

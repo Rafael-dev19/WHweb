@@ -470,3 +470,14 @@ CREATE TABLE IF NOT EXISTS carritos_guardados (
   INDEX idx_session  (session_token),
   INDEX idx_fecha    (fecha_guardado)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ================================================================
+-- ANTICIPO / PAGO PARCIAL (ejecutar en instalaciones existentes)
+-- tipo_pago: elegido por el cliente en el carrito (completo o 50% anticipo)
+-- monto_pagado: suma de pagos aprobados (stripe/paypal/manual) para el pedido
+-- estado 'anticipo_pagado': se pagó el anticipo, falta liquidar el saldo
+-- ================================================================
+ALTER TABLE pedidos ADD COLUMN tipo_pago ENUM('completo','anticipo') NOT NULL DEFAULT 'completo' AFTER total;
+ALTER TABLE pedidos ADD COLUMN monto_pagado DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER tipo_pago;
+ALTER TABLE pedidos MODIFY COLUMN estado ENUM('pendiente','anticipo_pagado','pagado','en_produccion','listo','entregado','cancelado')
+  NOT NULL DEFAULT 'pendiente';

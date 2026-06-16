@@ -23,8 +23,61 @@ let orderData    = null;
 
 initMenuHamburguesa();
 document.addEventListener('DOMContentLoaded', () => {
-  cargarResumen();
+  const params = new URLSearchParams(window.location.search);
+  const numero = params.get('numero');
+  if (params.get('modo') === 'saldo' && numero) {
+    cargarResumenSaldo(numero);
+  } else {
+    cargarResumen();
+  }
 });
+
+// ── Resumen: pagar el saldo pendiente de un pedido existente ──────
+async function cargarResumenSaldo(numeroPedido) {
+  try {
+    const res  = await fetch(`${API_BASE}/pedidos.php?numero=${encodeURIComponent(numeroPedido)}`);
+    const data = await res.json();
+    if (!data.success || !data.pedido) throw new Error('Pedido no encontrado');
+
+    const p     = data.pedido;
+    const saldo = Math.round((p.total - (p.monto_pagado || 0)) * 100) / 100;
+
+    if (saldo <= 0) {
+      const notice = document.getElementById('noticeBox');
+      notice.innerHTML = '<strong><i class="fa-solid fa-circle-check"></i> Este pedido ya está completamente pagado.</strong>';
+      notice.style.display = 'block';
+      document.getElementById('btnStripe')?.setAttribute('disabled', true);
+      return;
+    }
+
+    pedidoCreado = { pedido_id: p.id, numero_pedido: p.numero_pedido };
+    orderData    = { esSaldo: true, total: saldo };
+
+    const banner = document.getElementById('tipoPagoBanner');
+    if (banner) {
+      banner.style.display = 'block';
+      banner.innerHTML = `<i class="fa-solid fa-circle-info"></i> Pagando el saldo pendiente del pedido <strong>${esc(p.numero_pedido)}</strong> — `
+        + `Total del pedido: ${formatCurrency(p.total)} · Ya pagado: ${formatCurrency(p.monto_pagado || 0)}`;
+    }
+
+    document.getElementById('shippingLine').style.display = 'none';
+    setText('subtotalDisplay', '—');
+    setText('totalDisplay',    `<strong>${formatCurrency(saldo)}</strong>`);
+
+    const itemsEl = document.getElementById('cart-items-summary');
+    if (itemsEl) {
+      itemsEl.innerHTML = `<div class="summary-item"><span>Saldo pendiente</span><span>${formatCurrency(saldo)}</span></div>`;
+    }
+
+    initStripe();
+    initPayPal();
+  } catch (err) {
+    const notice = document.getElementById('noticeBox');
+    notice.innerHTML = '<strong><i class="fa-solid fa-triangle-exclamation"></i> No se pudo cargar la información del pedido.</strong>';
+    notice.style.display = 'block';
+    document.getElementById('btnStripe')?.setAttribute('disabled', true);
+  }
+}
 
 // ── Resumen del pedido ────────────────────────────────────────────
 function cargarResumen() {
@@ -78,6 +131,16 @@ function cargarResumen() {
     setText('installationDisplay', formatCurrency(instalacion));
   }
 
+  if (checkout.tipo_pago === 'anticipo') {
+    const montoAnticipo = Math.round(total * 0.5 * 100) / 100;
+    const banner = document.getElementById('tipoPagoBanner');
+    if (banner) {
+      banner.style.display = 'block';
+      banner.innerHTML = `<i class="fa-solid fa-circle-info"></i> Pagando anticipo del 50% — `
+        + `Pagas ahora: <strong>${formatCurrency(montoAnticipo)}</strong> · Saldo pendiente: ${formatCurrency(total - montoAnticipo)}`;
+    }
+  }
+
   const itemsEl = document.getElementById('cart-items-summary');
   if (itemsEl) {
     itemsEl.innerHTML = carrito.map(i => `
@@ -111,6 +174,7 @@ function cargarResumen() {
       instalacion: !!checkout.incluye_instalacion,
     },
     subtotal, envio, instalacion, descuento: 0, total,
+    tipoPago: checkout.tipo_pago === 'anticipo' ? 'anticipo' : 'completo',
   };
 
   initStripe();
@@ -285,6 +349,7 @@ async function crearPedidoEnBD() {
       incluye_instalacion: !!orderData.deliveryData.instalacion,
       items:               orderData.carrito.map(i => ({ producto_id: i.id, cantidad: i.cantidad })),
       descuento:           orderData.descuento || 0,
+      tipo_pago:           orderData.tipoPago || 'completo',
     };
 
     const res  = await fetch(`${API_BASE}/pedidos.php`, {

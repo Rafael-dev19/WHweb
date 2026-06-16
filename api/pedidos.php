@@ -16,6 +16,7 @@ switch ($method) {
                 "SELECT id, numero_pedido, nombre_cliente, correo_cliente, telefono_cliente,
                         tipo_entrega, direccion_envio, incluye_instalacion, estado,
                         subtotal, costo_envio, costo_instalacion, descuento, total,
+                        tipo_pago, monto_pagado,
                         fecha_estimada, fecha_creacion, notas
                  FROM pedidos WHERE numero_pedido = ?",
                 [$numero]
@@ -35,6 +36,7 @@ switch ($method) {
                 "SELECT id, numero_pedido, nombre_cliente, correo_cliente, telefono_cliente,
                         tipo_entrega, direccion_envio, incluye_instalacion, estado,
                         subtotal, costo_envio, costo_instalacion, descuento, total,
+                        tipo_pago, monto_pagado,
                         fecha_estimada, fecha_creacion, notas
                  FROM pedidos WHERE token_seguimiento = ?",
                 [$token]
@@ -72,7 +74,7 @@ switch ($method) {
         $desde  = preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['fecha_desde'] ?? '') ? $_GET['fecha_desde'] : '';
         $hasta  = preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['fecha_hasta'] ?? '') ? $_GET['fecha_hasta'] : '';
 
-        $estadosValidos = ['pendiente','pagado','en_produccion','listo','entregado','cancelado'];
+        $estadosValidos = ['pendiente','anticipo_pagado','pagado','en_produccion','listo','entregado','cancelado'];
         if ($estado && !in_array($estado, $estadosValidos, true)) $estado = '';
 
         $where = ['1=1']; $params = [];
@@ -140,6 +142,8 @@ switch ($method) {
         $descuento        = max(0, sanitizeFloat($body['descuento'] ?? 0));
         $total            = $subtotal + $costoEnvio + $costoInstalacion - $descuento;
 
+        $tipoPago = ($body['tipo_pago'] ?? 'completo') === 'anticipo' ? 'anticipo' : 'completo';
+
         $numeroPedido = generarNumeroPedido();
         $tokenSeg     = generarTokenSeguimiento();
         $totalProductos = array_sum(array_column(array_map(fn($i) => ['c' => $i['cantidad']], $itemsData), 'c'));
@@ -169,6 +173,8 @@ switch ($method) {
             try { dbRows("SELECT colonia_envio FROM pedidos LIMIT 0"); $tieneColonia      = true; } catch (Exception $e) {}
             $tieneMunicipio = false;
             try { dbRows("SELECT municipio_envio FROM pedidos LIMIT 0"); $tieneMunicipio  = true; } catch (Exception $e) {}
+            $tieneTipoPago = false;
+            try { dbRows("SELECT tipo_pago FROM pedidos LIMIT 0"); $tieneTipoPago = true; } catch (Exception $e) {}
 
             $datosPedido = [
                 'numero_pedido'       => $numeroPedido,
@@ -198,6 +204,9 @@ switch ($method) {
             }
             if ($tieneMunicipio) {
                 $datosPedido['municipio_envio'] = $municipioEnvio;
+            }
+            if ($tieneTipoPago) {
+                $datosPedido['tipo_pago'] = $tipoPago;
             }
 
             $clienteSession = sesionClienteActiva();
@@ -247,6 +256,8 @@ switch ($method) {
             'numero_pedido'     => $numeroPedido,
             'token_seguimiento' => $tokenSeg,
             'total'             => $total,
+            'tipo_pago'         => $tipoPago,
+            'monto_a_pagar'     => $tipoPago === 'anticipo' ? round($total * 0.5, 2) : $total,
             'fecha_estimada'    => $fechaEst,
         ], 201);
         break;
@@ -259,7 +270,7 @@ switch ($method) {
 
         $body   = getJsonBody();
         $update = [];
-        $estadiosValidos = ['pendiente', 'pagado', 'en_produccion', 'listo', 'entregado', 'cancelado'];
+        $estadiosValidos = ['pendiente', 'anticipo_pagado', 'pagado', 'en_produccion', 'listo', 'entregado', 'cancelado'];
 
         if (isset($body['estado'])) {
             if (!in_array($body['estado'], $estadiosValidos)) jsonError('Estado inválido', 422);

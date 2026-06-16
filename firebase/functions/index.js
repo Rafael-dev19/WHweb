@@ -176,6 +176,9 @@ function emailPedidoConfirmado(pedido) {
   const subtotal  = Number(pedido.subtotal  || 0);
   const descuento = Number(pedido.descuento || 0);
   const total     = Number(pedido.total     || 0);
+  const esAnticipo    = pedido.tipo_pago === 'anticipo';
+  const montoPagado   = Number(pedido.monto_pagado || 0);
+  const saldoPendiente = Math.max(0, total - montoPagado);
 
   const itemsHtml = (pedido.items || []).map(item => `
     <tr>
@@ -246,6 +249,17 @@ function emailPedidoConfirmado(pedido) {
   </tr>
 </table>
 
+${esAnticipo ? `
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:20px;background:#faf6f0;border-left:4px solid #8B6914;border-radius:4px;">
+  <tr>
+    <td style="padding:14px 18px;">
+      <strong style="color:#5C3D11;">💳 Pagaste un anticipo del 50%</strong><br>
+      <span style="color:#666;font-size:13px;">Pagado ahora: <strong>${fmt(montoPagado)}</strong> · Saldo pendiente: <strong style="color:#8B6914;">${fmt(saldoPendiente)}</strong></span><br>
+      <span style="color:#888;font-size:12px;">El saldo se liquida antes de la entrega — puedes pagarlo en línea desde tu página de seguimiento o al recibir tu pedido.</span>
+    </td>
+  </tr>
+</table>` : ''}
+
 <p style="color:#555;"><strong>📅 Semana estimada de entrega:</strong> ${fecha}</p>
 
 <!-- Ticket de pago -->
@@ -286,19 +300,24 @@ function emailEstadoPedido(pedido, estadoAnterior) {
   const nombre = pedido.nombre_cliente || '';
 
   const estadoLabels = {
-    pendiente:     'Pendiente de pago',
-    pagado:        'Pago confirmado ✓',
-    en_produccion: 'En producción 🔨',
-    listo:         'Listo para entrega 📦',
-    entregado:     'Entregado ✅',
-    cancelado:     'Cancelado ❌',
+    pendiente:        'Pendiente de pago',
+    anticipo_pagado:  'Anticipo pagado (50%)',
+    pagado:           'Pago confirmado ✓',
+    en_produccion:    'En producción 🔨',
+    listo:            'Listo para entrega 📦',
+    entregado:        'Entregado ✅',
+    cancelado:        'Cancelado ❌',
   };
 
-  const estadoActual = pedido.estado || '';
-  const label        = estadoLabels[estadoActual] || estadoActual;
+  const estadoActual       = pedido.estado || '';
+  const label              = estadoLabels[estadoActual] || estadoActual;
+  const esLiquidacionSaldo = estadoActual === 'pagado' && estadoAnterior === 'anticipo_pagado';
 
   const mensajes = {
-    pagado:        'Hemos confirmado tu pago. Pronto comenzaremos a fabricar tus muebles.',
+    anticipo_pagado: 'Hemos confirmado tu anticipo del 50%. Comenzaremos a fabricar tus muebles. El saldo restante se liquida antes de la entrega.',
+    pagado:        esLiquidacionSaldo
+      ? '¡Hemos confirmado el pago de tu saldo! Tu pedido ya está completamente liquidado.'
+      : 'Hemos confirmado tu pago. Pronto comenzaremos a fabricar tus muebles.',
     en_produccion: 'Tu pedido está siendo fabricado por nuestros artesanos.',
     listo:         'Tu pedido está listo. Nos pondremos en contacto para coordinar la entrega.',
     entregado:     '¡Tu pedido ha sido entregado! Esperamos que disfrutes tus nuevos muebles.',
@@ -452,7 +471,13 @@ function emailAdminNuevoEvento(tipo, datos) {
        </tr>`
     ).join('');
 
-    subject = `🛒 Nuevo pedido ${folio} — ${total}`;
+    const esAnticipoAdmin = datos.tipo_pago === 'anticipo';
+    const montoPagadoAdmin = Number(datos.monto_pagado || 0);
+    const saldoAdmin        = Math.max(0, Number(datos.total || 0) - montoPagadoAdmin);
+
+    subject = esAnticipoAdmin
+      ? `🛒 Nuevo pedido ${folio} — Anticipo ${fmt(montoPagadoAdmin)} de ${total}`
+      : `🛒 Nuevo pedido ${folio} — ${total}`;
     body = `
 <h2 style="color:#8B6914;margin-top:0;">Nuevo pedido recibido</h2>
 <p style="color:#555;">Se acaba de confirmar un pedido en tu tienda.</p>
@@ -502,6 +527,12 @@ function emailAdminNuevoEvento(tipo, datos) {
   ${descuento > 0 ? `<tr><td style="padding:5px 10px;color:#3d8b3d;">Descuento:</td><td style="padding:5px 10px;text-align:right;color:#3d8b3d;">-${fmt(descuento)}</td></tr>` : ''}
   <tr style="background:#f0e8d8;"><td style="padding:10px;font-weight:bold;color:#5C3D11;">TOTAL:</td><td style="padding:10px;text-align:right;font-weight:bold;font-size:18px;color:#8B6914;">${total}</td></tr>
 </table>
+
+${esAnticipoAdmin ? `
+<div style="background:#fdf3e0;border-left:4px solid #c9a96e;padding:12px 16px;margin-bottom:16px;border-radius:4px;font-size:13px;">
+  <p style="margin:3px 0;"><strong>⚠️ Pago parcial — anticipo del 50%</strong></p>
+  <p style="margin:3px 0;color:#666;">Recibido: <strong>${fmt(montoPagadoAdmin)}</strong> · Saldo pendiente: <strong style="color:#c9a96e;">${fmt(saldoAdmin)}</strong></p>
+</div>` : ''}
 
 <p style="margin:20px 0 8px;color:#555;">📅 <strong>Fecha estimada de entrega:</strong> ${datos.fecha_estimada || 'Por confirmar'}</p>
 ${datos.notas ? `<p style="color:#555;">📝 <strong>Notas del cliente:</strong> ${datos.notas}</p>` : ''}
