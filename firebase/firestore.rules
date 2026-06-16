@@ -14,8 +14,11 @@ service cloud.firestore {
                     && request.resource.data.titulo.size() <= 200
                     && request.resource.data.mensaje is string
                     && request.resource.data.mensaje.size() <= 1000;
-      allow update: if request.auth != null
-                    && request.resource.data.diff(resource.data).affectedKeys()
+      // El backend PHP también marca notificaciones como leídas vía REST API
+      // con API key (sin auth token) — por eso esta regla tampoco puede exigir
+      // request.auth. La protección real es que solo se puede tocar 'leida'/
+      // 'fecha_leida', nunca el resto de los campos del documento.
+      allow update: if request.resource.data.diff(resource.data).affectedKeys()
                          .hasOnly(['leida','fecha_leida']);
       allow delete: if request.auth != null;
     }
