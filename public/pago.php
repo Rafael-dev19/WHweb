@@ -30,8 +30,6 @@ if (!$paypalId)  error_log('[pago.php] PAYPAL_CLIENT_ID vacío o no definido');
   <title>Proceso de Pago - Wooden House</title>
   <meta name="description" content="Completa tu compra en Wooden House de forma segura. Pago con tarjeta de crédito/débito o PayPal. Transacciones cifradas con SSL.">
 
-  <link rel="icon" href="/assets/img/favicon.ico">
-
   <!-- Credenciales inyectadas desde .env — leídas por pago.js desde data attributes -->
   <div id="payment-config"
        data-stripe-pk="<?= htmlspecialchars($stripePk, ENT_QUOTES, 'UTF-8') ?>"
