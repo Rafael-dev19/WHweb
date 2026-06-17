@@ -300,10 +300,21 @@ function _destruirSesionCliente(): void {
         $_SESSION['_cliente_login_time']
     );
     if (empty($_SESSION['usuario_id'])) {
-        $p = session_get_cookie_params();
-        setcookie('XSRF-TOKEN', '', time() - 86400, '/', $p['domain'], true, false);
-        unset($_SESSION['_csrf']);
         session_regenerate_id(true);
+        // Emite un token CSRF fresco — el modal de login (misma página, sin reload)
+        // necesita un token válido en la cookie para el siguiente POST de autenticación.
+        // Borrar la cookie aquí causaría un 403 inmediato al volver a iniciar sesión.
+        $nuevoCsrf = bin2hex(random_bytes(32));
+        $_SESSION['_csrf'] = $nuevoCsrf;
+        $p = session_get_cookie_params();
+        setcookie('XSRF-TOKEN', $nuevoCsrf, [
+            'expires'  => 0,
+            'path'     => '/',
+            'domain'   => $p['domain'],
+            'secure'   => $p['secure'],
+            'httponly' => false,
+            'samesite' => 'Strict',
+        ]);
     }
 }
 
@@ -315,10 +326,18 @@ function _destruirSesionPersonal(): void {
         $_SESSION['_usuario_login_time']
     );
     if (empty($_SESSION['cliente_id'])) {
-        $p = session_get_cookie_params();
-        setcookie('XSRF-TOKEN', '', time() - 86400, '/', $p['domain'], true, false);
-        unset($_SESSION['_csrf']);
         session_regenerate_id(true);
+        $nuevoCsrf = bin2hex(random_bytes(32));
+        $_SESSION['_csrf'] = $nuevoCsrf;
+        $p = session_get_cookie_params();
+        setcookie('XSRF-TOKEN', $nuevoCsrf, [
+            'expires'  => 0,
+            'path'     => '/',
+            'domain'   => $p['domain'],
+            'secure'   => $p['secure'],
+            'httponly' => false,
+            'samesite' => 'Strict',
+        ]);
     }
 }
 
