@@ -236,6 +236,52 @@
 }
 .auth-switch-link a:hover { color: #e0c080; text-decoration: underline; }
 
+/* ── Divisor "o continúa con" ────────────────────────────────────── */
+.auth-social-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 20px 0 14px;
+  font-size: 12px;
+  color: #666;
+}
+.auth-social-divider::before,
+.auth-social-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #3a3a3a;
+}
+
+/* ── Botón de Google ─────────────────────────────────────────────── */
+.btn-auth-google {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 13px 20px;
+  background: #fff;
+  color: #3c4043;
+  border: 1.5px solid #dadce0;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+  font-family: inherit;
+  margin-bottom: 4px;
+}
+.btn-auth-google:hover:not(:disabled) {
+  background: #f8f9fa;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+}
+.btn-auth-google:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+.btn-auth-google svg { flex-shrink: 0; }
+
 /* ── Pie de modal ────────────────────────────────────────────────── */
 .auth-modal-footer {
   text-align: center;

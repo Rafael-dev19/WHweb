@@ -1074,6 +1074,7 @@ unset($_usuario);
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
   <script src="../assets/<?= av('js/firebase-config.js') ?>"></script>
   <!-- ═══ MODAL: DETALLE PEDIDO (admin) ══════════════════════════ -->
   <div class="modal" id="adminPedidoDetalleModal">

@@ -1,4 +1,5 @@
-// public/assets/js/firebase-config.js — Firebase SDK compat init
+// firebase-config.js — SDK Firebase: compat para paneles, modular para páginas públicas
+
 const firebaseConfig = {
   apiKey:            "AIzaSyA0G4QZuxw0l7hH82SW_Y8_UurYsqyrMGs",
   authDomain:        "woodenhouse-898de.firebaseapp.com",
@@ -9,74 +10,87 @@ const firebaseConfig = {
   measurementId:     "G-LTQWQQ44ZH"
 };
 
-let firebaseApp;
-let firebaseAuth;
-let firebaseFirestore;
-let firebaseStorage;
+// Site key pública de reCAPTCHA v3 (Firebase App Check)
+const RECAPTCHA_SITE_KEY = '6LfSEyQtAAAAAPlm7sa3YbiMud-WSre2hTYVwzSW';
+
+window.firebaseConfig = firebaseConfig;
+
+// ── Inicialización según contexto ─────────────────────────────────
 
 function initFirebase() {
-  if (typeof firebase === 'undefined') {
-    console.error('[Firebase] SDK no cargado.');
-    return false;
+  if (typeof window.firebase !== 'undefined') {
+    // ── Paneles: compat SDK ya cargado vía CDN en el HTML ──────────
+    const fb  = window.firebase;
+    const app = fb.apps.length ? fb.apps[0] : fb.initializeApp(firebaseConfig);
+
+    // App Check debe activarse ANTES de auth/firestore/storage
+    if (typeof fb.appCheck === 'function') {
+      try {
+        fb.appCheck().activate(RECAPTCHA_SITE_KEY, true);
+      } catch (e) {
+        console.warn('[AppCheck] activate error:', e);
+      }
+    }
+
+    window.firebaseApp  = app;
+    window.firebaseAuth = fb.auth();
+    if (typeof fb.firestore === 'function')
+      window.firebaseFirestore = fb.firestore();
+    if (typeof fb.storage  === 'function')
+      window.firebaseStorage   = fb.storage();
+
+    return true;
   }
 
-  firebaseApp = firebase.apps.length
-    ? firebase.apps[0]
-    : firebase.initializeApp(firebaseConfig);
+  // ── Páginas públicas: SDK modular ─────────────────────────────────
+  Promise.all([
+    import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js'),
+    import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js'),
+    import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js'),
+  ]).then(([
+    { initializeApp, getApps, getApp },
+    { getAuth },
+    { initializeAppCheck, ReCaptchaV3Provider },
+  ]) => {
+    const app  = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-  firebaseAuth = firebase.auth();
-  window.firebaseAuth = firebaseAuth;
+    // App Check antes que auth
+    initializeAppCheck(app, {
+      provider: new ReCaptchaV3Provider(RECAPTCHA_SITE_KEY),
+      isTokenAutoRefreshEnabled: true,
+    });
 
-  if (typeof firebase.firestore === 'function') {
-    firebaseFirestore = firebase.firestore();
-    window.firebaseFirestore = firebaseFirestore;
-  }
+    window.firebaseApp  = app;
+    window.firebaseAuth = getAuth(app);
+  }).catch(err => console.warn('[Firebase] init modular error:', err));
 
-  if (typeof firebase.storage === 'function') {
-    firebaseStorage = firebase.storage();
-    window.firebaseStorage = firebaseStorage;
-  }
-
-  return true;
+  return false;
 }
 
-if (typeof firebase !== 'undefined') {
-  initFirebase();
-}
+initFirebase();
+window.initFirebase = initFirebase;
 
-// ── Helpers ────────────────────────────────────────────────────
-
-async function loginConFirebase(email, password) {
-  if (!firebaseAuth) throw new Error('Firebase Auth no inicializado');
-  const credential = await firebaseAuth.signInWithEmailAndPassword(email, password);
-  const idToken    = await credential.user.getIdToken(true);
-
-  const response = await fetch('/api/auth.php?action=login', {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ firebase_token: idToken }),
-  });
-
-  const contentType = response.headers.get('content-type') || '';
-  if (!contentType.includes('application/json')) {
-    throw new Error('La API no respondio con JSON. Verifica que /api/ sea accesible.');
-  }
-
-  const data = await response.json();
-  if (!data.success) throw new Error(data.error || 'Error de autenticacion');
-  return { ...data, idToken };
-}
+// ── Helpers ───────────────────────────────────────────────────────
 
 async function getFirebaseToken() {
-  if (!firebaseAuth) return null;
-  const user = firebaseAuth.currentUser;
+  const auth = window.firebaseAuth;
+  if (!auth) return null;
+  const user = auth.currentUser;
   if (!user) return null;
   return await user.getIdToken(true);
 }
 
 async function logoutFirebase() {
-  if (firebaseAuth) await firebaseAuth.signOut();
-  await fetch('/api/auth.php?action=logout', { method: 'POST' });
+  const auth = window.firebaseAuth;
+  if (auth) {
+    if (typeof auth.signOut === 'function') {
+      await auth.signOut();  // compat (paneles)
+    } else {
+      const { signOut } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js');
+      await signOut(auth);   // modular (páginas públicas)
+    }
+  }
+  await fetch('/api/auth.php?action=logout', { method: 'POST' }).catch(() => {});
 }
 
 async function authFetch(url, options = {}) {
@@ -88,9 +102,6 @@ async function authFetch(url, options = {}) {
   return fetch(url, options);
 }
 
-window.firebaseConfig   = firebaseConfig;
-window.initFirebase     = initFirebase;
-window.loginConFirebase = loginConFirebase;
 window.getFirebaseToken = getFirebaseToken;
 window.logoutFirebase   = logoutFirebase;
 window.authFetch        = authFetch;
