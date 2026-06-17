@@ -57,6 +57,11 @@ if (session_status() === PHP_SESSION_NONE) {
     if (isset($_SESSION['_last_activity'])
         && (time() - $_SESSION['_last_activity']) > SESSION_IDLE_TIMEOUT) {
         $teniaSesion = !empty($_SESSION['cliente_id']) || !empty($_SESSION['usuario_id']);
+        // El token CSRF ya emitido sigue siendo válido para la petición en curso
+        // (es la que el navegador trae en la cookie ahora mismo) — conservarlo
+        // evita que el propio reinicio de sesión por inactividad cause un 403
+        // falso en la acción que el usuario está ejecutando justo en este momento.
+        $csrfPrevio = $_SESSION['_csrf'] ?? null;
         session_unset();
         session_destroy();
         session_start();
@@ -64,6 +69,9 @@ if (session_status() === PHP_SESSION_NONE) {
         $_SESSION['_initiated']     = true;
         $_SESSION['_created']       = time();
         $_SESSION['_last_activity'] = time();
+        if ($csrfPrevio) {
+            $_SESSION['_csrf'] = $csrfPrevio;
+        }
         if ($teniaSesion) {
             $_SESSION['_session_expired'] = true;
         }
@@ -73,6 +81,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
     // ── Timeout absoluto (2 horas) ────────────────────────────────
     if (isset($_SESSION['_created']) && (time() - $_SESSION['_created']) > 7200) {
+        $csrfPrevio = $_SESSION['_csrf'] ?? null;
         session_unset();
         session_destroy();
         session_start();
@@ -80,6 +89,9 @@ if (session_status() === PHP_SESSION_NONE) {
         $_SESSION['_initiated']     = true;
         $_SESSION['_created']       = time();
         $_SESSION['_last_activity'] = time();
+        if ($csrfPrevio) {
+            $_SESSION['_csrf'] = $csrfPrevio;
+        }
     }
 
     // ── CSRF: emitir token en cada visita (patrón double-submit cookie) ──
