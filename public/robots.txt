@@ -30,6 +30,10 @@ Disallow: /.env
 # Sitemap
 Sitemap: https://muebleswh.com/sitemap.xml
 
+# Páginas legales — permitir indexación
+Allow: /terminos
+Allow: /privacidad
+
 # ----------------------------------------------------------------
 # Googlebot — sin crawl-delay (Google lo ignora de todas formas)
 # ----------------------------------------------------------------

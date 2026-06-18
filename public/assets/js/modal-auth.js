@@ -84,7 +84,9 @@
       </button>
 
       <div class="auth-modal-footer">
-        Al continuar aceptas nuestros <a href="/terminos" target="_blank" rel="noopener">términos de servicio</a>
+        <a href="/terminos" target="_blank" rel="noopener">Condiciones del Servicio</a>
+        &nbsp;&middot;&nbsp;
+        <a href="/privacidad" target="_blank" rel="noopener">Privacidad</a>
         <span class="auth-recaptcha-notice">
           Protegido por reCAPTCHA &mdash;
           <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Privacidad</a>

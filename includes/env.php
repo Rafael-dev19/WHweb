@@ -71,12 +71,18 @@ define('PAYPAL_API_URL', PAYPAL_MODE === 'live'
 define('PAYPAL_WEBHOOK_ID',    env('PAYPAL_WEBHOOK_ID',    ''));
 
 // ── Email ─────────────────────────────────────────────────────────
-define('EMAIL_FROM',      env('EMAIL_FROM',      ''));
-define('EMAIL_FROM_NAME', env('EMAIL_FROM_NAME', 'Wooden House'));
-define('SMTP_HOST',       env('SMTP_HOST',       ''));
-define('SMTP_PORT',       (int) env('SMTP_PORT', 587));
-define('SMTP_USER',       env('SMTP_USER',       ''));
-define('SMTP_PASS',       env('SMTP_PASS',       ''));
+define('EMAIL_FROM',           env('EMAIL_FROM',           ''));
+define('EMAIL_FROM_NAME',      env('EMAIL_FROM_NAME',      'Wooden House'));
+define('SMTP_HOST',            env('SMTP_HOST',            ''));
+define('SMTP_PORT',            (int) env('SMTP_PORT',      587));
+define('SMTP_USER',            env('SMTP_USER',            ''));
+define('SMTP_PASS',            env('SMTP_PASS',            ''));
+define('ADMIN_EMAIL',          env('ADMIN_EMAIL',          ''));
+define('DESARROLLADOR_EMAIL',  env('DESARROLLADOR_EMAIL',  ''));
+define('EMAIL_PEDIDOS',        env('EMAIL_PEDIDOS',        ''));
+define('EMAIL_CITAS',          env('EMAIL_CITAS',          ''));
+define('EMAIL_COTIZACIONES',   env('EMAIL_COTIZACIONES',   ''));
+define('EMAIL_VENTAS',         env('EMAIL_VENTAS',         ''));
 
 // ── Negocio ────────────────────────────────────────────────────────
 define('COSTO_INSTALACION', (float) env('COSTO_INSTALACION', 1500));

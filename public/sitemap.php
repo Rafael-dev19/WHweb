@@ -18,6 +18,7 @@ $estaticas = [
     ['loc' => '/catalogo',    'lastmod' => $hoy,             'freq' => 'daily',   'pri' => '0.9'],
     ['loc' => '/seguimiento', 'lastmod' => $hoy,             'freq' => 'monthly', 'pri' => '0.6'],
     ['loc' => '/terminos',    'lastmod' => $lastmodTerminos, 'freq' => 'yearly',  'pri' => '0.3'],
+    ['loc' => '/privacidad',  'lastmod' => $hoy,             'freq' => 'yearly',  'pri' => '0.3'],
 ];
 
 // Productos activos con su imagen principal
