@@ -2,7 +2,7 @@
 // Wooden House — Seguimiento de solicitudes
 // =====================================================
 const API_URL = '/api';
-const siteEmail = document.body.dataset.siteEmail || 'ventas@muebleswh.com';
+const siteEmail = document.body.dataset.siteEmail || 'woodenhouse250@gmail.com';
 
 document.addEventListener('DOMContentLoaded', function () {
   initCartBadge();
