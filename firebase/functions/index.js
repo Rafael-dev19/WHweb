@@ -11,17 +11,18 @@ const db = getFirestore();
 
 const SECRETS = [
   'BREVO_API_KEY',
-  'EMAIL_PEDIDOS', 'EMAIL_CITAS', 'EMAIL_COTIZACIONES', 'EMAIL_VENTAS', 'ADMIN_EMAIL',
+  'EMAIL_GENERAL', 'ADMIN_EMAIL',
   'APP_URL',
 ];
 
 function getEmails() {
+  const general = process.env.EMAIL_GENERAL || 'woodenhouse250@gmail.com';
   return {
-    pedidos:       process.env.EMAIL_PEDIDOS       || 'pedidos@muebleswh.com',
-    citas:         process.env.EMAIL_CITAS         || 'citas@muebleswh.com',
-    cotizaciones:  process.env.EMAIL_COTIZACIONES  || 'cotizaciones@muebleswh.com',
-    ventas:        process.env.EMAIL_VENTAS        || 'ventas@muebleswh.com',
-    admin:         process.env.ADMIN_EMAIL         || 'woodenhouse250@gmail.com',
+    pedidos:      general,
+    citas:        general,
+    cotizaciones: general,
+    ventas:       general,
+    admin:        process.env.ADMIN_EMAIL || general,
   };
 }
 
