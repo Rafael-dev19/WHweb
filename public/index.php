@@ -83,7 +83,7 @@ if (!empty($_SESSION['_flash'])) {
   <main id="contenido-principal">
   <!-- Hero Section -->
   <div class="hero" id="inicio">
-    <h1>WOODEN HOUSE</h1>
+    <h1>Wooden House</h1>
     <p class="tagline">Muebles de Madera a Medida | Calidad Artesanal en Guadalajara</p>
     <p style="color:#888; font-size:15px; margin-top:10px;">
       <i class="fa-solid fa-location-dot"></i> Guadalajara, Jalisco · Entregas en toda la ZMG
@@ -158,6 +158,14 @@ if (!empty($_SESSION['_flash'])) {
       <p>
         Desde cocinas integrales hasta clósets personalizados, cada proyecto es único y refleja nuestra pasión
         por la carpintería de excelencia.
+      </p>
+      <p style="margin-top:14px; padding-top:14px; border-top:1px solid rgba(201,169,110,0.2); font-size:14px; color:#aaa; line-height:1.7;">
+        <strong style="color:#c9a96e;">Cuenta de cliente:</strong>
+        Wooden House permite crear una cuenta personal para gestionar tus pedidos, cotizaciones y citas de medición
+        desde un solo lugar. Puedes registrarte con tu correo electrónico o iniciar sesión rápidamente con
+        <strong>Google</strong> — utilizamos Google Sign-In únicamente para verificar tu identidad y autocompletar
+        tu nombre y correo. No accedemos a tu historial de búsqueda, contactos ni ningún otro dato fuera de tu perfil básico.
+        Consulta nuestra <a href="/privacidad" style="color:#c9a96e;">Política de Privacidad</a> para más información.
       </p>
     </div>
 

@@ -308,6 +308,7 @@ img, video { max-width: 100%; height: auto; }
   text-shadow: 0 2px 20px rgba(139,115,85,0.4);
   letter-spacing: 4px;
   font-weight: 900;
+  text-transform: uppercase;
 }
 
 .hero .tagline {
