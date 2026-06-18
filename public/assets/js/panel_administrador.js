@@ -2320,7 +2320,7 @@ async function verDetallePedidoAdmin(id) {
           ${estadosSiguientesPedido(est, p.monto_pagado).map(s=>{
             const l2=estadoLabels[s]||s;
             const c2=estadoClass[s]||'status-pending';
-            return `<button data-admin-ped-estado="${s}"
+            return `<button type="button" data-admin-ped-estado="${s}"
               class="status-badge ${c2}" style="cursor:pointer;border:none;opacity:0.85;">→ ${l2}</button>`;
           }).join('') || '<span style="color:var(--muted);font-size:12px;">Estado final — sin más transiciones</span>'}
         </div>
@@ -3364,6 +3364,12 @@ window.showSection = function(section, ev) {
 };
 
 // ── Exponer funciones para event-delegation.js (data-call) ────
+window.scrollToEstadoPedido = function() {
+  const body = document.getElementById('adm_ped_body');
+  if (!body) return;
+  const target = body.querySelector('[data-admin-ped-estado]') || body.querySelector('.status-badge');
+  if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+};
 window.verDetallePedidoAdmin  = verDetallePedidoAdmin;
 window.marcarSaldoManualAdmin = marcarSaldoManualAdmin;
 window.verDetalleCitaAdmin    = verDetalleCitaAdmin;

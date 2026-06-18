@@ -82,7 +82,8 @@ Options -Indexes -ExecCGI
             https://recaptcha.google.com/recaptcha/ \
             'sha256-WIlKelm8ojiSveOVCzOFa/rue3gUsCh7S2ofr2rYxRQ=' \
             'sha256-0OlPi+bjGFT8zFT0a0sHNP6j9hT8CTJ7CeAWG9jGGMY=' \
-            'sha256-YLMHjiSfpIgC7ff04fpMUTCPqja57z6QFtV/FkALLXo='; \
+            'sha256-YLMHjiSfpIgC7ff04fpMUTCPqja57z6QFtV/FkALLXo=' \
+            'sha256-VGsMpJObwA21wM0PXkDnTB6yDlyDSLteJzixXCR5kvE='; \
         style-src 'self' 'unsafe-inline' \
             https://fonts.googleapis.com \
             https://cdnjs.cloudflare.com \

@@ -1091,8 +1091,8 @@ unset($_usuario);
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" data-dismiss="adminPedidoDetalleModal">Cerrar</button>
-        <button class="btn btn-primary" id="adm_ped_edit_btn" data-dismiss="adminPedidoDetalleModal">
-          <i class="fa-solid fa-pen"></i> Cambiar Estado
+        <button type="button" class="btn btn-primary" id="adm_ped_edit_btn" data-call="scrollToEstadoPedido">
+          <i class="fa-solid fa-pen"></i> Ir a Cambiar Estado
         </button>
       </div>
     </div>

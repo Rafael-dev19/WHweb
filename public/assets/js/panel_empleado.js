@@ -1264,7 +1264,7 @@ async function verDetallePedidoEmp(id) {
           ${estadosSiguientesPedidoEmp(est, p.monto_pagado).map(s=>{
             const l2=estadoLabels[s]||s;
             const c2=estadoClass[s]||'status-pending';
-            return `<button data-emp-ped-estado="${s}"
+            return `<button type="button" data-emp-ped-estado="${s}"
               class="status-badge ${c2}" style="cursor:pointer;border:none;opacity:0.85;">→ ${l2}</button>`;
           }).join('') || '<span style="color:var(--muted);font-size:12px;">Estado final — sin más transiciones</span>'}
         </div>
