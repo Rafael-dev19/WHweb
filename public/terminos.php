@@ -94,6 +94,14 @@ require_once dirname(__DIR__) . '/includes/env.php';
       La autenticación en este sitio utiliza Firebase de Google con verificación por correo electrónico.
       Wooden House no almacena contraseñas en texto plano.
     </div>
+    <p style="margin-top:12px;font-size:13px;color:#aaa;">
+      Este sitio está protegido por <strong style="color:#c9a96e;">reCAPTCHA de Google</strong> para prevenir
+      el acceso automatizado. Se aplican la
+      <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Política de Privacidad</a>
+      y los
+      <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer">Términos de Servicio</a>
+      de Google.
+    </p>
   </div>
 
   <!-- 4. Propiedad intelectual -->
@@ -240,7 +248,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
     </ul>
     <p>
       Wooden House <strong>no vende ni comparte</strong> tus datos personales con terceros, salvo con los
-      proveedores necesarios para operar el servicio (Stripe, PayPal, Firebase/Google), quienes cuentan
+      proveedores necesarios para operar el servicio (Stripe, PayPal, Firebase/Google, reCAPTCHA), quienes cuentan
       con sus propias políticas de privacidad y estándares de seguridad certificados.
     </p>
     <div class="highlight-box">

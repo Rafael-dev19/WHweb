@@ -85,6 +85,11 @@
 
       <div class="auth-modal-footer">
         Al continuar aceptas nuestros <a href="/terminos" target="_blank" rel="noopener">términos de servicio</a>
+        <span class="auth-recaptcha-notice">
+          Protegido por reCAPTCHA &mdash;
+          <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Privacidad</a>
+          y <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer">Términos</a> de Google
+        </span>
       </div>
     </div>
 

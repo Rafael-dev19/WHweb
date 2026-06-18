@@ -3364,12 +3364,6 @@ window.showSection = function(section, ev) {
 };
 
 // ── Exponer funciones para event-delegation.js (data-call) ────
-window.scrollToEstadoPedido = function() {
-  const body = document.getElementById('adm_ped_body');
-  if (!body) return;
-  const target = body.querySelector('[data-admin-ped-estado]') || body.querySelector('.status-badge');
-  if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-};
 window.verDetallePedidoAdmin  = verDetallePedidoAdmin;
 window.marcarSaldoManualAdmin = marcarSaldoManualAdmin;
 window.verDetalleCitaAdmin    = verDetalleCitaAdmin;

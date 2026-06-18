@@ -282,6 +282,10 @@
 }
 .btn-auth-google svg { flex-shrink: 0; }
 
+/* ── reCAPTCHA badge — oculto visualmente ────────────────────────── */
+/* Google exige mencionar reCAPTCHA en los términos cuando se oculta */
+.grecaptcha-badge { visibility: hidden !important; }
+
 /* ── Pie de modal ────────────────────────────────────────────────── */
 .auth-modal-footer {
   text-align: center;
@@ -291,6 +295,15 @@
 }
 .auth-modal-footer a { color: #8b7355; text-decoration: none; }
 .auth-modal-footer a:hover { text-decoration: underline; }
+.auth-recaptcha-notice {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: #555;
+  line-height: 1.4;
+}
+.auth-recaptcha-notice a { color: #555; text-decoration: underline; }
+.auth-recaptcha-notice a:hover { color: #888; }
 
 /* ── Vista usuario autenticado ───────────────────────────────────── */
 .auth-user-view { text-align: center; padding: 10px 0; }
