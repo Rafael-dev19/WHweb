@@ -366,7 +366,7 @@ if (empty($_SESSION['cliente_email_verified'])) {
     <p style="margin-top:8px; font-size:12px;">
       <a href="/terminos" style="color:#8b7355; text-decoration:none;">Términos y Condiciones</a>
       &nbsp;·&nbsp;
-      <a href="/terminos#privacidad" style="color:#8b7355; text-decoration:none;">Aviso de Privacidad</a>
+      <a href="/privacidad" style="color:#8b7355; text-decoration:none;">Aviso de Privacidad</a>
     </p>
   </div>
 

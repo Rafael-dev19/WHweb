@@ -185,7 +185,7 @@ header('Content-Type: text/html; charset=utf-8');
   <p style="margin-top:8px; font-size:12px;">
     <a href="/terminos" style="color:var(--color-primary); text-decoration:none;">Términos y Condiciones</a>
     &nbsp;·&nbsp;
-    <a href="/terminos#privacidad" style="color:var(--color-primary); text-decoration:none;">Aviso de Privacidad</a>
+    <a href="/privacidad" style="color:var(--color-primary); text-decoration:none;">Aviso de Privacidad</a>
   </p>
 </div>
 
