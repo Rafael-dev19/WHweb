@@ -83,7 +83,7 @@ if (!empty($_SESSION['_flash'])) {
   <main id="contenido-principal">
   <!-- Hero Section -->
   <div class="hero" id="inicio">
-    <h1>Wooden House</h1>
+    <h1>WOODEN HOUSE</h1>
     <p class="tagline">Muebles de Madera a Medida | Calidad Artesanal en Guadalajara</p>
     <p style="color:#888; font-size:15px; margin-top:10px;">
       <i class="fa-solid fa-location-dot"></i> Guadalajara, Jalisco · Entregas en toda la ZMG
