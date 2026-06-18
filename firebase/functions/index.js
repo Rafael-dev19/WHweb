@@ -11,18 +11,20 @@ const db = getFirestore();
 
 const SECRETS = [
   'BREVO_API_KEY',
-  'EMAIL_GENERAL', 'ADMIN_EMAIL',
+  'EMAIL_GENERAL', 'REPLY_TO', 'ADMIN_EMAIL',
   'APP_URL',
 ];
 
 function getEmails() {
-  const general = process.env.EMAIL_GENERAL || 'woodenhouse250@gmail.com';
+  const general = process.env.EMAIL_GENERAL || 'woodenhouse@muebleswh.com';
+  const replyTo = process.env.REPLY_TO      || process.env.ADMIN_EMAIL || 'woodenhouse250@gmail.com';
   return {
     pedidos:      general,
     citas:        general,
     cotizaciones: general,
     ventas:       general,
-    admin:        process.env.ADMIN_EMAIL || general,
+    admin:        process.env.ADMIN_EMAIL || 'woodenhouse250@gmail.com',
+    replyTo,
   };
 }
 
@@ -603,7 +605,7 @@ exports.onNuevaNotificacion = onDocumentCreated(
         sendEmail({
           from: emails.pedidos, fromName: 'Wooden House Pedidos',
           to:      pedido.correo_cliente,
-          replyTo: emails.pedidos,
+          replyTo: emails.replyTo,
           subject: `Pedido confirmado – ${pedido.numero_pedido} | Wooden House`,
           html:    emailPedidoConfirmado(pedido),
           text:    `Pedido ${pedido.numero_pedido} confirmado. Total: $${pedido.total} MXN. Entrega: ${pedido.fecha_estimada || 'Por confirmar'}.`,
@@ -632,7 +634,7 @@ exports.onNuevaNotificacion = onDocumentCreated(
       await sendEmail({
         from: emails.pedidos, fromName: 'Wooden House Pedidos',
         to:      pedido.correo_cliente,
-        replyTo: emails.pedidos,
+        replyTo: emails.replyTo,
         subject: `Pedido ${pedido.numero_pedido} — ${pedido.estado} | Wooden House`,
         html:    emailEstadoPedido(pedido, pedido.estado_anterior || ''),
         text:    `El estado de tu pedido ${pedido.numero_pedido} cambió a: ${pedido.estado}.`,
@@ -653,7 +655,7 @@ exports.onNuevaNotificacion = onDocumentCreated(
         sendEmail({
           from: emails.cotizaciones, fromName: 'Wooden House Cotizaciones',
           to:      cot.correo_cliente,
-          replyTo: emails.cotizaciones,
+          replyTo: emails.replyTo,
           subject: `Cotización ${cot.numero_cotizacion} recibida | Wooden House`,
           html:    emailCotizacionRecibida(cot),
           text:    `Cotización ${cot.numero_cotizacion} recibida. Te contactaremos en 2-3 días hábiles.`,
@@ -682,7 +684,7 @@ exports.onNuevaNotificacion = onDocumentCreated(
       await sendEmail({
         from: emails.cotizaciones, fromName: 'Wooden House Cotizaciones',
         to:      cot.correo_cliente,
-        replyTo: emails.cotizaciones,
+        replyTo: emails.replyTo,
         subject: `Tu cotización ${cot.numero_cotizacion} ha sido respondida | Wooden House`,
         html:    emailCotizacionRespondida(cot),
         text:    `Tu cotización ${cot.numero_cotizacion} ha sido respondida. Revisa tu correo para ver la propuesta.`,
@@ -703,7 +705,7 @@ exports.onNuevaNotificacion = onDocumentCreated(
         sendEmail({
           from: emails.citas, fromName: 'Wooden House Citas',
           to:      cita.correo_cliente,
-          replyTo: emails.citas,
+          replyTo: emails.replyTo,
           subject: `Cita confirmada – ${cita.numero_cita} | Wooden House`,
           html:    emailCitaConfirmada(cita),
           text:    `Cita ${cita.numero_cita} confirmada para el ${cita.fecha_cita}.`,
