@@ -621,7 +621,20 @@
       const token = await cred.user.getIdToken();
       const data  = await _llamarBackend('cliente-login', token);
       if (!data.success) throw new Error(data.error || 'Error al iniciar sesión');
-      if (data.redirect) { window.location.href = data.redirect; return; }  // personal → su panel
+      if (data.redirect) {
+        if (data['2fa_required']) {
+          // Tiene 2FA activo: pedir código TOTP antes de entrar al panel
+          _mostrar2faCheck(data.redirect, cred.user);
+          return;
+        }
+        if (data['2fa_setup']) {
+          // No tiene 2FA: redirigir al panel con flag para forzar la configuración
+          window.location.href = data.redirect + '?setup_2fa=1';
+          return;
+        }
+        window.location.href = data.redirect;
+        return;
+      }
       _onAutenticado(data.cliente, cred.user.emailVerified);
     } catch (e) {
       if (_loginTimer) {
@@ -972,6 +985,110 @@
         return;
       }
       document.querySelectorAll('.wh-help--open').forEach(t => t.classList.remove('wh-help--open'));
+    });
+  }
+
+  /* ── Overlay de verificación 2FA para personal ───────────────── */
+  // Se muestra después del login cuando el servidor devuelve 2fa_required=true.
+  // El usuario ingresa su código TOTP; si es correcto se redirige al panel.
+  function _mostrar2faCheck(redirectUrl, firebaseUser) {
+    const overlay = document.createElement('div');
+    overlay.id = 'wh-2fa-overlay';
+    overlay.style.cssText = `
+      position:fixed;inset:0;z-index:99999;
+      background:rgba(10,8,5,0.92);
+      display:flex;align-items:center;justify-content:center;
+      font-family:'Segoe UI',Arial,sans-serif;
+    `;
+    overlay.innerHTML = `
+      <div style="
+        background:#252525;border:1px solid #3a3020;border-radius:16px;
+        padding:40px 36px;max-width:380px;width:90%;text-align:center;
+        box-shadow:0 8px 40px rgba(0,0,0,0.6);
+      ">
+        <div style="font-size:40px;margin-bottom:16px;">🔐</div>
+        <h2 style="color:#e8dcc8;font-size:20px;font-weight:700;margin-bottom:8px;">
+          Verificación en dos pasos
+        </h2>
+        <p style="color:#a09080;font-size:13px;line-height:1.6;margin-bottom:24px;">
+          Ingresa el código de 6 dígitos de tu app de autenticación.
+        </p>
+        <input id="wh-2fa-input"
+          type="text" inputmode="numeric" autocomplete="one-time-code"
+          maxlength="6" placeholder="000 000"
+          style="
+            width:100%;font-size:28px;letter-spacing:8px;text-align:center;
+            background:#1a1a1a;border:2px solid #444;border-radius:10px;
+            color:#e8dcc8;padding:14px;font-family:monospace;outline:none;
+            margin-bottom:16px;
+          ">
+        <div id="wh-2fa-error" style="
+          display:none;color:#e07070;font-size:13px;margin-bottom:14px;
+          padding:10px;background:#2a0a0a;border-radius:6px;
+        "></div>
+        <button id="wh-2fa-btn" style="
+          width:100%;padding:14px;border:none;border-radius:8px;
+          background:linear-gradient(135deg,#c9a96e,#a07830);
+          color:#1a1008;font-weight:700;font-size:15px;cursor:pointer;
+        ">
+          Verificar y entrar
+        </button>
+        <p style="color:#5a5040;font-size:11px;margin-top:16px;">
+          ¿Perdiste acceso a tu app? Contacta al administrador.
+        </p>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    const input  = overlay.querySelector('#wh-2fa-input');
+    const errBox = overlay.querySelector('#wh-2fa-error');
+    const btn    = overlay.querySelector('#wh-2fa-btn');
+    input.focus();
+
+    async function _verificar() {
+      const codigo = input.value.replace(/\D/g, '');
+      if (codigo.length !== 6) {
+        errBox.textContent = 'Ingresa los 6 dígitos completos.';
+        errBox.style.display = '';
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = 'Verificando...';
+      errBox.style.display = 'none';
+
+      try {
+        const csrfCookie = document.cookie.split(';').find(c => c.trim().startsWith('XSRF-TOKEN='));
+        const csrf = csrfCookie ? decodeURIComponent(csrfCookie.split('=')[1]) : '';
+
+        const res  = await fetch('/api/auth.php?action=2fa-check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+          credentials: 'same-origin',
+          body: JSON.stringify({ codigo }),
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          window.location.href = redirectUrl;
+        } else {
+          errBox.textContent = data.error || 'Código incorrecto. Intenta de nuevo.';
+          errBox.style.display = '';
+          input.value = '';
+          input.focus();
+        }
+      } catch {
+        errBox.textContent = 'Error de red. Intenta de nuevo.';
+        errBox.style.display = '';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Verificar y entrar';
+      }
+    }
+
+    btn.addEventListener('click', _verificar);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') _verificar(); });
+    // Auto-submit cuando se completan 6 dígitos
+    input.addEventListener('input', () => {
+      if (input.value.replace(/\D/g,'').length === 6) _verificar();
     });
   }
 

@@ -80,6 +80,7 @@ unset($_usuario);
     <a href="#" data-section="citas"><i class="fa-solid fa-calendar-days"></i> Citas Programadas</a>
     <a href="#" data-section="cotizaciones"><i class="fa-solid fa-briefcase"></i> Cotizaciones</a>
     <a href="#" data-section="calendario"><i class="fa-solid fa-calendar-check"></i> Mi Calendario</a>
+    <a href="#" data-section="seguridad"><i class="fa-solid fa-shield-halved"></i> Seguridad</a>
   </div>
 
   <div class="container">
@@ -109,6 +110,12 @@ unset($_usuario);
       <div class="sidebar-item" data-section="calendario">
         <span class="icon"><i class="fa-solid fa-calendar-check"></i></span>
         <span>Mi Calendario</span>
+      </div>
+
+      <div class="sidebar-section">MI CUENTA</div>
+      <div class="sidebar-item" data-section="seguridad">
+        <span class="icon"><i class="fa-solid fa-shield-halved"></i></span>
+        <span>Seguridad</span>
       </div>
     </aside>
 
@@ -306,6 +313,78 @@ unset($_usuario);
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SEGURIDAD -->
+      <div id="seguridad-section" class="content-section hidden">
+        <h1 class="page-title"><i class="fa-solid fa-shield-halved"></i> Seguridad de Cuenta</h1>
+        <p class="page-subtitle">Configura la verificación en dos pasos para proteger tu acceso</p>
+
+        <div class="section">
+          <div class="table-card" style="max-width:560px;">
+            <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
+              <div id="seg-2fa-icono" style="font-size:36px;color:var(--muted);">
+                <i class="fa-solid fa-lock-open"></i>
+              </div>
+              <div>
+                <div style="font-weight:700;font-size:15px;color:var(--text);">Verificación en dos pasos</div>
+                <div id="seg-2fa-estado-texto" style="font-size:13px;color:var(--muted);margin-top:3px;">Cargando estado...</div>
+              </div>
+              <span id="seg-2fa-badge" style="margin-left:auto;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;background:#2a2a2a;color:var(--muted);">—</span>
+            </div>
+            <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:20px;">
+              Con 2FA activado necesitarás un código de 6 dígitos de tu app de autenticación cada vez que inicies sesión.
+            </p>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button id="seg-btn-activar" class="btn btn-primary" data-call="iniciarSetup2FA" style="display:none;">
+                <i class="fa-solid fa-shield-halved"></i> Activar 2FA
+              </button>
+              <button id="seg-btn-desactivar" class="btn btn-danger" data-call="confirmarDesactivar2FA" style="display:none;">
+                <i class="fa-solid fa-shield-xmark"></i> Desactivar 2FA
+              </button>
+            </div>
+          </div>
+
+          <div id="seg-setup-flow" style="display:none;max-width:560px;margin-top:16px;">
+            <div class="table-card">
+              <h3 style="font-size:14px;font-weight:700;color:var(--accent);margin-bottom:16px;">
+                <i class="fa-solid fa-qrcode"></i> Configurar Autenticador
+              </h3>
+              <div style="display:flex;flex-direction:column;gap:20px;">
+                <div>
+                  <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;">Paso 1 — Escanea el QR con Google Authenticator o Authy</div>
+                  <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;">
+                    <canvas id="seg-qr-canvas" style="border:3px solid #333;border-radius:8px;background:#fff;"></canvas>
+                    <div style="flex:1;min-width:180px;">
+                      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">O ingresa el código manualmente:</div>
+                      <code id="seg-secreto-texto" style="display:block;font-size:14px;letter-spacing:2px;background:#1a1a1a;border:1px solid #333;padding:10px 14px;border-radius:6px;word-break:break-all;color:var(--accent);font-family:monospace;">—</code>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;">Paso 2 — Confirma con el código de 6 dígitos</div>
+                  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                    <input id="seg-codigo-input" type="text" inputmode="numeric" autocomplete="one-time-code"
+                      maxlength="6" placeholder="000 000" class="form-input"
+                      style="width:140px;font-size:22px;letter-spacing:6px;text-align:center;font-family:monospace;">
+                    <button class="btn btn-primary" data-call="confirmarActivar2FA">
+                      <i class="fa-solid fa-check"></i> Verificar y Activar
+                    </button>
+                    <button class="btn btn-secondary" data-call="cancelarSetup2FA">Cancelar</button>
+                  </div>
+                  <div id="seg-setup-error" style="display:none;color:#e05;font-size:13px;margin-top:10px;padding:10px;background:#2a0a0a;border-radius:6px;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-card" style="max-width:560px;margin-top:16px;border-left:3px solid var(--accent);">
+            <div style="font-size:13px;color:var(--muted);line-height:1.7;">
+              <strong style="color:var(--text);">Importante:</strong> Si pierdes acceso a tu app de autenticación,
+              contacta al administrador para que desactive el 2FA de tu cuenta.
             </div>
           </div>
         </div>
@@ -586,6 +665,7 @@ unset($_usuario);
   </div>
 
   
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>

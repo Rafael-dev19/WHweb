@@ -286,6 +286,12 @@
       if(section === 'cotizaciones')  cargarCotizacionesAPI();
       if(section === 'empleados')  cargarEmpleadosAPI();
       if(section === 'capacidad')  cargarCapacidad();
+      if(section === 'seguridad')  cargarEstado2FA();
+      if(section === 'seguridad' && new URLSearchParams(location.search).get('setup_2fa')) {
+        // Forzar apertura del flujo de setup si viene de login sin 2FA
+        setTimeout(iniciarSetup2FA, 400);
+        history.replaceState(null, '', location.pathname);   // limpiar URL
+      }
       refreshKPIs();
     }
 
@@ -1830,6 +1836,10 @@
       cargarProductosAPI().then(() => {
         renderCatalogo();
       }).catch(e => console.warn('No se pudieron cargar productos:', e));
+      // Si viene de login sin 2FA configurado, forzar sección Seguridad
+      if (new URLSearchParams(location.search).get('setup_2fa')) {
+        showSection('seguridad');
+      }
       setTimeout(() => showNotification('Bienvenido, Administrador', 'success'), 450);
       if (typeof firebaseAuth !== 'undefined') {
         firebaseAuth.onAuthStateChanged(async (user) => {
@@ -2433,17 +2443,83 @@ async function verDetalleCotAdmin(id) {
     const cot = data.cotizacion;
     folio.textContent = cot.numero_cotizacion;
 
-    const estLabels = { nueva:'Nueva',en_revision:'En Revisión',respondida:'Respondida',cerrada:'Cerrada' };
-    const estClass  = { nueva:'status-new',en_revision:'status-pending',respondida:'status-replied',cerrada:'status-disabled' };
+    const estLabels = {
+      nueva:'Nueva', en_revision:'En Revisión', respondida:'Propuesta enviada',
+      aceptada:'Aceptada', en_produccion:'En Producción',
+      lista:'Lista para entrega', entregada:'Entregada', cancelada:'Cancelada'
+    };
+    const estClass = {
+      nueva:'status-new', en_revision:'status-pending', respondida:'status-replied',
+      aceptada:'status-info', en_produccion:'status-producing',
+      lista:'status-ready', entregada:'status-completed', cancelada:'status-cancelled'
+    };
     const est = cot.estado || 'nueva';
+    const fmt = (n) => n > 0 ? `$${Number(n).toLocaleString('es-MX',{minimumFractionDigits:2})} MXN` : '—';
+
+    // Botones de acción según el estado actual
+    const acciones = {
+      nueva:        [['en_revision','📋 Marcar en revisión','btn-secondary']],
+      en_revision:  [['respondida','📨 Enviar propuesta al cliente','btn-primary'], ['cancelada','✕ Cancelar','btn-danger']],
+      respondida:   [['aceptada','✅ Cliente aceptó','btn-primary'], ['cancelada','✕ Cancelar','btn-danger']],
+      aceptada:     [['en_produccion','🔨 Mandar a producción','btn-primary'], ['cancelada','✕ Cancelar','btn-danger']],
+      en_produccion:[['lista','✅ Marcar como lista','btn-primary']],
+      lista:        [['entregada','🎉 Marcar como entregada','btn-primary']],
+      entregada:    [],
+      cancelada:    [],
+    };
+
+    const botonesHtml = (acciones[est] || []).map(([estado, label, cls]) =>
+      `<button class="btn ${cls} btn-small" onclick="cambiarEstadoCotAdmin(${cot.id},'${estado}')">${label}</button>`
+    ).join(' ');
+
+    // Formulario de propuesta (visible solo cuando está en revisión)
+    const showProposal = ['en_revision','respondida','aceptada','en_produccion','lista','entregada'].includes(est);
+    const proposalFields = showProposal ? `
+      <div style="background:var(--bg);border-left:3px solid #c9a96e;border-radius:6px;padding:14px;margin-top:14px;">
+        <div style="font-weight:700;color:#c9a96e;margin-bottom:10px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">
+          Propuesta del admin ${est === 'en_revision' ? '— rellena antes de enviar al cliente' : ''}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+          <div>
+            <label style="color:var(--muted);font-size:10px;display:block;margin-bottom:4px;">PRECIO COTIZADO (MXN) *</label>
+            <input id="cot_precio" type="number" min="0" step="0.01"
+              value="${cot.precio_cotizado || ''}"
+              style="width:100%;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px;"
+              placeholder="Ej: 15000">
+          </div>
+          <div>
+            <label style="color:var(--muted);font-size:10px;display:block;margin-bottom:4px;">ENTREGA ESTIMADA</label>
+            <input id="cot_fecha_entrega" type="date"
+              value="${cot.fecha_entrega_estimada || ''}"
+              style="width:100%;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px;">
+          </div>
+        </div>
+        <div style="margin-bottom:10px;">
+          <label style="color:var(--muted);font-size:10px;display:block;margin-bottom:4px;">DESCRIPCIÓN DE LA PROPUESTA * (qué se va a fabricar, materiales, acabados)</label>
+          <textarea id="cot_desc_respuesta" rows="4"
+            style="width:100%;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px;resize:vertical;"
+            placeholder="Ej: Closet de 2.5m x 2m en melamina nogal, 4 cajones, 6 repisas, puertas corredizas con espejo...">${escapeHtml(cot.descripcion_respuesta || '')}</textarea>
+        </div>
+        <div style="margin-bottom:10px;">
+          <label style="color:var(--muted);font-size:10px;display:block;margin-bottom:4px;">NOTAS INTERNAS (solo visibles aquí)</label>
+          <textarea id="cot_notas" rows="2"
+            style="width:100%;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:12px;resize:vertical;"
+            placeholder="Notas de taller, proveedores, condiciones...">${escapeHtml(cot.notas_admin || '')}</textarea>
+        </div>
+        <button class="btn btn-secondary btn-small" onclick="guardarCamposCotizacion(${cot.id})">
+          <i class="fa-solid fa-floppy-disk"></i> Guardar cambios
+        </button>
+      </div>` : '';
 
     body.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:18px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
         <span class="status-badge ${estClass[est]||'status-new'}">${estLabels[est]||est}</span>
         <span style="font-size:11px;color:var(--muted);">Creada: ${(cot.fecha_creacion||'').substring(0,10)}</span>
       </div>
 
-      <div style="background:var(--bg);border-left:3px solid var(--accent);border-radius:6px;padding:12px;margin-bottom:14px;">
+      ${botonesHtml ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;">${botonesHtml}</div>` : ''}
+
+      <div style="background:var(--bg);border-left:3px solid var(--accent);border-radius:6px;padding:12px;margin-bottom:12px;">
         <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Cliente</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;color:var(--muted2);">
           <div><span style="color:var(--muted);display:block;font-size:10px;">Nombre</span><strong>${escapeHtml(cot.nombre_cliente)}</strong></div>
@@ -2453,21 +2529,22 @@ async function verDetalleCotAdmin(id) {
         </div>
       </div>
 
-      <div style="background:var(--bg);border-left:3px solid var(--ok);border-radius:6px;padding:12px;">
-        <div style="font-weight:700;color:var(--ok);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Especificaciones</div>
+      <div style="background:var(--bg);border-left:3px solid var(--ok);border-radius:6px;padding:12px;margin-bottom:2px;">
+        <div style="font-weight:700;color:var(--ok);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Solicitud del cliente</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;color:var(--muted2);">
-          <div><span style="color:var(--muted);display:block;font-size:10px;">Modelo de mueble</span><strong>${escapeHtml(cot.modelo_mueble||'No especificado')}</strong></div>
-          <div><span style="color:var(--muted);display:block;font-size:10px;">Presupuesto</span><strong>${escapeHtml(cot.rango_presupuesto||'No especificado')}</strong></div>
+          <div><span style="color:var(--muted);display:block;font-size:10px;">Modelo</span><strong>${escapeHtml(cot.modelo_mueble||'No especificado')}</strong></div>
+          <div><span style="color:var(--muted);display:block;font-size:10px;">Presupuesto cliente</span><strong>${escapeHtml(cot.rango_presupuesto||'—')}</strong></div>
           <div><span style="color:var(--muted);display:block;font-size:10px;">Tiene medidas</span><strong>${parseInt(cot.tiene_medidas)?'✅ Sí':'❌ No'}</strong></div>
           <div><span style="color:var(--muted);display:block;font-size:10px;">Requiere instalación</span><strong>${parseInt(cot.requiere_instalacion)?'✅ Sí':'❌ No'}</strong></div>
           ${cot.medidas?`<div style="grid-column:1/-1;"><span style="color:var(--muted);display:block;font-size:10px;">Medidas</span><strong>${escapeHtml(cot.medidas)}</strong></div>`:''}
           <div style="grid-column:1/-1;">
-            <span style="color:var(--muted);display:block;font-size:10px;margin-bottom:4px;">Descripción de la solicitud</span>
+            <span style="color:var(--muted);display:block;font-size:10px;margin-bottom:4px;">Descripción</span>
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:10px;line-height:1.6;color:var(--muted2);">${escapeHtml(cot.descripcion_solicitud||'—')}</div>
           </div>
-          ${cot.notas_admin?`<div style="grid-column:1/-1;"><span style="color:var(--muted);display:block;font-size:10px;margin-bottom:4px;">Notas internas</span><div style="background:var(--panel);border:1px solid var(--warn);border-radius:6px;padding:10px;color:var(--muted2);">${escapeHtml(cot.notas_admin)}</div></div>`:''}
         </div>
       </div>
+
+      ${proposalFields}
     `;
   } catch(e) {
     body.innerHTML = `<div style="color:var(--danger);padding:20px;text-align:center;"><i class="fa-solid fa-circle-exclamation"></i> Error: ${e.message}</div>`;
@@ -2491,8 +2568,16 @@ async function cargarCotizacionesAPI() {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted)">Sin cotizaciones registradas</td></tr>';
         return;
       }
-      const estadoCotClass  = { nueva:'status-new', en_revision:'status-pending', respondida:'status-replied', cerrada:'status-disabled' };
-      const estadoCotLabels = { nueva:'Nueva', en_revision:'En revisión', respondida:'Respondida', cerrada:'Cerrada' };
+      const estadoCotClass  = {
+        nueva:'status-new', en_revision:'status-pending', respondida:'status-replied',
+        aceptada:'status-info', en_produccion:'status-producing',
+        lista:'status-ready', entregada:'status-completed', cancelada:'status-cancelled'
+      };
+      const estadoCotLabels = {
+        nueva:'Nueva', en_revision:'En revisión', respondida:'Propuesta enviada',
+        aceptada:'Aceptada', en_produccion:'En Producción',
+        lista:'Lista', entregada:'Entregada', cancelada:'Cancelada'
+      };
       tbody.innerHTML = cots.map(c => {
         const est   = c.estado || 'nueva';
         const cls   = estadoCotClass[est]  || 'status-new';
@@ -2519,12 +2604,9 @@ async function cargarCotizacionesAPI() {
           <td>${escapeHtml(fecha)}</td>
           <td><span class="status-badge ${cls}">${label}</span></td>
           <td>
-            <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;">
-              <button data-call="verDetalleCotAdmin" data-args="[${c.id}]" class="btn btn-primary btn-small" title="Ver detalle"><i class='fa-solid fa-eye'></i> Ver</button>
-              <button data-call="cambiarEstadoCotAdmin" data-args='[${c.id},"en_revision"]' class="btn btn-secondary btn-small" title="Marcar en revisión"><i class="fa-solid fa-clipboard-list"></i></button>
-              <button data-call="cambiarEstadoCotAdmin" data-args='[${c.id},"respondida"]'  class="btn btn-secondary btn-small" title="Marcar respondida"><i class="fa-solid fa-check"></i></button>
-              <button data-call="cambiarEstadoCotAdmin" data-args='[${c.id},"cerrada"]'    class="btn btn-secondary btn-small" title="Cerrar cotización"><i class="fa-solid fa-lock"></i></button>
-            </div>
+            <button data-call="verDetalleCotAdmin" data-args="[${c.id}]" class="btn btn-primary btn-small">
+              <i class='fa-solid fa-eye'></i> Ver y gestionar
+            </button>
           </td>
         </tr>`;
       }).join('');
@@ -2535,19 +2617,55 @@ async function cargarCotizacionesAPI() {
   }
 }
 
-async function cambiarEstadoCotAdmin(id, estado) {
-  try {
-    const data = await apiFetch(`${API_BASE}/cotizaciones.php?id=${id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ estado })
-    });
-    if (data.success) {
-      const lbl = {nueva:'Nueva',en_revision:'En Revisión',respondida:'Respondida',cerrada:'Cerrada'}[estado] || estado;
-      showNotification(`✅ Cotización: ${lbl}`, 'success');
-      cargarCotizacionesAPI();
-    }
-  } catch(e) { console.error(e); }
+async function guardarCamposCotizacion(id) {
+  const precio     = parseFloat(document.getElementById('cot_precio')?.value || 0);
+  const desc       = document.getElementById('cot_desc_respuesta')?.value?.trim() || '';
+  const notas      = document.getElementById('cot_notas')?.value?.trim() || '';
+  const fechaEnt   = document.getElementById('cot_fecha_entrega')?.value || '';
+
+  const data = await apiFetch(`${API_BASE}/cotizaciones.php?id=${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      precio_cotizado:       precio || null,
+      descripcion_respuesta: desc   || null,
+      notas_admin:           notas  || null,
+      fecha_entrega_estimada:fechaEnt || null,
+    }),
+  });
+  if (data.success) showNotification('<i class="fa-solid fa-floppy-disk"></i> Guardado', 'success');
+  else showNotification(data.error || 'Error al guardar', 'error');
 }
+
+async function cambiarEstadoCotAdmin(id, estado) {
+  // Al enviar propuesta, incluir precio y descripción en el mismo request
+  const body = { estado };
+  if (estado === 'respondida') {
+    body.precio_cotizado        = parseFloat(document.getElementById('cot_precio')?.value || 0);
+    body.descripcion_respuesta  = document.getElementById('cot_desc_respuesta')?.value?.trim() || '';
+    body.notas_admin            = document.getElementById('cot_notas')?.value?.trim() || '';
+    body.fecha_entrega_estimada = document.getElementById('cot_fecha_entrega')?.value || '';
+  }
+
+  const data = await apiFetch(`${API_BASE}/cotizaciones.php?id=${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
+
+  if (data.success) {
+    const lbl = {
+      nueva:'Nueva', en_revision:'En Revisión', respondida:'Propuesta enviada al cliente',
+      aceptada:'Aceptada', en_produccion:'Enviada a producción',
+      lista:'Lista para entrega', entregada:'Entregada', cancelada:'Cancelada',
+    }[estado] || estado;
+    showNotification(`✅ ${lbl}`, 'success');
+    closeModal('adminCotDetalleModal');
+    cargarCotizacionesAPI();
+  } else {
+    showNotification(data.error || 'Error al cambiar estado', 'error');
+  }
+}
+
+window.guardarCamposCotizacion = guardarCamposCotizacion;
 
 async function cargarReportesAPI() {
   try {
@@ -2686,126 +2804,104 @@ document.addEventListener('DOMContentLoaded', () => {
 window.logoutAdmin              = logoutAdmin;
 window.actualizarEstadoPedido   = actualizarEstadoPedido;
 
-// ── EMPLEADOS - Crear/editar (Firebase Auth + MySQL) ──
+// ── EMPLEADOS - Invitar (nuevo) o editar (existente) ──────────────
 
 async function guardarEmpleado() {
-  const mode    = document.getElementById('emp_mode')?.value || 'create';
-  const isEdit  = mode === 'edit';
-  const empId   = document.getElementById('emp_id')?.value || '';
-  const nombre  = document.getElementById('emp_nombre')?.value.trim() || '';
-  const correo  = document.getElementById('emp_correo')?.value.trim().toLowerCase() || '';
-  const pass    = document.getElementById('emp_password')?.value || '';
-  const rol     = document.getElementById('emp_rol')?.value || 'empleado';
-  const errBox  = document.getElementById('emp_error');
-  const btn     = document.getElementById('emp_btn_guardar');
+  const mode   = document.getElementById('emp_mode')?.value || 'invite';
+  const isEdit = mode === 'edit';
+  const empId  = document.getElementById('emp_id')?.value || '';
+  const nombre = document.getElementById('emp_nombre')?.value.trim() || '';
+  const correo = document.getElementById('emp_correo')?.value.trim().toLowerCase() || '';
+  const rol    = document.getElementById('emp_rol')?.value || 'empleado';
+  const errBox = document.getElementById('emp_error');
+  const infoBox= document.getElementById('emp_info');
+  const btn    = document.getElementById('emp_btn_guardar');
 
   const showErr = (msg) => {
-    if (errBox) { errBox.textContent = msg; errBox.style.display = 'block'; }
+    if (errBox)  { errBox.textContent = msg; errBox.style.display = 'block'; }
+    if (infoBox) infoBox.style.display = 'none';
   };
-  if (errBox) errBox.style.display = 'none';
+  if (errBox)  errBox.style.display  = 'none';
+  if (infoBox) infoBox.style.display = 'none';
 
   if (!nombre) { showErr('Ingresa el nombre completo'); return; }
   const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!correo || !emailRe.test(correo)) { showErr('Correo electrónico inválido. Ejemplo: nombre@dominio.com'); return; }
-  if (!isEdit && pass.length < 6) { showErr('La contraseña debe tener mínimo 6 caracteres'); return; }
+  if (!correo || !emailRe.test(correo)) { showErr('Correo electrónico inválido.'); return; }
 
-  if (btn) { btn.disabled = true; btn.textContent = isEdit ? 'Guardando...' : 'Creando...'; }
+  if (btn) { btn.disabled = true; btn.innerHTML = isEdit ? '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...' : '<i class="fa-solid fa-spinner fa-spin"></i> Enviando...'; }
 
   try {
     if (isEdit) {
+      // Edición: solo nombre y rol (el correo no se cambia para no romper Firebase)
       const data = await apiFetch(`${API_BASE}/empleados.php?id=${empId}`, {
         method: 'PUT',
         body: JSON.stringify({ nombre_completo: nombre, correo, rol }),
       });
       if (!data.success) throw new Error(data.error || 'Error al actualizar');
       showNotification('<i class="fa-solid fa-circle-check"></i> Empleado actualizado', 'success');
+      closeModal('nuevoEmpleado');
+      cargarEmpleadosAPI();
 
     } else {
-      if (!firebaseAuth) throw new Error('Firebase Auth no disponible');
+      // Invitación: el admin NO toca contraseñas — el empleado la crea por su cuenta
+      const data = await apiFetch(`${API_BASE}/invitaciones.php?action=crear`, {
+        method: 'POST',
+        body: JSON.stringify({ nombre_completo: nombre, correo, rol }),
+      });
+      if (!data.success) throw new Error(data.error || 'Error al enviar la invitación');
 
-      const adminUser = firebaseAuth.currentUser;
-      if (!adminUser) throw new Error('Sesión expirada, recarga la página');
-
-      const cred = await firebaseAuth.createUserWithEmailAndPassword(correo, pass);
-      const nuevoUid = cred.user.uid;
-
-      // Volver a iniciar sesión como admin (Firebase cambia el usuario activo al crear)
-      // Usamos el token guardado en session
-      const adminToken = sessionStorage.getItem('wh_firebase_token') || '';
-
-      try {
-        const data = await apiFetch(`${API_BASE}/empleados.php`, {
-          method: 'POST',
-          body: JSON.stringify({
-            firebase_uid:    nuevoUid,
-            nombre_completo: nombre,
-            correo,
-            rol,
-          }),
-        });
-        if (!data.success) {
-          // Si MySQL falla, eliminar el usuario de Firebase para no dejar inconsistencia
-          await cred.user.delete();
-          throw new Error(data.error || 'Error al guardar en base de datos');
-        }
-      } catch(mysqlErr) {
-        try { await cred.user.delete(); } catch(e2) {}
-        throw mysqlErr;
+      if (infoBox) {
+        infoBox.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${data.mensaje || 'Invitación enviada.'}`;
+        infoBox.style.display = '';
       }
-
-      // Reautenticar al admin (sign out del nuevo usuario, volver al admin)
-      await firebaseAuth.signOut();
-      // El panel detectará la desconexión y pedirá login nuevamente si no se maneja
-      // Para evitar esto, recargamos con el token guardado
-      showNotification('<i class="fa-solid fa-circle-check"></i> Empleado creado. Recargando sesión...', 'success');
-      setTimeout(() => window.location.reload(), 1500);
-      return;
+      showNotification('<i class="fa-solid fa-paper-plane"></i> Invitación enviada', 'success');
+      // No cerramos el modal de inmediato para que el admin vea la confirmación
+      setTimeout(() => { closeModal('nuevoEmpleado'); cargarEmpleadosAPI(); }, 2000);
     }
 
-    closeModal('nuevoEmpleado');
-    cargarEmpleadosAPI();
-
   } catch(e) {
-    let msg = e.message || 'Error desconocido';
-    if (msg.includes('email-already-in-use')) msg = 'Ese correo ya tiene cuenta en el sistema';
-    if (msg.includes('weak-password'))        msg = 'Contraseña muy débil (mínimo 6 caracteres)';
-    showErr(msg);
+    showErr(e.message || 'Error desconocido');
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = isEdit ? 'Guardar' : 'Crear Empleado'; }
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = isEdit
+        ? '<i class="fa-solid fa-floppy-disk"></i> Guardar cambios'
+        : '<i class="fa-solid fa-paper-plane"></i> Enviar invitación';
+    }
   }
 }
 
 function abrirEditarEmpleado(id, nombre, correo, rol) {
-  document.getElementById('emp_mode').value    = 'edit';
-  document.getElementById('emp_id').value      = id;
-  document.getElementById('emp_nombre').value  = nombre;
-  document.getElementById('emp_correo').value  = correo;
-  document.getElementById('emp_rol').value     = rol;
-  document.getElementById('emp_password').value = '';
+  document.getElementById('emp_mode').value   = 'edit';
+  document.getElementById('emp_id').value     = id;
+  document.getElementById('emp_nombre').value = nombre;
+  document.getElementById('emp_correo').value = correo;
+  document.getElementById('emp_rol').value    = rol;
   document.getElementById('empModalTitle').textContent = 'Editar Empleado';
-  const help = document.getElementById('emp_password_help');
-  if (help) help.textContent = 'Déjala en blanco para no cambiar la contraseña.';
+  const help = document.getElementById('emp_correo_help');
+  if (help) help.textContent = 'El correo no se puede cambiar aquí (está vinculado a Firebase).';
+  document.getElementById('emp_correo').readOnly = true;
   const btn = document.getElementById('emp_btn_guardar');
-  if (btn) btn.textContent = 'Guardar Cambios';
-  const err = document.getElementById('emp_error');
-  if (err) err.style.display = 'none';
+  if (btn) btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Guardar cambios';
+  document.getElementById('emp_error')?.style && (document.getElementById('emp_error').style.display = 'none');
+  document.getElementById('emp_info')?.style  && (document.getElementById('emp_info').style.display  = 'none');
   openModal('nuevoEmpleado');
 }
 
 function abrirNuevoEmpleado() {
-  document.getElementById('emp_mode').value    = 'create';
-  document.getElementById('emp_id').value      = '';
-  document.getElementById('emp_nombre').value  = '';
-  document.getElementById('emp_correo').value  = '';
-  document.getElementById('emp_password').value = '';
-  document.getElementById('emp_rol').value     = 'empleado';
-  document.getElementById('empModalTitle').textContent = 'Nuevo Empleado';
-  const help = document.getElementById('emp_password_help');
-  if (help) help.textContent = 'Mínimo 6 caracteres.';
+  document.getElementById('emp_mode').value   = 'invite';
+  document.getElementById('emp_id').value     = '';
+  document.getElementById('emp_nombre').value = '';
+  document.getElementById('emp_correo').value = '';
+  document.getElementById('emp_correo').readOnly = false;
+  document.getElementById('emp_rol').value    = 'empleado';
+  document.getElementById('empModalTitle').textContent = 'Invitar Empleado';
+  const help = document.getElementById('emp_correo_help');
+  if (help) help.textContent = 'Se enviará un enlace de activación a este correo.';
   const btn = document.getElementById('emp_btn_guardar');
-  if (btn) btn.textContent = 'Crear Empleado';
-  const err = document.getElementById('emp_error');
-  if (err) err.style.display = 'none';
+  if (btn) btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Enviar invitación';
+  document.getElementById('emp_error')?.style && (document.getElementById('emp_error').style.display = 'none');
+  document.getElementById('emp_info')?.style  && (document.getElementById('emp_info').style.display  = 'none');
   openModal('nuevoEmpleado');
 }
 
@@ -3363,6 +3459,187 @@ window.showSection = function(section, ev) {
   if (section === 'ofertas')  cargarOfertasAdmin();
 };
 
+// ═══════════════════════════════════════════════════════════
+// SEGURIDAD — 2FA TOTP
+// ═══════════════════════════════════════════════════════════
+
+async function cargarEstado2FA() {
+  const csrf = document.cookie.split(';').find(c => c.trim().startsWith('XSRF-TOKEN='));
+  const csrfToken = csrf ? decodeURIComponent(csrf.split('=')[1]) : '';
+
+  try {
+    const res  = await fetch('/api/auth.php?action=verificar', {
+      headers: { 'X-CSRF-Token': csrfToken }
+    });
+    const data = await res.json();
+
+    const activo = data?.usuario?.totp_activo == 1;
+    _renderEstado2FA(activo);
+  } catch {
+    _renderEstado2FA(null);
+  }
+}
+
+function _renderEstado2FA(activo) {
+  const icono  = document.getElementById('seg-2fa-icono');
+  const texto  = document.getElementById('seg-2fa-estado-texto');
+  const badge  = document.getElementById('seg-2fa-badge');
+  const btnAct = document.getElementById('seg-btn-activar');
+  const btnDes = document.getElementById('seg-btn-desactivar');
+
+  if (activo === null) {
+    texto.textContent = 'No se pudo cargar el estado.';
+    return;
+  }
+
+  if (activo) {
+    icono.innerHTML  = '<i class="fa-solid fa-shield-halved" style="color:#4caf50;"></i>';
+    texto.textContent = 'El segundo factor está activo. Tu cuenta requiere un código TOTP al iniciar sesión.';
+    badge.textContent = 'ACTIVO';
+    badge.style.cssText += 'background:#1a3a1a;color:#4caf50;';
+    btnAct.style.display = 'none';
+    btnDes.style.display = '';
+  } else {
+    icono.innerHTML  = '<i class="fa-solid fa-lock-open" style="color:var(--muted);"></i>';
+    texto.textContent = 'El segundo factor está desactivado. Tu cuenta solo requiere contraseña.';
+    badge.textContent = 'INACTIVO';
+    badge.style.cssText += 'background:#2a2a2a;color:var(--muted);';
+    btnAct.style.display = '';
+    btnDes.style.display = 'none';
+  }
+
+  // Ocultar flujo de setup si estaba abierto
+  document.getElementById('seg-setup-flow').style.display = 'none';
+}
+
+async function iniciarSetup2FA() {
+  const csrf = document.cookie.split(';').find(c => c.trim().startsWith('XSRF-TOKEN='));
+  const csrfToken = csrf ? decodeURIComponent(csrf.split('=')[1]) : '';
+
+  const btnAct = document.getElementById('seg-btn-activar');
+  btnAct.disabled = true;
+  btnAct.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generando...';
+
+  try {
+    // Obtener token Firebase fresco para reautenticación
+    const firebaseToken = await firebase.auth().currentUser?.getIdToken(true);
+    if (!firebaseToken) throw new Error('No hay sesión activa en Firebase.');
+
+    const res  = await fetch('/api/auth.php?action=2fa-setup', {
+      headers: {
+        'X-CSRF-Token': csrfToken,
+        'Authorization': 'Bearer ' + firebaseToken
+      }
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Error al generar configuración 2FA.');
+
+    // Mostrar secreto en texto
+    document.getElementById('seg-secreto-texto').textContent = data.secreto;
+
+    // Generar QR en canvas con la librería qrcode
+    const canvas = document.getElementById('seg-qr-canvas');
+    await QRCode.toCanvas(canvas, data.qr_url, {
+      width: 180,
+      margin: 1,
+      color: { dark: '#000000', light: '#ffffff' }
+    });
+
+    // Limpiar campo de código y error
+    document.getElementById('seg-codigo-input').value = '';
+    document.getElementById('seg-setup-error').style.display = 'none';
+
+    // Mostrar flujo
+    document.getElementById('seg-setup-flow').style.display = '';
+    document.getElementById('seg-codigo-input').focus();
+
+  } catch(err) {
+    alert('Error: ' + err.message);
+  } finally {
+    btnAct.disabled = false;
+    btnAct.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Activar 2FA';
+  }
+}
+
+async function confirmarActivar2FA() {
+  const codigo = document.getElementById('seg-codigo-input').value.replace(/\D/g,'');
+  const errBox = document.getElementById('seg-setup-error');
+
+  if (codigo.length !== 6) {
+    errBox.textContent = 'Ingresa los 6 dígitos del código.';
+    errBox.style.display = '';
+    return;
+  }
+
+  const csrf = document.cookie.split(';').find(c => c.trim().startsWith('XSRF-TOKEN='));
+  const csrfToken = csrf ? decodeURIComponent(csrf.split('=')[1]) : '';
+  const firebaseToken = await firebase.auth().currentUser?.getIdToken(false);
+
+  try {
+    const res  = await fetch('/api/auth.php?action=2fa-activar', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken,
+        'Authorization': 'Bearer ' + firebaseToken
+      },
+      body: JSON.stringify({ codigo })
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      errBox.textContent = data.error || 'Código incorrecto. Verifica la hora de tu dispositivo.';
+      errBox.style.display = '';
+      document.getElementById('seg-codigo-input').value = '';
+      document.getElementById('seg-codigo-input').focus();
+      return;
+    }
+
+    errBox.style.display = 'none';
+    document.getElementById('seg-setup-flow').style.display = 'none';
+    _renderEstado2FA(true);
+
+  } catch {
+    errBox.textContent = 'Error de red. Intenta nuevamente.';
+    errBox.style.display = '';
+  }
+}
+
+function cancelarSetup2FA() {
+  document.getElementById('seg-setup-flow').style.display = 'none';
+  document.getElementById('seg-codigo-input').value = '';
+  document.getElementById('seg-setup-error').style.display = 'none';
+}
+
+async function confirmarDesactivar2FA() {
+  const ok = confirm(
+    '¿Desactivar la verificación en dos pasos?\n\n' +
+    'Tu cuenta quedará protegida solo por contraseña.'
+  );
+  if (!ok) return;
+
+  const csrf = document.cookie.split(';').find(c => c.trim().startsWith('XSRF-TOKEN='));
+  const csrfToken = csrf ? decodeURIComponent(csrf.split('=')[1]) : '';
+  const firebaseToken = await firebase.auth().currentUser?.getIdToken(true);
+
+  try {
+    const res  = await fetch('/api/auth.php?action=2fa-desactivar', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken,
+        'Authorization': 'Bearer ' + firebaseToken
+      },
+      body: JSON.stringify({})
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'No se pudo desactivar el 2FA.');
+    _renderEstado2FA(false);
+  } catch(err) {
+    alert('Error: ' + err.message);
+  }
+}
+
 // ── Exponer funciones para event-delegation.js (data-call) ────
 window.verDetallePedidoAdmin  = verDetallePedidoAdmin;
 window.marcarSaldoManualAdmin = marcarSaldoManualAdmin;
@@ -3378,3 +3655,8 @@ window.cargarClientesAdmin    = cargarClientesAdmin;
 window.abrirOfertaModal       = abrirOfertaModal;
 window.eliminarOferta         = eliminarOferta;
 window.actualizarValorLabel   = actualizarValorLabel;
+window.cargarEstado2FA        = cargarEstado2FA;
+window.iniciarSetup2FA        = iniciarSetup2FA;
+window.confirmarActivar2FA    = confirmarActivar2FA;
+window.cancelarSetup2FA       = cancelarSetup2FA;
+window.confirmarDesactivar2FA = confirmarDesactivar2FA;

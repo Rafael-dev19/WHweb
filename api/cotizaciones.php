@@ -161,31 +161,74 @@ switch ($method) {
         break;
 
     case 'PUT':
-        requerirEmpleado();
+        requerirAdmin();     // solo admin gestiona cotizaciones (empleados fabrican)
         requerirCsrf();
         if (!$id) jsonError('ID requerido', 400);
         $cotActual = dbRow("SELECT * FROM cotizaciones WHERE id = ?", [$id]);
         if (!$cotActual) jsonError('Cotización no encontrada', 404);
         $body = getJsonBody();
         $update = [];
-        $estadosValidos = ['nueva', 'en_revision', 'respondida', 'cerrada'];
+
+        $estadosValidos = ['nueva', 'en_revision', 'respondida', 'aceptada',
+                           'en_produccion', 'lista', 'entregada', 'cancelada'];
         if (isset($body['estado'])) {
             if (!in_array($body['estado'], $estadosValidos)) jsonError('Estado inválido', 422);
+
+            // Al marcar como "respondida" el precio y descripción son obligatorios
+            if ($body['estado'] === 'respondida') {
+                $precio = isset($body['precio_cotizado']) ? (float)$body['precio_cotizado'] : (float)($cotActual['precio_cotizado'] ?? 0);
+                $desc   = trim($body['descripcion_respuesta'] ?? $cotActual['descripcion_respuesta'] ?? '');
+                if ($precio <= 0)    jsonError('Debes ingresar el precio cotizado antes de responder al cliente.', 422);
+                if (strlen($desc) < 10) jsonError('Ingresa la descripción de la propuesta (qué se fabricará).', 422);
+            }
+
+            // Al mandar a producción se asigna token de seguimiento si no tiene
+            if ($body['estado'] === 'en_produccion' && empty($cotActual['token_seguimiento'])) {
+                $update['token_seguimiento'] = bin2hex(random_bytes(16));
+            }
+
             $update['estado'] = $body['estado'];
         }
-        if (isset($body['notas_admin'])) $update['notas_admin'] = sanitize($body['notas_admin']);
+
+        if (isset($body['notas_admin']))          $update['notas_admin']          = sanitize($body['notas_admin']);
+        if (isset($body['precio_cotizado']))       $update['precio_cotizado']       = (float)$body['precio_cotizado'] > 0 ? (float)$body['precio_cotizado'] : null;
+        if (isset($body['descripcion_respuesta'])) $update['descripcion_respuesta'] = sanitize($body['descripcion_respuesta']);
+        if (isset($body['fecha_entrega_estimada'])) {
+            $fe = trim($body['fecha_entrega_estimada']);
+            $update['fecha_entrega_estimada'] = preg_match('/^\d{4}-\d{2}-\d{2}$/', $fe) ? $fe : null;
+        }
+
         if ($update) dbUpdate('cotizaciones', $update, 'id = ?', [$id]);
 
-        if (!empty($update['estado']) && $update['estado'] === 'respondida'
-            && $cotActual['estado'] !== 'respondida') {
+        // Recargar para tener todos los campos actualizados (incluye token recién asignado)
+        $cotFinal = dbRow("SELECT * FROM cotizaciones WHERE id = ?", [$id]);
+
+        // ── Disparar notificaciones por email según el estado nuevo ──
+        $estadoNuevo   = $update['estado']      ?? null;
+        $estadoAnterior = $cotActual['estado'];
+
+        if ($estadoNuevo && $estadoNuevo !== $estadoAnterior) {
             try {
-                notificarCotizacionRespondida(array_merge($cotActual, $update));
+                switch ($estadoNuevo) {
+                    case 'respondida':
+                        notificarCotizacionRespondida($cotFinal);
+                        break;
+                    case 'en_produccion':
+                        notificarCotizacionEnProduccion($cotFinal);
+                        break;
+                    case 'lista':
+                        notificarCotizacionLista($cotFinal);
+                        break;
+                    case 'entregada':
+                        notificarCotizacionEntregada($cotFinal);
+                        break;
+                }
             } catch (Exception $e) {
-                appLog('warning', 'Notif cotizacion respondida fallida', ['e' => $e->getMessage()]);
+                appLog('warning', 'Notif cotizacion fallida', ['estado' => $estadoNuevo, 'e' => $e->getMessage()]);
             }
         }
 
-        jsonSuccess(['mensaje' => 'Cotización actualizada']);
+        jsonSuccess(['mensaje' => 'Cotización actualizada', 'token_seguimiento' => $cotFinal['token_seguimiento'] ?? null]);
         break;
 
     default:

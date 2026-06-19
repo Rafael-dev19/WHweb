@@ -41,10 +41,13 @@ switch ($action) {
 
         _crearSesion($usuario);
 
-        $redirect     = $usuario['rol'] === 'administrador'
+        $redirect    = $usuario['rol'] === 'administrador'
             ? '/admin/panel_administrador.php'
             : '/empleado/panel_empleado.php';
-        $requiere2fa  = !empty($usuario['totp_activo']);
+        $tiene2fa    = !empty($usuario['totp_activo']);
+        // Si el usuario aún no tiene 2FA configurado, forzar que lo configure
+        // antes de entrar al panel (obligatorio para admin y empleado).
+        $forzar2fa   = !$tiene2fa;
 
         jsonSuccess([
             'usuario' => [
@@ -55,7 +58,8 @@ switch ($action) {
             ],
             'redirect'      => $redirect,
             'csrf'          => getCsrfToken(),
-            '2fa_required'  => $requiere2fa,
+            '2fa_required'  => $tiene2fa,   // ya tiene 2FA → pedir código
+            '2fa_setup'     => $forzar2fa,  // no tiene 2FA → forzar configuración
         ]);
         break;
 
@@ -151,8 +155,15 @@ switch ($action) {
             $usuario = obtenerUsuarioPorFirebaseUid($uid);
             if (!$usuario) jsonError('Tu cuenta de personal no está activa. Contacta al administrador.', 403);
             _crearSesion($usuario);
-            $redirect = $usuario['rol'] === 'administrador' ? '/admin' : '/empleado';
-            jsonSuccess(['redirect' => $redirect, 'tipo' => 'personal', 'rol' => $usuario['rol']]);
+            $redirect   = $usuario['rol'] === 'administrador' ? '/admin' : '/empleado';
+            $tiene2fa   = !empty($usuario['totp_activo']);
+            jsonSuccess([
+                'redirect'     => $redirect,
+                'tipo'         => 'personal',
+                'rol'          => $usuario['rol'],
+                '2fa_required' => $tiene2fa,   // tiene 2FA → pedir código antes de entrar
+                '2fa_setup'    => !$tiene2fa,  // no tiene 2FA → forzar configuración
+            ]);
         }
         $cliente = $uid ? obtenerClientePorFirebaseUid($uid) : null;
         // Auto-registrar si no existe pero tiene email en el token
@@ -254,7 +265,7 @@ switch ($action) {
     // El secreto provisional se almacena en sesión hasta que se active.
     case '2fa-setup':
         if ($method !== 'GET') jsonError('Método no permitido', 405);
-        $usuario = requerirAdmin();
+        $usuario = requerirEmpleado();   // admin y empleado pueden configurar su propio 2FA
         requerirReautenticacion('2fa_setup', 300);
         $secreto = generarSecreto2FA();
         $_SESSION['_2fa_secreto_provisional'] = $secreto;
@@ -268,7 +279,7 @@ switch ($action) {
     case '2fa-activar':
         if ($method !== 'POST') jsonError('Método no permitido', 405);
         requerirCsrf();
-        $usuario = requerirAdmin();
+        $usuario = requerirEmpleado();
         requerirReautenticacion('2fa_setup', 300);
         $body    = getJsonBody();
         $codigo  = trim($body['codigo'] ?? '');
@@ -290,10 +301,13 @@ switch ($action) {
     case '2fa-desactivar':
         if ($method !== 'POST') jsonError('Método no permitido', 405);
         requerirCsrf();
-        $usuario = requerirAdmin();
+        $usuario = requerirEmpleado();
         requerirReautenticacion('2fa_desactivar', 300);
         $body       = getJsonBody();
-        $objetivoId = isset($body['usuario_id']) ? (int)$body['usuario_id'] : (int)$usuario['id'];
+        // Un empleado solo puede desactivar su propia cuenta; admin puede desactivar cualquiera
+        $objetivoId = isset($body['usuario_id']) && $usuario['rol'] === 'administrador'
+            ? (int)$body['usuario_id']
+            : (int)$usuario['id'];
         dbQuery(
             "UPDATE usuarios_personal SET totp_secreto = NULL, totp_activo = 0 WHERE id = ?",
             [$objetivoId]

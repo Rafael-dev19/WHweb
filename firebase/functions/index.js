@@ -390,36 +390,141 @@ function emailCotizacionRecibida(cot) {
 
 // ── emailCotizacionRespondida ─────────────────────────────────────
 function emailCotizacionRespondida(cot) {
-  const folio    = cot.numero_cotizacion || '';
-  const nombre   = cot.nombre_cliente    || '';
-  const respuesta = cot.notas_admin      || '';
+  const folio    = cot.numero_cotizacion    || '';
+  const nombre   = cot.nombre_cliente       || '';
+  const precio   = Number(cot.precio_cotizado || 0);
+  const precioFmt = `$${precio.toLocaleString('es-MX', { minimumFractionDigits: 2 })} MXN`;
+  const desc     = cot.descripcion_respuesta || cot.notas_admin || '';
+  const fechaEnt = cot.fecha_entrega_estimada || '';
 
   const contenido = `
-<h2 style="color:#8B6914;margin-top:0;">Tu cotización ha sido respondida 📋</h2>
-<p style="color:#555;line-height:1.7;">Hola <strong>${nombre}</strong>, hemos revisado tu solicitud de cotización y te enviamos nuestra propuesta.</p>
+<h2 style="color:#8B6914;margin-top:0;">Tu propuesta de cotización está lista 📋</h2>
+<p style="color:#555;line-height:1.7;">Hola <strong>${nombre}</strong>, hemos revisado tu solicitud y preparamos esta propuesta personalizada para ti.</p>
 
 <div style="background:#faf6f0;border-left:4px solid #8B6914;padding:20px;margin:25px 0;border-radius:4px;">
-  <strong style="font-size:18px;color:#5C3D11;">${folio}</strong><br>
+  <strong style="font-size:18px;color:#5C3D11;display:block;margin-bottom:4px;">${folio}</strong>
   <span style="color:#888;font-size:13px;">Número de cotización</span>
 </div>
 
-${respuesta ? `
-<h3 style="color:#5C3D11;font-size:15px;margin:24px 0 8px;">📝 Respuesta de nuestro equipo</h3>
-<div style="background:#fff8f0;border:1px solid #e5ddd4;border-radius:6px;padding:20px;line-height:1.8;color:#3a3a3a;">
-  ${respuesta.replace(/\n/g, '<br>')}
+<!-- Precio destacado -->
+<div style="background:#fff8f0;border:2px solid #c9a96e;border-radius:10px;padding:20px;margin:20px 0;text-align:center;">
+  <div style="color:#7a5a1a;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Precio total de tu proyecto</div>
+  <div style="font-size:32px;font-weight:700;color:#5C3D11;">${precioFmt}</div>
+  ${fechaEnt ? `<div style="color:#888;font-size:13px;margin-top:6px;">📅 Entrega estimada: <strong>${fechaEnt}</strong></div>` : ''}
+</div>
+
+${desc ? `
+<h3 style="color:#5C3D11;font-size:15px;margin:24px 0 8px;">📐 Descripción de tu proyecto</h3>
+<div style="background:#fff;border:1px solid #e5ddd4;border-radius:6px;padding:20px;line-height:1.8;color:#3a3a3a;">
+  ${desc.replace(/\n/g, '<br>')}
 </div>` : ''}
 
-<p style="color:#555;line-height:1.7;margin-top:24px;">
-  Si tienes preguntas sobre esta propuesta o deseas proceder, por favor contáctanos respondiendo este correo o llamándonos.
-</p>
+<div style="background:#f0f7f0;border-left:4px solid #4a8b5a;padding:16px 20px;margin:24px 0;border-radius:4px;">
+  <p style="margin:0;color:#2a5a2a;font-size:14px;line-height:1.7;">
+    <strong>¿Te convence esta propuesta?</strong><br>
+    Contáctanos para confirmar y comenzamos la fabricación de tu mueble.
+  </p>
+</div>
 
 <div style="text-align:center;margin:30px 0;">
-  <a href="tel:3317054017" style="background:#8B6914;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:6px;font-size:15px;font-weight:bold;display:inline-block;font-family:Georgia,serif;">
-    Contactar ahora →
+  <a href="tel:3317054017" style="background:#8B6914;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:6px;font-size:15px;font-weight:bold;display:inline-block;font-family:Georgia,serif;margin-right:12px;">
+    📞 Llamar ahora
+  </a>
+  <a href="https://wa.me/523317054017?text=Hola%2C%20acepto%20la%20cotizaci%C3%B3n%20${folio}" style="background:#25D366;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:6px;font-size:15px;font-weight:bold;display:inline-block;font-family:Georgia,serif;">
+    💬 WhatsApp
   </a>
 </div>`;
 
-  return emailWrapper('Cotización Respondida', contenido);
+  return emailWrapper('Cotización Lista', contenido);
+}
+
+// ── emailCotizacionEnProduccion ───────────────────────────────────
+function emailCotizacionEnProduccion(cot) {
+  const folio    = cot.numero_cotizacion    || '';
+  const nombre   = cot.nombre_cliente       || '';
+  const desc     = cot.descripcion_respuesta || '';
+  const fechaEnt = cot.fecha_entrega_estimada || '';
+  const token    = cot.token_seguimiento    || '';
+  const trackUrl = token ? `https://muebleswh.com/seguimiento?token=${token}&cotizacion=${folio}` : '';
+
+  const contenido = `
+<h2 style="color:#8B6914;margin-top:0;">¡Tu mueble está en fabricación! 🔨</h2>
+<p style="color:#555;line-height:1.7;">Hola <strong>${nombre}</strong>, ¡excelente noticia! Tu proyecto personalizado ha comenzado el proceso de fabricación en nuestro taller.</p>
+
+<div style="background:#faf6f0;border-left:4px solid #8B6914;padding:20px;margin:25px 0;border-radius:4px;">
+  <strong style="font-size:18px;color:#5C3D11;display:block;margin-bottom:4px;">${folio}</strong>
+  <span style="color:#888;font-size:13px;">Número de cotización — guárdalo para dar seguimiento</span>
+  ${fechaEnt ? `<p style="margin:8px 0 0;color:#5C3D11;font-size:14px;">📅 Fecha estimada de entrega: <strong>${fechaEnt}</strong></p>` : ''}
+</div>
+
+${desc ? `
+<div style="background:#fff8f0;border:1px solid #e5ddd4;border-radius:6px;padding:16px 20px;margin:16px 0;">
+  <div style="color:#7a5a1a;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Tu proyecto</div>
+  <div style="color:#3a3a3a;line-height:1.7;font-size:14px;">${desc.replace(/\n/g, '<br>')}</div>
+</div>` : ''}
+
+${trackUrl ? `
+<div style="text-align:center;margin:28px 0;">
+  <a href="${trackUrl}" style="background:#8B6914;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:6px;font-size:15px;font-weight:bold;display:inline-block;">
+    Seguir mi pedido →
+  </a>
+</div>` : ''}
+
+<p style="color:#777;font-size:13px;text-align:center;">Te avisaremos por correo cuando tu mueble esté listo para entrega.</p>`;
+
+  return emailWrapper('En Fabricación', contenido);
+}
+
+// ── emailCotizacionLista ──────────────────────────────────────────
+function emailCotizacionLista(cot) {
+  const folio  = cot.numero_cotizacion || '';
+  const nombre = cot.nombre_cliente    || '';
+  const token  = cot.token_seguimiento || '';
+  const trackUrl = token ? `https://muebleswh.com/seguimiento?token=${token}&cotizacion=${folio}` : '';
+
+  const contenido = `
+<h2 style="color:#8B6914;margin-top:0;">¡Tu mueble está listo! ✅</h2>
+<p style="color:#555;line-height:1.7;">Hola <strong>${nombre}</strong>, tu mueble personalizado ha sido fabricado y está listo para entrega. Nos pondremos en contacto para coordinar los detalles.</p>
+
+<div style="background:#faf6f0;border-left:4px solid #4a8b5a;padding:20px;margin:25px 0;border-radius:4px;">
+  <strong style="font-size:18px;color:#5C3D11;display:block;margin-bottom:4px;">${folio}</strong>
+  <span style="color:#888;font-size:13px;">Número de cotización</span>
+</div>
+
+<div style="background:#f0f7f0;border-left:4px solid #4a8b5a;padding:16px 20px;margin:20px 0;border-radius:4px;">
+  <p style="margin:0;color:#2a5a2a;font-size:14px;line-height:1.7;">
+    📞 Nos comunicaremos contigo en las próximas horas para agendar la entrega o instalación.
+  </p>
+</div>
+
+${trackUrl ? `<div style="text-align:center;margin:24px 0;"><a href="${trackUrl}" style="background:#8B6914;color:#fff;text-decoration:none;padding:12px 28px;border-radius:6px;font-size:14px;font-weight:bold;display:inline-block;">Ver estado →</a></div>` : ''}`;
+
+  return emailWrapper('Mueble Listo', contenido);
+}
+
+// ── emailCotizacionEntregada ──────────────────────────────────────
+function emailCotizacionEntregada(cot) {
+  const folio  = cot.numero_cotizacion || '';
+  const nombre = cot.nombre_cliente    || '';
+
+  const contenido = `
+<h2 style="color:#8B6914;margin-top:0;">¡Entrega completada! 🎉</h2>
+<p style="color:#555;line-height:1.7;">Hola <strong>${nombre}</strong>, tu mueble personalizado ha sido entregado. Esperamos que lo disfrutes mucho.</p>
+
+<div style="background:#faf6f0;border-left:4px solid #8B6914;padding:20px;margin:25px 0;border-radius:4px;">
+  <strong style="font-size:18px;color:#5C3D11;display:block;margin-bottom:4px;">${folio}</strong>
+</div>
+
+<p style="color:#555;line-height:1.7;">
+  Si tienes alguna duda o necesitas ajustes, no dudes en contactarnos. Tu satisfacción es nuestra prioridad.
+</p>
+<div style="text-align:center;margin:28px 0;">
+  <a href="tel:3317054017" style="background:#8B6914;color:#fff;text-decoration:none;padding:12px 28px;border-radius:6px;font-size:14px;font-weight:bold;display:inline-block;">
+    Contactar soporte →
+  </a>
+</div>`;
+
+  return emailWrapper('Entrega Completada', contenido);
 }
 
 // ── emailCitaConfirmada ───────────────────────────────────────────
@@ -593,15 +698,16 @@ exports.onNuevaNotificacion = onDocumentCreated(
     const emails = getEmails();
     const tipo   = data.tipo;
 
-    // ── nuevo_pedido → emailPedidoConfirmado (cliente) + emailAdminNuevoEvento('pedido') (admin) ──
+    // ── nuevo_pedido → emailPedidoConfirmado (cliente) + emailAdminNuevoEvento (admin + empleados) ──
     if (tipo === 'nuevo_pedido') {
       let pedido = {};
       try { pedido = JSON.parse(data.datos_pedido || '{}'); } catch (e) {}
       if (!pedido.correo_cliente) return;
 
-      const adminEmail = emailAdminNuevoEvento('pedido', pedido);
+      const adminEmail   = emailAdminNuevoEvento('pedido', pedido);
+      const empleadosList = (data.correos_empleados || '').split(',').map(s => s.trim()).filter(Boolean);
 
-      await Promise.allSettled([
+      const tasks = [
         sendEmail({
           from: emails.pedidos, fromName: 'WOODEN HOUSE PEDIDOS',
           to:      pedido.correo_cliente,
@@ -621,7 +727,21 @@ exports.onNuevaNotificacion = onDocumentCreated(
           text:    `Nuevo pedido ${pedido.numero_pedido} de ${pedido.nombre_cliente}.`,
         }).then(() => console.log(`[CF] emailAdminNuevoEvento(pedido) → ${emails.admin}`))
           .catch(e => console.error('[CF] Error admin pedido:', e.message)),
-      ]);
+
+        // CC a cada empleado activo
+        ...empleadosList.map(empCorreo =>
+          sendEmail({
+            from: emails.pedidos, fromName: 'WOODEN HOUSE SISTEMA',
+            to:      empCorreo,
+            replyTo: emails.replyTo,
+            subject: adminEmail.subject,
+            html:    adminEmail.html,
+            text:    `Nuevo pedido ${pedido.numero_pedido} de ${pedido.nombre_cliente}.`,
+          }).then(() => console.log(`[CF] emailPedido empleado → ${empCorreo}`))
+            .catch(e => console.error(`[CF] Error pedido empleado ${empCorreo}:`, e.message))
+        ),
+      ];
+      await Promise.allSettled(tasks);
       return;
     }
 
@@ -675,7 +795,7 @@ exports.onNuevaNotificacion = onDocumentCreated(
       return;
     }
 
-    // ── cotizacion_respondida → emailCotizacionRespondida (cliente) ─────────────
+    // ── cotizacion_respondida → emailCotizacionRespondida (cliente con precio) ──
     if (tipo === 'cotizacion_respondida') {
       let cot = {};
       try { cot = JSON.parse(data.datos_cotizacion || '{}'); } catch (e) {}
@@ -685,23 +805,105 @@ exports.onNuevaNotificacion = onDocumentCreated(
         from: emails.cotizaciones, fromName: 'WOODEN HOUSE COTIZACIONES',
         to:      cot.correo_cliente,
         replyTo: emails.replyTo,
-        subject: `Tu cotización ${cot.numero_cotizacion} ha sido respondida | Wooden House`,
+        subject: `Tu propuesta está lista — ${cot.numero_cotizacion} | Wooden House`,
         html:    emailCotizacionRespondida(cot),
-        text:    `Tu cotización ${cot.numero_cotizacion} ha sido respondida. Revisa tu correo para ver la propuesta.`,
+        text:    `Tu cotización ${cot.numero_cotizacion} ha sido respondida. Precio: $${Number(cot.precio_cotizado||0).toFixed(2)} MXN.`,
       }).then(() => console.log(`[CF] emailCotizacionRespondida → ${cot.correo_cliente}`))
         .catch(e => console.error('[CF] Error emailCotizacionRespondida:', e.message));
       return;
     }
 
-    // ── nueva_cita → emailCitaConfirmada (cliente) + emailAdminNuevoEvento('cita') (admin) ──
+    // ── cotizacion_en_produccion → cliente + empleados ────────────
+    if (tipo === 'cotizacion_en_produccion') {
+      let cot = {};
+      try { cot = JSON.parse(data.datos_cotizacion || '{}'); } catch (e) {}
+      if (!cot.correo_cliente) return;
+
+      const empleadosList = (data.correos_empleados || '').split(',').map(s => s.trim()).filter(Boolean);
+
+      const tasks = [
+        sendEmail({
+          from: emails.cotizaciones, fromName: 'WOODEN HOUSE',
+          to:      cot.correo_cliente,
+          replyTo: emails.replyTo,
+          subject: `Tu mueble está en fabricación — ${cot.numero_cotizacion} | Wooden House`,
+          html:    emailCotizacionEnProduccion(cot),
+          text:    `Tu mueble personalizado (${cot.numero_cotizacion}) ha comenzado la fabricación. Entrega estimada: ${cot.fecha_entrega_estimada || 'por confirmar'}.`,
+        }).then(() => console.log(`[CF] emailCotEnProduccion → ${cot.correo_cliente}`))
+          .catch(e => console.error('[CF] Error cot en produccion cliente:', e.message)),
+
+        // Notificar a empleados con resumen de fabricación
+        ...empleadosList.map(empCorreo =>
+          sendEmail({
+            from: emails.cotizaciones, fromName: 'WOODEN HOUSE SISTEMA',
+            to:      empCorreo,
+            replyTo: emails.replyTo,
+            subject: `🔨 Nueva orden de fabricación — ${cot.numero_cotizacion}`,
+            html: `
+<div style="font-family:'Segoe UI',Arial,sans-serif;max-width:560px;margin:0 auto;background:#faf6f0;border-radius:12px;overflow:hidden;border:1px solid #e5ddd4;">
+  <div style="background:#5C3D11;padding:20px 28px;"><h1 style="color:#e8dcc8;margin:0;font-size:18px;">Nueva orden de fabricación</h1></div>
+  <div style="padding:24px;">
+    <p style="color:#3a3020;"><strong>Folio:</strong> ${cot.numero_cotizacion}</p>
+    <p style="color:#3a3020;"><strong>Cliente:</strong> ${cot.nombre_cliente}</p>
+    <p style="color:#3a3020;"><strong>Entrega estimada:</strong> ${cot.fecha_entrega_estimada || 'Por definir'}</p>
+    ${cot.descripcion_respuesta ? `<div style="background:#fff8f0;border:1px solid #e5ddd4;border-radius:6px;padding:14px;margin-top:12px;"><strong style="color:#5C3D11;">Especificaciones:</strong><p style="color:#3a3020;margin:8px 0 0;">${cot.descripcion_respuesta.replace(/\n/g,'<br>')}</p></div>` : ''}
+  </div>
+</div>`,
+            text: `Nueva fabricación ${cot.numero_cotizacion} para ${cot.nombre_cliente}. Entrega: ${cot.fecha_entrega_estimada || 'por definir'}.`,
+          }).then(() => console.log(`[CF] emailCotEnProduccion empleado → ${empCorreo}`))
+            .catch(e => console.error(`[CF] Error cot produccion empleado ${empCorreo}:`, e.message))
+        ),
+      ];
+      await Promise.allSettled(tasks);
+      return;
+    }
+
+    // ── cotizacion_lista → email al cliente ───────────────────────
+    if (tipo === 'cotizacion_lista') {
+      let cot = {};
+      try { cot = JSON.parse(data.datos_cotizacion || '{}'); } catch (e) {}
+      if (!cot.correo_cliente) return;
+
+      await sendEmail({
+        from: emails.cotizaciones, fromName: 'WOODEN HOUSE',
+        to:      cot.correo_cliente,
+        replyTo: emails.replyTo,
+        subject: `¡Tu mueble está listo! — ${cot.numero_cotizacion} | Wooden House`,
+        html:    emailCotizacionLista(cot),
+        text:    `Tu mueble personalizado (${cot.numero_cotizacion}) está listo. Pronto te contactaremos para coordinar la entrega.`,
+      }).then(() => console.log(`[CF] emailCotLista → ${cot.correo_cliente}`))
+        .catch(e => console.error('[CF] Error cot lista:', e.message));
+      return;
+    }
+
+    // ── cotizacion_entregada → email al cliente ───────────────────
+    if (tipo === 'cotizacion_entregada') {
+      let cot = {};
+      try { cot = JSON.parse(data.datos_cotizacion || '{}'); } catch (e) {}
+      if (!cot.correo_cliente) return;
+
+      await sendEmail({
+        from: emails.cotizaciones, fromName: 'WOODEN HOUSE',
+        to:      cot.correo_cliente,
+        replyTo: emails.replyTo,
+        subject: `¡Entrega completada! — ${cot.numero_cotizacion} | Wooden House`,
+        html:    emailCotizacionEntregada(cot),
+        text:    `Tu mueble personalizado (${cot.numero_cotizacion}) ha sido entregado. ¡Gracias por confiar en Wooden House!`,
+      }).then(() => console.log(`[CF] emailCotEntregada → ${cot.correo_cliente}`))
+        .catch(e => console.error('[CF] Error cot entregada:', e.message));
+      return;
+    }
+
+    // ── nueva_cita → emailCitaConfirmada (cliente) + emailAdminNuevoEvento (admin + empleados) ──
     if (tipo === 'nueva_cita') {
       let cita = {};
       try { cita = JSON.parse(data.datos_cita || '{}'); } catch (e) {}
       if (!cita.correo_cliente) return;
 
-      const adminEmail = emailAdminNuevoEvento('cita', cita);
+      const adminEmail   = emailAdminNuevoEvento('cita', cita);
+      const empleadosList = (data.correos_empleados || '').split(',').map(s => s.trim()).filter(Boolean);
 
-      await Promise.allSettled([
+      const tasks = [
         sendEmail({
           from: emails.citas, fromName: 'WOODEN HOUSE CITAS',
           to:      cita.correo_cliente,
@@ -721,7 +923,67 @@ exports.onNuevaNotificacion = onDocumentCreated(
           text:    `Nueva cita ${cita.numero_cita} de ${cita.nombre_cliente} para ${cita.fecha_cita}.`,
         }).then(() => console.log(`[CF] emailAdminNuevoEvento(cita) → ${emails.admin}`))
           .catch(e => console.error('[CF] Error admin cita:', e.message)),
-      ]);
+
+        // CC a cada empleado activo
+        ...empleadosList.map(empCorreo =>
+          sendEmail({
+            from: emails.citas, fromName: 'WOODEN HOUSE SISTEMA',
+            to:      empCorreo,
+            replyTo: emails.replyTo,
+            subject: adminEmail.subject,
+            html:    adminEmail.html,
+            text:    `Nueva cita ${cita.numero_cita} de ${cita.nombre_cliente} para ${cita.fecha_cita}.`,
+          }).then(() => console.log(`[CF] emailCita empleado → ${empCorreo}`))
+            .catch(e => console.error(`[CF] Error cita empleado ${empCorreo}:`, e.message))
+        ),
+      ];
+      await Promise.allSettled(tasks);
+      return;
+    }
+
+    // ── invitacion_personal → email al empleado invitado ──────────
+    if (tipo === 'invitacion_personal') {
+      const correoEmp  = data.correo_empleado  || '';
+      const nombreEmp  = data.nombre_empleado  || 'Equipo';
+      const rolEmp     = data.rol              || 'empleado';
+      const urlActivar = data.url_activacion   || '';
+      if (!correoEmp || !urlActivar) return;
+
+      const rolLabel = rolEmp === 'administrador' ? 'Administrador' : 'Empleado';
+      await sendEmail({
+        from: emails.admin, fromName: 'WOODEN HOUSE',
+        to:      correoEmp,
+        replyTo: emails.replyTo,
+        subject: 'Invitación al panel de gestión — Wooden House',
+        html: `
+<div style="font-family:'Segoe UI',Arial,sans-serif;max-width:560px;margin:0 auto;background:#faf6f0;border-radius:12px;overflow:hidden;border:1px solid #e5ddd4;">
+  <div style="background:#5C3D11;padding:28px 32px;text-align:center;">
+    <h1 style="color:#e8dcc8;margin:0;font-size:22px;font-weight:700;letter-spacing:1px;">WOODEN HOUSE</h1>
+  </div>
+  <div style="padding:32px;">
+    <h2 style="color:#5C3D11;margin-top:0;">Hola, ${nombreEmp}</h2>
+    <p style="color:#555;line-height:1.7;">
+      Has sido invitado/a al panel de gestión de <strong>Wooden House</strong> como <strong>${rolLabel}</strong>.
+    </p>
+    <p style="color:#555;line-height:1.7;">
+      Haz clic en el botón de abajo para crear tu contraseña y activar tu cuenta. El enlace es válido por <strong>48 horas</strong>.
+    </p>
+    <div style="text-align:center;margin:28px 0;">
+      <a href="${urlActivar}"
+         style="background:#8B6914;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;display:inline-block;">
+        Activar mi cuenta
+      </a>
+    </div>
+    <p style="color:#888;font-size:12px;line-height:1.6;">
+      Si no esperabas este correo, ignóralo. Nadie más puede usar este enlace.
+    </p>
+    <hr style="border:none;border-top:1px solid #e5ddd4;margin:20px 0;">
+    <p style="color:#aaa;font-size:11px;text-align:center;margin:0;">© Wooden House · Muebles a medida</p>
+  </div>
+</div>`,
+        text: `Hola ${nombreEmp},\n\nFuiste invitado al panel de Wooden House como ${rolLabel}.\n\nActiva tu cuenta aquí: ${urlActivar}\n\nEl enlace expira en 48 horas.`,
+      }).then(() => console.log(`[CF] emailInvitacion → ${correoEmp}`))
+        .catch(e => console.error('[CF] Error invitacion:', e.message));
       return;
     }
 

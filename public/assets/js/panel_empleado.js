@@ -96,6 +96,11 @@ function showSection(section){
   if(section === 'pedidos')      cargarPedidosEmpleadoAPI();
   if(section === 'citas')        cargarCitasAPI();
   if(section === 'cotizaciones') cargarCotizacionesAPI();
+  if(section === 'seguridad')    cargarEstado2FA();
+  if(section === 'seguridad' && new URLSearchParams(location.search).get('setup_2fa')) {
+    setTimeout(iniciarSetup2FA, 400);
+    history.replaceState(null, '', location.pathname);
+  }
 }
 
 // ================== MODALES: click fuera ==================
@@ -1466,7 +1471,12 @@ document.addEventListener('DOMContentLoaded', () => {
   setTimeout(cargarNombreEmpleado, 200);
   setTimeout(refreshKpisAPI, 400);
   setTimeout(fetchNotificationsFromAPI, 800);
-  showSection('dashboard');
+  // Si viene de login sin 2FA configurado, forzar sección Seguridad
+  if (new URLSearchParams(location.search).get('setup_2fa')) {
+    showSection('seguridad');
+  } else {
+    showSection('dashboard');
+  }
 
   window._currentSection = 'dashboard';
   window._autoRefreshInterval = setInterval(_autoRefresh, 8000);
@@ -1482,6 +1492,143 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+// ═══════════════════════════════════════════════════════════
+// SEGURIDAD — 2FA TOTP (empleado)
+// ═══════════════════════════════════════════════════════════
+
+function _getCsrf() {
+  const c = document.cookie.split(';').find(x => x.trim().startsWith('XSRF-TOKEN='));
+  return c ? decodeURIComponent(c.split('=')[1]) : '';
+}
+
+async function cargarEstado2FA() {
+  try {
+    const res  = await fetch('/api/auth.php?action=verificar', {
+      headers: { 'X-CSRF-Token': _getCsrf() }
+    });
+    const data = await res.json();
+    _renderEstado2FA(data?.usuario?.totp_activo == 1);
+  } catch {
+    _renderEstado2FA(null);
+  }
+}
+
+function _renderEstado2FA(activo) {
+  const icono  = document.getElementById('seg-2fa-icono');
+  const texto  = document.getElementById('seg-2fa-estado-texto');
+  const badge  = document.getElementById('seg-2fa-badge');
+  const btnAct = document.getElementById('seg-btn-activar');
+  const btnDes = document.getElementById('seg-btn-desactivar');
+  if (!icono) return;
+
+  if (activo === null) { texto.textContent = 'No se pudo cargar el estado.'; return; }
+
+  if (activo) {
+    icono.innerHTML   = '<i class="fa-solid fa-shield-halved" style="color:#4caf50;"></i>';
+    texto.textContent = 'El segundo factor está activo. Tu cuenta requiere un código TOTP al iniciar sesión.';
+    badge.textContent = 'ACTIVO';
+    badge.style.cssText += 'background:#1a3a1a;color:#4caf50;';
+    btnAct.style.display = 'none';
+    btnDes.style.display = '';
+  } else {
+    icono.innerHTML   = '<i class="fa-solid fa-lock-open" style="color:var(--muted);"></i>';
+    texto.textContent = 'El segundo factor está desactivado. Tu cuenta solo requiere contraseña.';
+    badge.textContent = 'INACTIVO';
+    badge.style.cssText += 'background:#2a2a2a;color:var(--muted);';
+    btnAct.style.display = '';
+    btnDes.style.display = 'none';
+  }
+  document.getElementById('seg-setup-flow').style.display = 'none';
+}
+
+async function iniciarSetup2FA() {
+  const btnAct = document.getElementById('seg-btn-activar');
+  btnAct.disabled = true;
+  btnAct.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generando...';
+  try {
+    const firebaseToken = await firebase.auth().currentUser?.getIdToken(true);
+    if (!firebaseToken) throw new Error('No hay sesión activa en Firebase.');
+
+    const res  = await fetch('/api/auth.php?action=2fa-setup', {
+      headers: { 'X-CSRF-Token': _getCsrf(), 'Authorization': 'Bearer ' + firebaseToken }
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Error al generar configuración 2FA.');
+
+    document.getElementById('seg-secreto-texto').textContent = data.secreto;
+    await QRCode.toCanvas(document.getElementById('seg-qr-canvas'), data.qr_url, {
+      width: 180, margin: 1, color: { dark: '#000000', light: '#ffffff' }
+    });
+    document.getElementById('seg-codigo-input').value = '';
+    document.getElementById('seg-setup-error').style.display = 'none';
+    document.getElementById('seg-setup-flow').style.display = '';
+    document.getElementById('seg-codigo-input').focus();
+  } catch(err) {
+    alert('Error: ' + err.message);
+  } finally {
+    btnAct.disabled = false;
+    btnAct.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Activar 2FA';
+  }
+}
+
+async function confirmarActivar2FA() {
+  const codigo = document.getElementById('seg-codigo-input').value.replace(/\D/g,'');
+  const errBox = document.getElementById('seg-setup-error');
+  if (codigo.length !== 6) { errBox.textContent = 'Ingresa los 6 dígitos del código.'; errBox.style.display = ''; return; }
+
+  try {
+    const firebaseToken = await firebase.auth().currentUser?.getIdToken(false);
+    const res  = await fetch('/api/auth.php?action=2fa-activar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': _getCsrf(), 'Authorization': 'Bearer ' + firebaseToken },
+      body: JSON.stringify({ codigo })
+    });
+    const data = await res.json();
+    if (!data.success) {
+      errBox.textContent = data.error || 'Código incorrecto. Verifica la hora de tu dispositivo.';
+      errBox.style.display = '';
+      document.getElementById('seg-codigo-input').value = '';
+      document.getElementById('seg-codigo-input').focus();
+      return;
+    }
+    errBox.style.display = 'none';
+    document.getElementById('seg-setup-flow').style.display = 'none';
+    _renderEstado2FA(true);
+  } catch {
+    errBox.textContent = 'Error de red. Intenta nuevamente.';
+    errBox.style.display = '';
+  }
+}
+
+function cancelarSetup2FA() {
+  document.getElementById('seg-setup-flow').style.display = 'none';
+  document.getElementById('seg-codigo-input').value = '';
+  document.getElementById('seg-setup-error').style.display = 'none';
+}
+
+async function confirmarDesactivar2FA() {
+  if (!confirm('¿Desactivar la verificación en dos pasos?\n\nTu cuenta quedará protegida solo por contraseña.')) return;
+  try {
+    const firebaseToken = await firebase.auth().currentUser?.getIdToken(true);
+    const res  = await fetch('/api/auth.php?action=2fa-desactivar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': _getCsrf(), 'Authorization': 'Bearer ' + firebaseToken },
+      body: JSON.stringify({})
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'No se pudo desactivar el 2FA.');
+    _renderEstado2FA(false);
+  } catch(err) {
+    alert('Error: ' + err.message);
+  }
+}
+
+window.cargarEstado2FA        = cargarEstado2FA;
+window.iniciarSetup2FA        = iniciarSetup2FA;
+window.confirmarActivar2FA    = confirmarActivar2FA;
+window.cancelarSetup2FA       = cancelarSetup2FA;
+window.confirmarDesactivar2FA = confirmarDesactivar2FA;
 
 window.actualizarEstadoPedidoEmp = actualizarEstadoPedidoEmp;
 window.confirmarCita      = confirmarCita;
