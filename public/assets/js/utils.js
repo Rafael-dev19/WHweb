@@ -108,6 +108,32 @@ async function apiRequest(endpoint, options = {}) {
   }
 }
 
+// ── SEGURIDAD: HTML SEGURO ────────────────────────────
+// Sanitiza HTML antes de inyectarlo en el DOM.
+// Usa DOMPurify si está disponible (cargado en páginas con contenido
+// dinámico de usuario); si no, escapa entidades como fallback seguro.
+
+function safeHtml(dirty) {
+  if (typeof DOMPurify !== 'undefined') {
+    return DOMPurify.sanitize(dirty, { USE_PROFILES: { html: true } });
+  }
+  // Fallback: escape de entidades HTML (sin interpretar etiquetas)
+  const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+  return String(dirty).replace(/[&<>"']/g, c => map[c]);
+}
+
+// Versión asíncrona para innerHTML cuando DOMPurify no está precargado
+function setInnerHTMLSafe(element, html) {
+  if (typeof DOMPurify !== 'undefined') {
+    element.innerHTML = DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
+  } else {
+    // Sin DOMPurify: construir el DOM manualmente para evitar XSS
+    const tmp = document.createElement('template');
+    tmp.innerHTML = html;
+    element.replaceChildren(...tmp.content.childNodes);
+  }
+}
+
 // ── DOM HELPERS ───────────────────────────────────────
 
 function showLoader(message = 'Cargando...') {
@@ -127,10 +153,14 @@ function showLoader(message = 'Cargando...') {
     z-index: 99999;
     color: white;
   `;
-  loader.innerHTML = `
-    <div style="font-size: 48px; margin-bottom: 20px; color: #8b7355;"><i class="fa-solid fa-spinner fa-spin"></i></div>
-    <div style="font-size: 18px;">${message}</div>
-  `;
+  // Construir con DOM API en lugar de innerHTML para evitar XSS en el mensaje
+  const icon = document.createElement('div');
+  icon.style.cssText = 'font-size: 48px; margin-bottom: 20px; color: #8b7355;';
+  icon.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+  const texto = document.createElement('div');
+  texto.style.fontSize = '18px';
+  texto.textContent = message;   // textContent no interpreta HTML
+  loader.append(icon, texto);
   document.body.appendChild(loader);
   return loader;
 }

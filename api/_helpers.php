@@ -18,6 +18,7 @@ require_once dirname(__DIR__) . '/includes/db.php';
 require_once dirname(__DIR__) . '/includes/functions.php';
 require_once dirname(__DIR__) . '/includes/auth.php';
 require_once dirname(__DIR__) . '/includes/notifications.php';
+require_once dirname(__DIR__) . '/includes/security.php';
 
 // ── CORS ──────────────────────────────────────────────────────────
 $allowedOrigins = array_filter(array_map('trim', explode(',',
@@ -58,6 +59,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(204);
     exit;
 }
+
+// ── Defensa temprana (antes de cualquier lógica de negocio) ───────
+limitarTamanoCuerpo(512);          // rechaza bodies > 512 KB
+inicializarHuellaSesion();         // sella la sesión con IP+UA en primera visita
+if (!verificarHuellaSesion()) {    // detecta cookie robada desde otro origen
+    session_regenerate_id(true);
+    $_SESSION = [];
+    jsonError('Sesión inválida. Por favor inicia sesión nuevamente.', 401);
+}
+// Revocación: invalida sesiones cuya cookie sea anterior al último logout
+verificarSesionPersonalRevocada();
+verificarSesionClienteRevocada();
 
 // ── Manejador global de excepciones ───────────────────────────────
 set_exception_handler(function(Throwable $e): void {

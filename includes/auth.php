@@ -177,7 +177,8 @@ function obtenerUsuarioPorFirebaseUid(string $uid): ?array {
     if (!preg_match('/^[a-zA-Z0-9]{20,128}$/', $uid)) return null;
 
     return dbRow(
-        "SELECT id, firebase_uid, nombre_completo, correo, rol, activo
+        "SELECT id, firebase_uid, nombre_completo, correo, rol, activo,
+                totp_activo, totp_secreto
          FROM usuarios_personal
          WHERE firebase_uid = ? AND activo = 1
          LIMIT 1",
@@ -201,12 +202,17 @@ function requerirAutenticacion(): array {
         $_SESSION['_last_activity'] = $now;
 
         $usuario = dbRow(
-            "SELECT id, firebase_uid, nombre_completo, correo, rol
+            "SELECT id, firebase_uid, nombre_completo, correo, rol,
+                    totp_activo, totp_secreto
              FROM usuarios_personal
              WHERE id = ? AND activo = 1 LIMIT 1",
             [$_SESSION['usuario_id']]
         );
-        if ($usuario) return $usuario;
+        if ($usuario) {
+            // 2FA: bloquea si el usuario tiene TOTP activo y no lo ha verificado en esta sesión
+            if (function_exists('requerir2FA')) requerir2FA($usuario);
+            return $usuario;
+        }
         _destruirSesion();
     }
 
@@ -243,7 +249,7 @@ function requerirEmpleado(): array {
 function sesionActiva(): ?array {
     if (!empty($_SESSION['usuario_id'])) {
         return dbRow(
-            "SELECT id, nombre_completo, correo, rol
+            "SELECT id, nombre_completo, correo, rol, totp_activo
              FROM usuarios_personal
              WHERE id = ? AND activo = 1 LIMIT 1",
             [$_SESSION['usuario_id']]
