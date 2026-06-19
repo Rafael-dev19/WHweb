@@ -12,16 +12,55 @@ USE wooden_house;
 -- totp_secreto:  clave Base32 para Google Authenticator / Authy.
 -- totp_activo:   0 = desactivado (default), 1 = obligatorio al entrar.
 
-ALTER TABLE usuarios_personal
-    ADD COLUMN IF NOT EXISTS sesiones_revocadas_desde TIMESTAMP NULL DEFAULT NULL,
-    ADD COLUMN IF NOT EXISTS totp_secreto             VARCHAR(64)  NULL DEFAULT NULL,
-    ADD COLUMN IF NOT EXISTS totp_activo              TINYINT(1)   NOT NULL DEFAULT 0;
+-- ADD COLUMN IF NOT EXISTS es MariaDB; en MySQL 8.0 usar procedimiento
+DROP PROCEDURE IF EXISTS wh_security_migration;
+DELIMITER $$
+CREATE PROCEDURE wh_security_migration()
+BEGIN
+    -- usuarios_personal: sesiones_revocadas_desde
+    IF NOT EXISTS (
+        SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'usuarios_personal'
+          AND COLUMN_NAME = 'sesiones_revocadas_desde'
+    ) THEN
+        ALTER TABLE usuarios_personal
+            ADD COLUMN sesiones_revocadas_desde TIMESTAMP NULL DEFAULT NULL;
+    END IF;
 
--- ── Tabla: clientes ───────────────────────────────────────────────
--- Misma columna de revocación para clientes e-commerce.
+    -- usuarios_personal: totp_secreto
+    IF NOT EXISTS (
+        SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'usuarios_personal'
+          AND COLUMN_NAME = 'totp_secreto'
+    ) THEN
+        ALTER TABLE usuarios_personal
+            ADD COLUMN totp_secreto VARCHAR(64) NULL DEFAULT NULL;
+    END IF;
 
-ALTER TABLE clientes
-    ADD COLUMN IF NOT EXISTS sesiones_revocadas_desde TIMESTAMP NULL DEFAULT NULL;
+    -- usuarios_personal: totp_activo
+    IF NOT EXISTS (
+        SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'usuarios_personal'
+          AND COLUMN_NAME = 'totp_activo'
+    ) THEN
+        ALTER TABLE usuarios_personal
+            ADD COLUMN totp_activo TINYINT(1) NOT NULL DEFAULT 0;
+    END IF;
+
+    -- clientes: sesiones_revocadas_desde
+    IF NOT EXISTS (
+        SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'clientes'
+          AND COLUMN_NAME = 'sesiones_revocadas_desde'
+    ) THEN
+        ALTER TABLE clientes
+            ADD COLUMN sesiones_revocadas_desde TIMESTAMP NULL DEFAULT NULL;
+    END IF;
+END$$
+DELIMITER ;
+
+CALL wh_security_migration();
+DROP PROCEDURE IF EXISTS wh_security_migration;
 
 -- ── Índices opcionales (mejoran velocidad de la verificación) ────
 -- No son críticos en tablas pequeñas; añadir si hay miles de filas.
