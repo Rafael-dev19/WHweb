@@ -3537,13 +3537,11 @@ async function iniciarSetup2FA() {
     // Mostrar secreto en texto
     document.getElementById('seg-secreto-texto').textContent = data.secreto;
 
-    // Generar QR en canvas con la librería qrcode
+    // Mostrar QR como imagen (sin dependencia de librería externa)
     const canvas = document.getElementById('seg-qr-canvas');
-    await QRCode.toCanvas(canvas, data.qr_url, {
-      width: 180,
-      margin: 1,
-      color: { dark: '#000000', light: '#ffffff' }
-    });
+    canvas.src = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=8&data='
+      + encodeURIComponent(data.qr_url);
+    canvas.style.display = '';
 
     // Limpiar campo de código y error
     document.getElementById('seg-codigo-input').value = '';

@@ -357,7 +357,8 @@ unset($_usuario);
                 <div>
                   <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;">Paso 1 — Escanea el QR con Google Authenticator o Authy</div>
                   <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;">
-                    <canvas id="seg-qr-canvas" style="border:3px solid #333;border-radius:8px;background:#fff;"></canvas>
+                    <img id="seg-qr-canvas" src="" alt="Código QR" width="180" height="180"
+                         style="border:3px solid #333;border-radius:8px;background:#fff;display:none;">
                     <div style="flex:1;min-width:180px;">
                       <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">O ingresa el código manualmente:</div>
                       <code id="seg-secreto-texto" style="display:block;font-size:14px;letter-spacing:2px;background:#1a1a1a;border:1px solid #333;padding:10px 14px;border-radius:6px;word-break:break-all;color:var(--accent);font-family:monospace;">—</code>
@@ -665,7 +666,6 @@ unset($_usuario);
   </div>
 
   
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>

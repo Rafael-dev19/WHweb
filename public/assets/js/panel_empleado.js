@@ -1557,9 +1557,10 @@ async function iniciarSetup2FA() {
     if (!data.success) throw new Error(data.error || 'Error al generar configuración 2FA.');
 
     document.getElementById('seg-secreto-texto').textContent = data.secreto;
-    await QRCode.toCanvas(document.getElementById('seg-qr-canvas'), data.qr_url, {
-      width: 180, margin: 1, color: { dark: '#000000', light: '#ffffff' }
-    });
+    const qrImg = document.getElementById('seg-qr-canvas');
+    qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=8&data='
+      + encodeURIComponent(data.qr_url);
+    qrImg.style.display = '';
     document.getElementById('seg-codigo-input').value = '';
     document.getElementById('seg-setup-error').style.display = 'none';
     document.getElementById('seg-setup-flow').style.display = '';

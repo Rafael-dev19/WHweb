@@ -1129,7 +1129,8 @@ unset($_usuario);
                     Abre Google Authenticator o Authy y escanea este código.
                   </div>
                   <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;">
-                    <canvas id="seg-qr-canvas" style="border:3px solid #333;border-radius:8px;background:#fff;"></canvas>
+                    <img id="seg-qr-canvas" src="" alt="Código QR" width="180" height="180"
+                         style="border:3px solid #333;border-radius:8px;background:#fff;display:none;">
                     <div style="flex:1;min-width:180px;">
                       <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">
                         O ingresa el código manualmente:
@@ -1188,7 +1189,6 @@ unset($_usuario);
   </div>
 
 
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
           integrity="sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA=="
           crossorigin="anonymous" referrerpolicy="no-referrer"></script>

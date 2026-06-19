@@ -42,7 +42,11 @@ CREATE TABLE usuarios_personal (
   activo TINYINT(1) NOT NULL DEFAULT 1,
   fecha_creacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   fecha_actualizacion TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
-  
+  -- Seguridad: revocación de sesiones y 2FA TOTP
+  sesiones_revocadas_desde TIMESTAMP NULL DEFAULT NULL,
+  totp_secreto VARCHAR(64) NULL DEFAULT NULL,
+  totp_activo TINYINT(1) NOT NULL DEFAULT 0,
+
   INDEX idx_rol (rol),
   INDEX idx_activo (activo)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -136,7 +140,14 @@ CREATE TABLE cotizaciones (
   rango_presupuesto VARCHAR(60) NULL,
   requiere_instalacion TINYINT(1) NOT NULL DEFAULT 0,
 
-  estado ENUM('nueva','en_revision','respondida','cerrada') NOT NULL DEFAULT 'nueva',
+  -- Respuesta del admin y flujo de producción
+  precio_cotizado DECIMAL(10,2) NULL DEFAULT NULL,
+  descripcion_respuesta TEXT NULL DEFAULT NULL,
+  fecha_entrega_estimada DATE NULL DEFAULT NULL,
+  token_seguimiento VARCHAR(64) NULL DEFAULT NULL UNIQUE,
+
+  estado ENUM('nueva','en_revision','respondida','aceptada',
+              'en_produccion','lista','entregada','cancelada') NOT NULL DEFAULT 'nueva',
 
   fecha_creacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   fecha_actualizacion TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
@@ -361,15 +372,12 @@ CREATE TABLE clientes (
   activo TINYINT(1) NOT NULL DEFAULT 1,
   fecha_registro TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   fecha_actualizacion TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+  -- Seguridad: revocación de sesiones robadas
+  sesiones_revocadas_desde TIMESTAMP NULL DEFAULT NULL,
 
   INDEX idx_correo (correo),
   INDEX idx_activo (activo)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Agregar colonia y municipio a clientes (para instalaciones existentes)
--- Nota: ejecutar solo si las columnas no existen aún
-ALTER TABLE clientes ADD COLUMN colonia VARCHAR(120) NULL AFTER direccion;
-ALTER TABLE clientes ADD COLUMN municipio VARCHAR(100) NULL AFTER colonia;
 
 -- Agregar campo municipio_envio (ejecutar en instalaciones existentes)
 ALTER TABLE pedidos ADD COLUMN municipio_envio VARCHAR(100) NULL AFTER ciudad_envio;
@@ -481,3 +489,22 @@ ALTER TABLE pedidos ADD COLUMN tipo_pago ENUM('completo','anticipo') NOT NULL DE
 ALTER TABLE pedidos ADD COLUMN monto_pagado DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER tipo_pago;
 ALTER TABLE pedidos MODIFY COLUMN estado ENUM('pendiente','anticipo_pagado','pagado','en_produccion','listo','entregado','cancelado')
   NOT NULL DEFAULT 'pendiente';
+
+-- ================================================================
+-- INVITACIONES DE PERSONAL
+-- El admin invita empleados por correo; ellos crean su propia
+-- contraseña sin que el admin la conozca nunca.
+-- ================================================================
+CREATE TABLE IF NOT EXISTS invitaciones_personal (
+  id            INT AUTO_INCREMENT PRIMARY KEY,
+  token         VARCHAR(64)  NOT NULL UNIQUE,
+  correo        VARCHAR(255) NOT NULL,
+  nombre_completo VARCHAR(255) NOT NULL,
+  rol           ENUM('administrador','empleado') NOT NULL DEFAULT 'empleado',
+  creada_por    INT          NOT NULL,
+  expira_en     DATETIME     NOT NULL,
+  usada_en      DATETIME     NULL DEFAULT NULL,
+
+  INDEX idx_token  (token),
+  INDEX idx_correo (correo)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
