@@ -37,6 +37,9 @@
     background:var(--bg);
     color:var(--text);
     overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    height:100vh;
   }
 
   /* HEADER */
@@ -48,6 +51,7 @@
     align-items:center;
     border-bottom:1px solid var(--border);
     gap:10px;
+    flex-shrink:0;
   }
 
   .header-left{
@@ -276,7 +280,9 @@
   /* LAYOUT */
   .container{
     display:flex;
-    height:calc(100vh - 55px);
+    flex:1;
+    min-height:0;
+    overflow:hidden;
     max-width:none;
     margin:0;
     padding:0;
@@ -286,6 +292,8 @@
   /* SIDEBAR (DESKTOP) */
   .sidebar{
     width:240px;
+    flex-shrink:0;
+    height:100%;
     background:var(--panel);
     border-right:1px solid var(--border);
     overflow-y:auto;
@@ -332,6 +340,7 @@
   /* MAIN */
   .main-content{
     flex:1;
+    min-width:0;
     padding:18px;
     overflow-y:auto;
     background:var(--panel2);
@@ -853,8 +862,8 @@
 
   /* RESPONSIVE */
   @media (max-width: 900px){
-    body{ overflow:auto; }
-    .container{ height:auto; min-height:calc(100vh - 55px); }
+    body{ display:block; height:auto; overflow:auto; }
+    .container{ flex:none; overflow:visible; height:auto; min-height:calc(100vh - 55px); }
     .sidebar{ display:none; }
     .menu-toggle{ display:inline-flex; }
     .main-content{ padding:12px; overflow-x: hidden; }
@@ -863,7 +872,7 @@
     .cal-day{ min-height:78px; }
     /* Bottom-sheet: modal sube desde abajo */
     .modal{ padding:0; align-items:flex-end; }
-    .modal-content{ max-height:92dvh; max-height:92vh; border-radius:20px 20px 0 0; max-width:100%; width:100%; }
+    .modal-content{ max-height:92vh; max-height:92dvh; border-radius:20px 20px 0 0; max-width:100%; width:100%; }
     .modal-header{ border-radius:20px 20px 0 0; }
     .modal-footer{ border-radius:0; }
   }
@@ -917,7 +926,7 @@
     .stat-value { font-size: 20px; }
     .stat-title { font-size: 10px; }
     .btn { padding: 6px 8px; font-size: 11px; }
-    .modal-content { padding: 14px; max-height:98dvh; max-height:98vh; }
+    .modal-content { padding: 14px; max-height:98vh; max-height:98dvh; }
     .modal-footer{ flex-direction:column; }
     .modal-footer .btn{ width:100%; justify-content:center; }
     .timeline { gap: 6px; }

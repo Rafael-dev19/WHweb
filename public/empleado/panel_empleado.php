@@ -409,7 +409,7 @@ unset($_usuario);
         </h3>
         <button class="modal-close" data-dismiss="empPedidoDetalleModal" style="color:#fff;">×</button>
       </div>
-      <div id="emp_ped_body" style="max-height:70vh;overflow-y:auto;overflow-x:hidden;">
+      <div id="emp_ped_body" style="overflow-x:auto;">
         <div style="text-align:center;padding:40px;color:var(--muted);"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>
       </div>
       <div class="modal-footer">
@@ -428,7 +428,7 @@ unset($_usuario);
         </h3>
         <button class="modal-close" data-dismiss="empCitaDetalleModal" style="color:#fff;">×</button>
       </div>
-      <div id="emp_cita_body" style="max-height:70vh;overflow-y:auto;overflow-x:hidden;">
+      <div id="emp_cita_body" style="overflow-x:auto;">
         <div style="text-align:center;padding:40px;color:var(--muted);"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:center;padding:12px 0 0;margin-top:4px;border-top:1px solid var(--border);">
@@ -451,7 +451,7 @@ unset($_usuario);
         </h3>
         <button class="modal-close" data-dismiss="empCotDetalleModal" style="color:#fff;">×</button>
       </div>
-      <div id="emp_cot_body" style="max-height:70vh;overflow-y:auto;overflow-x:hidden;">
+      <div id="emp_cot_body" style="overflow-x:auto;">
         <div style="text-align:center;padding:40px;color:var(--muted);"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:center;padding:12px 0 0;margin-top:4px;border-top:1px solid var(--border);">
