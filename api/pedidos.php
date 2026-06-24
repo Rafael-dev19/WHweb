@@ -60,11 +60,15 @@ switch ($method) {
             );
             foreach ($items as &$item) {
                 if (!empty($item['producto_id'])) {
-                    $specs = dbRows(
-                        "SELECT clave, valor FROM especificaciones_producto WHERE producto_id = ? ORDER BY id",
-                        [$item['producto_id']]
-                    );
-                    $item['especificaciones'] = $specs ?: [];
+                    try {
+                        $specs = dbRows(
+                            "SELECT clave, valor FROM especificaciones_producto WHERE producto_id = ? ORDER BY id",
+                            [$item['producto_id']]
+                        );
+                        $item['especificaciones'] = $specs ?: [];
+                    } catch (Exception $e) {
+                        $item['especificaciones'] = [];
+                    }
                 } else {
                     $item['especificaciones'] = [];
                 }
@@ -99,12 +103,22 @@ switch ($method) {
         $whereStr = 'WHERE ' . implode(' AND ', $where);
         $total = (int)(dbRow("SELECT COUNT(*) AS n FROM pedidos $whereStr", $params)['n'] ?? 0);
         $params[] = $limit; $params[] = $offset;
-        $pedidos = dbRows(
-            "SELECT id, numero_pedido, nombre_cliente, correo_cliente, telefono_cliente,
-                    tipo_entrega, estado, total, tipo_pago, monto_pagado, fecha_estimada, fecha_creacion
-             FROM pedidos $whereStr ORDER BY fecha_creacion DESC LIMIT ? OFFSET ?",
-            $params
-        );
+        try {
+            $pedidos = dbRows(
+                "SELECT id, numero_pedido, nombre_cliente, correo_cliente, telefono_cliente,
+                        tipo_entrega, estado, total, tipo_pago, monto_pagado, fecha_estimada, fecha_creacion
+                 FROM pedidos $whereStr ORDER BY fecha_creacion DESC LIMIT ? OFFSET ?",
+                $params
+            );
+        } catch (Exception $e) {
+            $pedidos = dbRows(
+                "SELECT id, numero_pedido, nombre_cliente, correo_cliente, telefono_cliente,
+                        tipo_entrega, estado, total, fecha_estimada, fecha_creacion
+                 FROM pedidos $whereStr ORDER BY fecha_creacion DESC LIMIT ? OFFSET ?",
+                $params
+            );
+            $pedidos = array_map(fn($p) => array_merge(['tipo_pago' => 'completo', 'monto_pagado' => 0], $p), $pedidos);
+        }
         jsonSuccess(['pedidos' => $pedidos, 'paginacion' => getPaginacion($total, $page, $limit)]);
         break;
 
@@ -336,12 +350,18 @@ switch ($method) {
         if (isset($body['fecha_estimada'])) $update['fecha_estimada'] = $body['fecha_estimada'];
         if (isset($body['notas']))           $update['notas']          = sanitize($body['notas']);
 
-        if ($update) dbUpdate('pedidos', $update, 'id = ?', [$id]);
+        if ($update) {
+            try {
+                dbUpdate('pedidos', $update, 'id = ?', [$id]);
+            } catch (Throwable $e) {
+                jsonError('Error al actualizar pedido: ' . $e->getMessage(), 500);
+            }
+        }
 
         if (!empty($update['estado']) && $update['estado'] !== $pedido['estado']) {
             try {
                 notificarCambioPedido(array_merge($pedido, $update), $pedido['estado']);
-            } catch (Exception $e) {}
+            } catch (Throwable $e) {}
         }
 
         jsonSuccess(['mensaje' => 'Pedido actualizado']);

@@ -181,62 +181,44 @@ unset($_usuario);
         </div>
 
         <div class="section">
-          <div class="section-header"><h2 class="section-title">Acciones Rápidas</h2></div>
-          <div class="row row-cols-2 row-cols-md-4 g-3 actions-grid">
-            <div class="col">
-              <div class="action-card h-100" data-section="pedidos">
-                <div class="action-icon"><i class="fa-solid fa-cart-shopping"></i></div>
-                <div class="action-title">Ver Pedidos</div>
-                <div class="action-subtitle">Control total</div>
-              </div>
+          <div class="section-header">
+            <h2 class="section-title"><i class="fa-solid fa-calendar-days"></i> Agenda del Mes</h2>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="btn btn-secondary" data-call="prevMonth"><i class="fa-solid fa-chevron-left"></i></button>
+              <button class="btn btn-secondary" data-call="nextMonth"><i class="fa-solid fa-chevron-right"></i></button>
             </div>
-            <div class="col">
-              <div class="action-card h-100" data-section="citas">
-                <div class="action-icon"><i class="fa-solid fa-calendar-days"></i></div>
-                <div class="action-title">Citas</div>
-                <div class="action-subtitle">Agenda y calendario</div>
-              </div>
+          </div>
+
+          <div class="calendar-wrap">
+            <div class="calendar-toolbar">
+              <div class="cal-title" id="calTitle">Cargando...</div>
+              <div style="color:var(--muted); font-size:12px;">Toca un día para ver detalles</div>
             </div>
-            <div class="col">
-              <div class="action-card h-100" data-section="cotizaciones">
-                <div class="action-icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
-                <div class="action-title">Cotizaciones</div>
-                <div class="action-subtitle">Solicitudes recibidas</div>
-              </div>
+
+            <div class="calendar-grid" id="calendarDow">
+              <div class="cal-dow">Lun</div><div class="cal-dow">Mar</div><div class="cal-dow">Mié</div>
+              <div class="cal-dow">Jue</div><div class="cal-dow">Vie</div><div class="cal-dow">Sáb</div><div class="cal-dow">Dom</div>
             </div>
-            <div class="col">
-              <div class="action-card h-100" data-section="catalogo">
-                <div class="action-icon"><i class="fa-solid fa-box"></i></div>
-                <div class="action-title">Gestionar Catálogo</div>
-                <div class="action-subtitle">Productos y servicios</div>
+
+            <div class="calendar-grid" id="calendarGrid"></div>
+
+            <div class="row g-3 cal-side">
+              <div class="col-md-8">
+                <div class="cal-list">
+                  <div class="cal-list-head" id="dayHead">Selecciona un día</div>
+                  <div class="cal-list-body" id="dayList">
+                    <div class="cal-item">
+                      <div class="t">Toca un día del calendario</div>
+                      <div class="m">Aquí verás las citas y asignaciones.</div>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div class="col">
-              <div class="action-card h-100" data-section="empleados">
-                <div class="action-icon"><i class="fa-solid fa-users"></i></div>
-                <div class="action-title">Empleados</div>
-                <div class="action-subtitle">Usuarios y permisos</div>
-              </div>
-            </div>
-            <div class="col">
-              <div class="action-card h-100" data-section="clientes">
-                <div class="action-icon"><i class="fa-solid fa-user-group"></i></div>
-                <div class="action-title">Clientes</div>
-                <div class="action-subtitle">Cuentas registradas</div>
-              </div>
-            </div>
-            <div class="col">
-              <div class="action-card h-100" data-section="ofertas">
-                <div class="action-icon"><i class="fa-solid fa-tag"></i></div>
-                <div class="action-title">Ofertas</div>
-                <div class="action-subtitle">Promociones activas</div>
-              </div>
-            </div>
-            <div class="col">
-              <div class="action-card h-100" data-section="reportes">
-                <div class="action-icon"><i class="fa-solid fa-chart-bar"></i></div>
-                <div class="action-title">Reportes</div>
-                <div class="action-subtitle">Exportar datos</div>
+              <div class="col-md-4">
+                <div class="cal-list">
+                  <div class="cal-list-head">Próximas (vista rápida)</div>
+                  <div class="cal-list-body" id="nextList"></div>
+                </div>
               </div>
             </div>
           </div>
@@ -297,69 +279,32 @@ unset($_usuario);
 
       <!-- CITAS / AGENDA -->
       <div id="citas-section" class="content-section hidden">
-        <h1 class="page-title">Agenda Operativa</h1>
-        <p class="page-subtitle">Vista unificada de citas, pedidos de entrega y cotizaciones en el calendario</p>
+        <h1 class="page-title">Citas Programadas</h1>
+        <p class="page-subtitle">Historial y gestión de todas las citas</p>
 
         <div class="section">
           <div class="section-header">
-            <h2 class="section-title">Agenda</h2>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
-              <button class="btn btn-secondary" data-call="prevMonth"><i class="fa-solid fa-chevron-left"></i></button>
-              <button class="btn btn-secondary" data-call="nextMonth"><i class="fa-solid fa-chevron-right"></i></button>
-            </div>
+            <h2 class="section-title">Todas las Citas</h2>
+            <button class="btn btn-secondary btn-small" data-call="cargarCitasCalendarioAPI">
+              <i class="fa-solid fa-rotate-right"></i> Actualizar
+            </button>
           </div>
 
-          <div class="calendar-wrap">
-            <div class="calendar-toolbar">
-              <div class="cal-title" id="calTitle">Febrero 2026</div>
-              <div style="color:var(--muted); font-size:12px;">Tip: toca un día para ver detalles</div>
+          <div class="table-container">
+            <div style="overflow:auto;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Folio</th><th>Cliente</th><th>ID Cliente</th><th>Fecha</th><th>Hora</th><th>Tipo</th><th>Estado</th><th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="citasTable">
+                  <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px;">
+                    <i class="fa-solid fa-spinner fa-spin"></i> Cargando citas...
+                  </td></tr>
+                </tbody>
+              </table>
             </div>
-
-            <div class="calendar-grid" id="calendarDow">
-              <div class="cal-dow">Lun</div><div class="cal-dow">Mar</div><div class="cal-dow">Mié</div>
-              <div class="cal-dow">Jue</div><div class="cal-dow">Vie</div><div class="cal-dow">Sáb</div><div class="cal-dow">Dom</div>
-            </div>
-
-            <div class="calendar-grid" id="calendarGrid"></div>
-
-            <div class="row g-3 cal-side">
-              <div class="col-md-8">
-                <div class="cal-list">
-                  <div class="cal-list-head" id="dayHead">Citas del día</div>
-                  <div class="cal-list-body" id="dayList">
-                    <div class="cal-item">
-                      <div class="t">Selecciona un día</div>
-                      <div class="m">Aquí verás las citas y asignaciones.</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="col-md-4">
-                <div class="cal-list">
-                  <div class="cal-list-head">Próximas (vista rápida)</div>
-                  <div class="cal-list-body" id="nextList"></div>
-                </div>
-              </div>
-            </div>
-
-            <div class="table-container" style="margin-top:12px;">
-              <div style="overflow:auto;">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Folio</th><th>Cliente</th><th>ID Cliente</th><th>Fecha</th><th>Hora</th><th>Tipo</th><th>Estado</th><th>Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody id="citasTable">
-                    <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px;">
-                      <i class="fa-solid fa-spinner fa-spin"></i> Cargando citas...
-                    </td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
           </div>
         </div>
       </div>
@@ -551,13 +496,25 @@ unset($_usuario);
       <!-- FINANCIERO -->
       <div id="financiero-section" class="content-section hidden">
         <h1 class="page-title">Análisis Financiero</h1>
-        <p class="page-subtitle">Ingresos, egresos y análisis detallado</p>
+        <p class="page-subtitle">Ingresos y métricas del negocio — datos en tiempo real</p>
 
         <div class="row row-cols-2 row-cols-md-4 g-3 stats-grid">
-          <div class="col"><div class="stat-card"><div class="stat-title">Ingresos del Mes</div><div class="stat-value">$156,800</div><div class="stat-subtitle">+18%</div></div></div>
-          <div class="col"><div class="stat-card"><div class="stat-title">Egresos del Mes</div><div class="stat-value">$89,200</div><div class="stat-subtitle">-5%</div></div></div>
-          <div class="col"><div class="stat-card"><div class="stat-title">Utilidad Neta</div><div class="stat-value">$67,600</div><div class="stat-subtitle">+23%</div></div></div>
-          <div class="col"><div class="stat-card"><div class="stat-title">Margen de Utilidad</div><div class="stat-value">43%</div><div class="stat-subtitle">+2%</div></div></div>
+          <div class="col"><div class="stat-card"><div class="stat-title">Ingresos del Mes</div><div class="stat-value" id="finIngresosMes"><i class="fa-solid fa-spinner fa-spin"></i></div><div class="stat-subtitle" id="finIngresosMesHint">—</div></div></div>
+          <div class="col"><div class="stat-card"><div class="stat-title">Pedidos del Mes</div><div class="stat-value" id="finPedidosMes"><i class="fa-solid fa-spinner fa-spin"></i></div><div class="stat-subtitle" id="finPedidosMesHint">—</div></div></div>
+          <div class="col"><div class="stat-card"><div class="stat-title">Ingresos Totales</div><div class="stat-value" id="finIngresosTotales"><i class="fa-solid fa-spinner fa-spin"></i></div><div class="stat-subtitle" id="finIngresosTotalesHint">—</div></div></div>
+          <div class="col"><div class="stat-card"><div class="stat-title">Clientes del Mes</div><div class="stat-value" id="finClientesMes"><i class="fa-solid fa-spinner fa-spin"></i></div><div class="stat-subtitle" id="finClientesMesHint">—</div></div></div>
+        </div>
+
+        <div class="section" style="margin-top:16px;">
+          <div class="section-header">
+            <h2 class="section-title">Productos más vendidos (este mes)</h2>
+            <button class="btn btn-secondary btn-small" data-call="cargarFinanciero">
+              <i class="fa-solid fa-rotate-right"></i> Actualizar
+            </button>
+          </div>
+          <div id="finProductosBody" style="color:var(--muted);font-size:13px;padding:12px 0;">
+            <i class="fa-solid fa-spinner fa-spin"></i> Cargando...
+          </div>
         </div>
       </div>
 
@@ -1206,7 +1163,7 @@ unset($_usuario);
   <script src="../assets/<?= av('js/firebase-config.js') ?>"></script>
   <!-- ═══ MODAL: DETALLE PEDIDO (admin) ══════════════════════════ -->
   <div class="modal" id="adminPedidoDetalleModal">
-    <div class="modal-content" style="max-width:750px;">
+    <div class="modal-content" style="max-width:900px;width:min(900px,96vw);">
       <div class="modal-header" style="background:var(--accent);color:#fff;border-radius:8px 8px 0 0;margin:-18px -18px 16px;padding:16px 18px;">
         <h3 class="modal-title" style="color:#fff;">
           <i class="fa-solid fa-box"></i> Detalle del Pedido
@@ -1214,7 +1171,7 @@ unset($_usuario);
         </h3>
         <button class="modal-close" data-dismiss="adminPedidoDetalleModal" style="color:#fff;">×</button>
       </div>
-      <div id="adm_ped_body" style="overflow-x:auto;">
+      <div id="adm_ped_body" style="overflow-x:auto;min-height:180px;">
         <div style="text-align:center;padding:40px;color:var(--muted);"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>
       </div>
       <div class="modal-footer">

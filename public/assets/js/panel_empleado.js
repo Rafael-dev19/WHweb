@@ -709,13 +709,27 @@ function buildCalendar(){
 }
 
 function renderDayEvents(dayISO){
-  const list = document.getElementById('dayEventsList');
+  const list  = document.getElementById('dayEventsList');
   const title = document.getElementById('selectedDayTitle');
-  title.textContent = `Eventos del día (${dayISO})`;
+  const rutaBtn = document.getElementById('rutaDiaCal');
+
+  // Actualizar título del panel
+  if (title) {
+    const titleSpan = title.querySelector('span');
+    if (titleSpan) titleSpan.textContent = `Eventos del día (${dayISO})`;
+    else title.textContent = `Eventos del día (${dayISO})`;
+  }
 
   const events = _getAllEmpEvents()
     .filter(e => e.date === dayISO)
     .sort((a,b) => (a.time||'').localeCompare(b.time||''));
+
+  // Mostrar/ocultar botón de ruta según haya paradas con dirección
+  const tieneParadas = events.some(e =>
+    (e.eventoTipo === 'pedido' && e.datos?.tipo_entrega === 'envio' && !['cancelado','entregado'].includes(e.datos?.estado || '')) ||
+    (e.eventoTipo === 'cita'   && !['cancelada'].includes(e.datos?.estado || ''))
+  );
+  if (rutaBtn) rutaBtn.style.display = tieneParadas ? '' : 'none';
 
   if(!events.length){
     list.innerHTML = `<div style="color: var(--muted);">No hay eventos para este día.</div>`;
@@ -1550,10 +1564,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if (new URLSearchParams(location.search).get('setup_2fa')) {
     showSection('seguridad');
   } else {
-    showSection('dashboard');
+    showSection('calendario');
   }
 
-  window._currentSection = 'dashboard';
+  window._currentSection = 'calendario';
   window._autoRefreshInterval = setInterval(_autoRefresh, 8000);
   setInterval(fetchNotificationsFromAPI, 60000);
 
@@ -1717,56 +1731,205 @@ window.marcarSaldoManualEmp = marcarSaldoManualEmp;
 window.verDetalleCitaEmp  = verDetalleCitaEmp;
 window.verDetalleCotEmp   = verDetalleCotEmp;
 window.abrirRutaDiaEmp    = abrirRutaDiaEmp;
+window.generarRutaDia     = generarRutaDia;
 
+// Backwards-compat: el botón de "Generar ruta" en pedidos usa la nueva función
 function abrirRutaDiaEmp() {
   const fecha = document.getElementById('rutaFechaEmp')?.value;
   if (!fecha) { showNotification('Selecciona una fecha para la ruta', 'warning'); return; }
+  generarRutaDia(fecha);
+}
 
-  const filas = document.querySelectorAll('#pedidosTable tr[data-entrega]');
-  const destinos = [];
-  filas.forEach(tr => {
-    if ((tr.dataset.entrega || '').substring(0,10) !== fecha) return;
-    const estado = tr.dataset.status || '';
-    if (['cancelado','entregado'].includes(estado)) return;
-    const id = parseInt(tr.dataset.id);
-    if (id) destinos.push(id);
+// ═══════════════════════════════════════════════════════════════
+// MÓDULO RUTA DEL DÍA — pedidos + citas, ordenados por distancia
+// ═══════════════════════════════════════════════════════════════
+
+// Punto de partida fijo (tienda). Coordenadas de Ignacio Zaragoza 36, La Florida, Tlaquepaque.
+const ORIGEN_TIENDA = {
+  label:   'Ignacio Zaragoza 36, La Florida, San Pedro Tlaquepaque, Jal.',
+  address: 'Ignacio Zaragoza 36, La Florida, 45236 San Pedro Tlaquepaque, Jal.',
+  lat: 20.64531,
+  lng: -103.32675,
+};
+
+function _haversineDist(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function _getCurrentPos() {
+  return new Promise(resolve => {
+    if (!navigator.geolocation) return resolve(null);
+    navigator.geolocation.getCurrentPosition(
+      p => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
+      () => resolve(null),
+      { timeout: 5000, enableHighAccuracy: false }
+    );
   });
+}
 
-  if (!destinos.length) {
-    showNotification(`No hay pedidos pendientes para ${fecha}`, 'info');
-    return;
-  }
+// Ordena por distancia ascendente desde (oLat, oLng).
+// Stops con GPS → ordenados más cercano a más lejano.
+// Stops sin GPS → al final (no se pueden calcular).
+function _sortByDistFromOrigin(stops, oLat, oLng) {
+  const withGPS    = stops.filter(s => s.lat != null && s.lng != null);
+  const withoutGPS = stops.filter(s => s.lat == null || s.lng == null);
 
-  Promise.all(destinos.map(id => apiFetch(`${API_BASE}/pedidos.php?id=${id}`)))
-    .then(resultados => {
-      const waypoints = [];
-      resultados.forEach(r => {
-        if (!r?.success || !r.pedido) return;
-        const p = r.pedido;
-        if (p.tipo_entrega !== 'envio') return;
-        if (p.lat && p.lng) {
-          waypoints.push(`${p.lat},${p.lng}`);
-        } else {
-          const addr = [p.direccion_envio, p.colonia_envio, p.ciudad_envio, p.cp_envio].filter(Boolean).join(', ');
-          if (addr) waypoints.push(addr);
-        }
+  withGPS.forEach(s => {
+    s._distKm = _haversineDist(oLat, oLng, s.lat, s.lng);
+  });
+  withGPS.sort((a, b) => a._distKm - b._distKm);
+
+  return [...withGPS, ...withoutGPS];
+}
+
+async function generarRutaDia(fecha) {
+  if (!fecha) fecha = selectedDateISO || isoDate(new Date());
+
+  const label = document.getElementById('rutaDiaFechaLabel');
+  const body  = document.getElementById('rutaDiaBody');
+  const mBtn  = document.getElementById('rutaDiaMapsBtn');
+  if (label) label.textContent = fecha;
+  if (body)  body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);"><i class="fa-solid fa-spinner fa-spin fa-xl"></i><br><span style="font-size:13px;margin-top:10px;display:block;">Recopilando paradas...</span></div>';
+  if (mBtn)  mBtn.style.display = 'none';
+  openModal('rutaDiaModal');
+
+  try {
+    // ── 1. Citas del día desde caché ─────────────────────────
+    const citasDia = _empCitasApiCache.filter(e =>
+      e.date === fecha && !['cancelada'].includes(e.datos?.estado || '')
+    );
+
+    // ── 2. Pedidos del día desde caché (excluir recoger en tienda) ─
+    const pedidosEvts = _empPedidosApiCache.filter(e =>
+      e.date === fecha && !['cancelado','entregado'].includes(e.datos?.estado || '')
+    );
+
+    // ── 3. Fetch detalle de cada pedido para obtener dirección/GPS ─
+    const pedRes = await Promise.allSettled(
+      pedidosEvts.map(e => apiFetch(`${API_BASE}/pedidos.php?id=${e.datos.id}`))
+    );
+
+    // ── 4. Construir paradas ──────────────────────────────────
+    const stops = [];
+
+    citasDia.forEach(e => {
+      const c = e.datos || {};
+      const dir = [c.direccion, c.colonia ? `Col. ${c.colonia}` : '', c.ciudad, c.cp ? `CP ${c.cp}` : ''].filter(Boolean).join(', ');
+      if (!dir && !c.lat) return;
+      const tipoLabel = c.tipo === 'medicion' ? 'Medición' : c.tipo === 'instalacion' ? 'Instalación' : 'Cita';
+      stops.push({
+        tipo: 'cita', icon: '📅',
+        label: `${tipoLabel}: ${c.nombre_cliente || ''}`,
+        hora: e.time || '',
+        address: dir,
+        lat: c.lat ? parseFloat(c.lat) : null,
+        lng: c.lng ? parseFloat(c.lng) : null,
+        id: c.id,
       });
+    });
 
-      if (!waypoints.length) {
-        showNotification(`Ningún pedido de ${fecha} tiene envío a domicilio`, 'info');
-        return;
-      }
+    pedRes.forEach(r => {
+      if (r.status !== 'fulfilled' || !r.value?.success || !r.value.pedido) return;
+      const p = r.value.pedido;
+      if (p.tipo_entrega !== 'envio') return;
+      const dir = [p.direccion_envio, p.colonia_envio ? `Col. ${p.colonia_envio}` : '', p.ciudad_envio, p.cp_envio ? `CP ${p.cp_envio}` : ''].filter(Boolean).join(', ');
+      if (!dir && !p.lat) return;
+      stops.push({
+        tipo: 'pedido', icon: '📦',
+        label: `${p.numero_pedido}: ${p.nombre_cliente}`,
+        hora: '',
+        address: dir,
+        lat: p.lat ? parseFloat(p.lat) : null,
+        lng: p.lng ? parseFloat(p.lng) : null,
+        id: p.id,
+      });
+    });
 
-      let url;
-      if (waypoints.length === 1) {
-        url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(waypoints[0])}`;
-      } else {
-        const origin = encodeURIComponent(waypoints[0]);
-        const destination = encodeURIComponent(waypoints[waypoints.length - 1]);
-        const wps = waypoints.slice(1, -1).map(encodeURIComponent).join('|');
-        url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${wps ? '&waypoints=' + wps : ''}&travelmode=driving`;
-      }
-      window.open(url, '_blank', 'noopener');
-    })
-    .catch(() => showNotification('Error al obtener direcciones', 'error'));
+    if (!stops.length) {
+      if (body) body.innerHTML = `<div style="padding:28px;text-align:center;color:var(--muted);">
+        <i class="fa-solid fa-map-pin" style="font-size:2rem;margin-bottom:10px;display:block;opacity:.35;"></i>
+        No hay paradas con dirección para <strong>${fecha}</strong>.<br>
+        <span style="font-size:12px;margin-top:6px;display:block;">Los pedidos de "recoger en tienda" no se incluyen en la ruta.</span>
+      </div>`;
+      return;
+    }
+
+    // ── 5. Determinar origen ──────────────────────────────────
+    // Prioridad: GPS del empleado → tienda (Ignacio Zaragoza 36)
+    const pos = await _getCurrentPos();
+    let oLat, oLng, originLabel, originStr;
+    if (pos) {
+      oLat = pos.lat;
+      oLng = pos.lng;
+      originStr   = `${pos.lat},${pos.lng}`;
+      originLabel = `<i class="fa-solid fa-location-dot" style="color:#4CAF50;"></i> Tu ubicación actual (GPS)`;
+    } else {
+      oLat = ORIGEN_TIENDA.lat;
+      oLng = ORIGEN_TIENDA.lng;
+      originStr   = ORIGEN_TIENDA.address;
+      originLabel = `<i class="fa-solid fa-store" style="color:var(--accent);"></i> ${ORIGEN_TIENDA.label}`;
+    }
+
+    // ── 6. Ordenar más cercano → más lejano desde el origen ──
+    const sorted = _sortByDistFromOrigin(stops, oLat, oLng);
+
+    // ── 7. Renderizar lista en modal ──────────────────────────
+    const stopsHtml = sorted.map((s, i) => `
+      <div style="display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border);">
+        <div style="flex-shrink:0;width:28px;height:28px;border-radius:50%;background:${s.tipo==='cita'?'#3d5a80':'var(--accent)'};color:#fff;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center;">${i+1}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;font-size:13px;color:var(--text);">${s.icon} ${escapeHtml(s.label)}</div>
+          ${s.hora ? `<div style="font-size:11px;color:var(--accent);margin-top:2px;"><i class="fa-regular fa-clock"></i> ${escapeHtml(s.hora)}</div>` : ''}
+          <div style="font-size:12px;color:var(--muted2);margin-top:4px;word-break:break-word;">${escapeHtml(s.address || '(sin dirección registrada)')}</div>
+          <div style="display:flex;gap:6px;margin-top:5px;flex-wrap:wrap;">
+            ${s.lat && s.lng
+              ? `<span style="font-size:10px;background:#1b5e2020;color:#2e7d32;border-radius:10px;padding:1px 8px;"><i class="fa-solid fa-map-pin"></i> GPS exacto</span>`
+              : `<span style="font-size:10px;background:var(--bg);color:var(--muted);border-radius:10px;padding:1px 8px;"><i class="fa-solid fa-magnifying-glass-location"></i> Búsqueda por dirección</span>`}
+            ${s._distKm != null ? `<span style="font-size:10px;color:var(--muted);"><i class="fa-solid fa-arrows-left-right"></i> ~${s._distKm < 1 ? (s._distKm*1000).toFixed(0)+' m' : s._distKm.toFixed(1)+' km'} desde ${pos?'ti':'la tienda'}</span>` : ''}
+          </div>
+        </div>
+      </div>`).join('');
+
+    const origenDesde = pos ? 'tu ubicación actual' : 'la tienda';
+    if (body) body.innerHTML = `
+      <div style="padding:10px 12px;background:var(--bg);border-radius:8px;font-size:12px;color:var(--muted2);margin-bottom:12px;">
+        <div style="margin-bottom:4px;"><strong>Salida:</strong> ${originLabel}</div>
+        ${!pos ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;"><i class="fa-solid fa-circle-info"></i> Activa el GPS del dispositivo para partir desde tu ubicación actual.</div>` : ''}
+      </div>
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;padding:0 2px;">
+        ${sorted.length} ${sorted.length===1?'parada':'paradas'} · más cercana a más lejana desde ${origenDesde}
+      </div>
+      ${stopsHtml}
+      ${sorted.some(s => !s.lat || !s.lng)
+        ? `<div style="margin-top:10px;font-size:11px;color:var(--muted);padding:8px 10px;background:var(--bg);border-radius:6px;"><i class="fa-solid fa-circle-info"></i> Google Maps geocodificará automáticamente las paradas sin coordenadas GPS.</div>`
+        : ''}
+    `;
+
+    // ── 8. Construir URL de Google Maps ──────────────────────
+    const waypoints = sorted.map(s => s.lat && s.lng ? `${s.lat},${s.lng}` : s.address).filter(Boolean);
+    let mapsUrl;
+    if (waypoints.length === 1) {
+      // Una sola parada: navegar directamente
+      const dest = waypoints[0];
+      mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(originStr)}&destination=${encodeURIComponent(dest)}&travelmode=driving`;
+    } else {
+      // Múltiples paradas: origen fijo → parada 1 → ... → última
+      const dest     = encodeURIComponent(waypoints[waypoints.length - 1]);
+      const middle   = waypoints.slice(0, -1);
+      const wpsParam = middle.length ? '&waypoints=' + middle.map(encodeURIComponent).join('|') : '';
+      mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(originStr)}&destination=${dest}${wpsParam}&travelmode=driving`;
+    }
+
+    if (mBtn) {
+      mBtn.style.display = '';
+      mBtn.onclick = () => window.open(mapsUrl, '_blank', 'noopener');
+    }
+
+  } catch(e) {
+    if (body) body.innerHTML = `<div style="color:var(--danger);padding:24px;text-align:center;"><i class="fa-solid fa-circle-exclamation"></i> Error: ${escapeHtml(e.message)}</div>`;
+  }
 }

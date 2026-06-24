@@ -278,13 +278,14 @@
 
       window._currentSection = section;
 
-      if(section === 'citas')     cargarCitasCalendarioAPI();
-      if(section === 'catalogo')  cargarProductosAPI().then(() => renderCatalogo());
-      if(section === 'reportes')  { cargarReportesAPI(); }
-      if(section === 'dashboard') setTimeout(refreshKPIsFromAPI, 100);
+      if(section === 'citas')        cargarCitasCalendarioAPI();
+      if(section === 'catalogo')     cargarProductosAPI().then(() => renderCatalogo());
+      if(section === 'reportes')     { cargarReportesAPI(); }
+      if(section === 'dashboard')    { setTimeout(refreshKPIsFromAPI, 100); cargarCitasCalendarioAPI(); }
       if(section === 'pedidos')      cargarPedidosAPI();
-      if(section === 'cotizaciones')  cargarCotizacionesAPI();
-      if(section === 'empleados')  cargarEmpleadosAPI();
+      if(section === 'cotizaciones') cargarCotizacionesAPI();
+      if(section === 'empleados')    cargarEmpleadosAPI();
+      if(section === 'financiero')   cargarFinanciero();
       if(section === 'capacidad')  cargarCapacidad();
       if(section === 'seguridad')  cargarEstado2FA();
       if(section === 'seguridad' && new URLSearchParams(location.search).get('setup_2fa')) {
@@ -1785,10 +1786,11 @@
       ctx.fillStyle = accent;
 
       values.forEach((v,i)=>{
-        const bh = (h-pad*2) * (v/max);
+        const bh = Math.max(0, (h-pad*2) * (v/max));
+        if (bh < 1) return;
         const x = pad + i*bw + (bw*0.18);
         const y = h - pad - bh;
-        const rw = bw*0.64;
+        const rw = Math.max(2, bw*0.64);
         ctx.globalAlpha = 0.9;
         roundRect(ctx, x, y, rw, bh, 10*(window.devicePixelRatio||1));
         ctx.fill();
@@ -1842,7 +1844,7 @@
     }
 
     function roundRect(ctx, x, y, w, h, r){
-      const rr = Math.min(r, w/2, h/2);
+      const rr = Math.max(0, Math.min(r, w/2, h/2));
       ctx.beginPath();
       ctx.moveTo(x+rr, y);
       ctx.arcTo(x+w, y, x+w, y+h, rr);
@@ -1904,6 +1906,65 @@
       }
     }
 
+    async function cargarFinanciero() {
+      const fmt = n => '$' + (parseFloat(n) || 0).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+      const hoy = new Date().toISOString().slice(0, 10);
+      const mes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
+      const ini = '2020-01-01';
+      try {
+        const [resResult, prodResult, ingTotResult] = await Promise.allSettled([
+          apiFetch(`${API_BASE}/reportes.php?tipo=resumen`),
+          apiFetch(`${API_BASE}/reportes.php?tipo=productos&desde=${mes}&hasta=${hoy}&limit=10`),
+          apiFetch(`${API_BASE}/reportes.php?tipo=ingresos&agrupacion=mes&desde=${ini}&hasta=${hoy}`),
+        ]);
+
+        if (resResult.status === 'fulfilled' && resResult.value?.success) {
+          const r = resResult.value;
+          const el = id => document.getElementById(id);
+          if (el('finIngresosMes'))     el('finIngresosMes').textContent     = fmt(r.ingresos_mes);
+          if (el('finIngresosMesHint')) el('finIngresosMesHint').textContent  = `${r.pedidos_mes || 0} pedidos este mes`;
+          if (el('finPedidosMes'))      el('finPedidosMes').textContent      = r.pedidos_mes || 0;
+          if (el('finPedidosMesHint'))  el('finPedidosMesHint').textContent   = `${r.pedidos_pendientes || 0} pendientes`;
+          if (el('finClientesMes'))     el('finClientesMes').textContent     = r.clientes_mes || 0;
+          if (el('finClientesMesHint')) el('finClientesMesHint').textContent  = `${r.clientes_unicos || 0} clientes únicos total`;
+        }
+        if (ingTotResult.status === 'fulfilled' && ingTotResult.value?.success) {
+          const total = ingTotResult.value.total || 0;
+          const cnt   = (ingTotResult.value.datos || []).reduce((a, d) => a + (parseInt(d.pedidos) || 0), 0);
+          const el    = document.getElementById('finIngresosTotales');
+          const hint  = document.getElementById('finIngresosTotalesHint');
+          if (el)   el.textContent   = fmt(total);
+          if (hint) hint.textContent = `${cnt} pedidos históricos`;
+        }
+        if (prodResult.status === 'fulfilled' && prodResult.value?.success) {
+          const prods = prodResult.value.productos || [];
+          const el = document.getElementById('finProductosBody');
+          if (el) {
+            if (!prods.length) {
+              el.innerHTML = '<span style="color:var(--muted);">Sin ventas registradas este mes.</span>';
+            } else {
+              const maxU = Math.max(...prods.map(p => parseInt(p.unidades_vendidas) || 0), 1);
+              el.innerHTML = prods.map(p => {
+                const pct = Math.round(((parseInt(p.unidades_vendidas) || 0) / maxU) * 100);
+                return `<div style="margin-bottom:14px;">
+                  <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
+                    <span style="color:var(--text);font-weight:700;">${p.nombre_producto || '—'}</span>
+                    <span style="color:var(--accent);font-weight:900;">${fmt(p.ingresos_generados)}</span>
+                  </div>
+                  <div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden;">
+                    <div style="width:${pct}%;background:var(--accent);height:100%;border-radius:4px;"></div>
+                  </div>
+                  <div style="font-size:11px;color:var(--muted);margin-top:3px;">${p.unidades_vendidas || 0} unidades · ${p.num_pedidos || 0} pedidos</div>
+                </div>`;
+              }).join('');
+            }
+          }
+        }
+      } catch(e) {
+        console.warn('Error cargando análisis financiero:', e);
+      }
+    }
+
     window.addEventListener('resize', () => {
       clearTimeout(window.__whChartTimer);
       window.__whChartTimer = setTimeout(drawDashboardCharts, 120);
@@ -1913,6 +1974,7 @@
       renderCalendar();
       refreshKPIs();
       drawDashboardCharts();
+      setTimeout(cargarCitasCalendarioAPI, 600);
       cargarProductosAPI().then(() => {
         renderCatalogo();
       }).catch(e => console.warn('No se pudieron cargar productos:', e));
