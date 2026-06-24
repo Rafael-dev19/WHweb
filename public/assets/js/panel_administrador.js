@@ -393,29 +393,70 @@
     ========================= */
     let calYear  = new Date().getFullYear();
     let calMonth = new Date().getMonth();
-    // Citas cargadas desde la API — sin localStorage, datos reales de MySQL
-    let _citasCache = [];
+    let _citasCache        = [];
+    let _pedidosCalCache   = [];
+    let _cotizacionesCalCache = [];
+
+    function _todosEventos() {
+      return [..._citasCache, ..._pedidosCalCache, ..._cotizacionesCalCache];
+    }
 
     async function cargarCitasCalendarioAPI() {
       try {
         const hoy = new Date();
         const desde = `${hoy.getFullYear()}-01-01`;
         const hasta = `${hoy.getFullYear()}-12-31`;
-        const data = await apiFetch(`${API_BASE}/citas.php?limit=200&fecha_desde=${desde}&fecha_hasta=${hasta}`);
-        if (data.success && data.citas) {
-          _citasCache = data.citas.map(c => ({
-            id:      c.numero_cita || c.id,
-            cliente: c.nombre_cliente || '',
-            date:    (c.fecha_cita || '').substring(0, 10),
-            time:    c.rango_horario || 'Por confirmar',
-            tipo:    c.tipo || 'medicion',
-            estado:  c.estado || 'nueva',
-            datos:   c,
+
+        // Citas
+        const dataCitas = await apiFetch(`${API_BASE}/citas.php?limit=200&fecha_desde=${desde}&fecha_hasta=${hasta}`);
+        if (dataCitas.success && dataCitas.citas) {
+          _citasCache = dataCitas.citas.map(c => ({
+            id:         c.numero_cita || c.id,
+            cliente:    c.nombre_cliente || '',
+            date:       (c.fecha_cita || '').substring(0, 10),
+            time:       c.rango_horario || 'Por confirmar',
+            tipo:       c.tipo || 'medicion',
+            eventoTipo: 'cita',
+            estado:     c.estado || 'nueva',
+            datos:      c,
           }));
         }
+
+        // Pedidos (fecha_estimada)
+        const dataPed = await apiFetch(`${API_BASE}/pedidos.php?limit=200&fecha_desde=${desde}&fecha_hasta=${hasta}`);
+        if (dataPed.success && dataPed.pedidos) {
+          _pedidosCalCache = dataPed.pedidos
+            .filter(p => p.fecha_estimada)
+            .map(p => ({
+              id:         p.numero_pedido || p.id,
+              cliente:    p.nombre_cliente || '',
+              date:       (p.fecha_estimada || '').substring(0, 10),
+              time:       p.tipo_entrega === 'envio' ? '🚚 Envío' : '🏪 Recoger',
+              tipo:       'pedido',
+              eventoTipo: 'pedido',
+              estado:     p.estado || 'pendiente',
+              datos:      p,
+            }));
+        }
+
+        // Cotizaciones (fecha_creacion como fecha de la cot)
+        const dataCot = await apiFetch(`${API_BASE}/cotizaciones.php?limit=200`);
+        if (dataCot.success && dataCot.cotizaciones) {
+          _cotizacionesCalCache = dataCot.cotizaciones
+            .filter(c => c.fecha_creacion)
+            .map(c => ({
+              id:         c.numero_cotizacion || c.id,
+              cliente:    c.nombre_cliente || '',
+              date:       (c.fecha_creacion || '').substring(0, 10),
+              time:       c.tipo_mueble || 'Solicitud',
+              tipo:       'cot',
+              eventoTipo: 'cotizacion',
+              estado:     c.estado || 'nueva',
+              datos:      c,
+            }));
+        }
       } catch(e) {
-        console.warn('Error cargando citas:', e);
-        _citasCache = [];
+        console.warn('Error cargando agenda:', e);
       }
       renderCalendar();
       renderCitasTable();
@@ -453,26 +494,28 @@
       return 'Nueva';
     }
 
-    function makeDayCell(y, m, d, muted, citas){
+    function makeDayCell(y, m, d, muted, eventos){
       const dateObj = new Date(y, m, d);
       const yy = dateObj.getFullYear();
       const mm = dateObj.getMonth();
       const dd = dateObj.getDate();
       const iso = `${yy}-${pad(mm+1)}-${pad(dd)}`;
 
-      const dayCitas = citas.filter(c => c.date === iso);
+      const dayEvts = eventos.filter(e => e.date === iso);
 
       const cell = document.createElement('div');
       cell.className = 'cal-day' + (muted ? ' muted' : '');
       cell.setAttribute('data-date', iso);
       cell.onclick = () => selectDay(iso);
 
-      const chips = dayCitas.slice(0, 2).map(c => {
-        return `<div class="chip ${c.tipo}">${escapeHtml(c.time)} • ${escapeHtml(c.cliente)}</div>`;
+      const chips = dayEvts.slice(0, 2).map(e => {
+        const chipClass = e.eventoTipo || e.tipo;
+        const icon = e.eventoTipo === 'pedido' ? '📦' : e.eventoTipo === 'cotizacion' ? '📋' : '📅';
+        return `<div class="chip ${chipClass}">${icon} ${escapeHtml(e.time)} • ${escapeHtml(e.cliente)}</div>`;
       }).join('');
 
-      const dots = dayCitas.slice(0, 3).map(c => {
-        return `<span class="dot ${c.tipo}"></span>`;
+      const dots = dayEvts.slice(0, 4).map(e => {
+        return `<span class="dot ${e.eventoTipo || e.tipo}"></span>`;
       }).join('');
 
       cell.innerHTML = `
@@ -488,40 +531,65 @@
       const cell = $(`.cal-day[data-date="${iso}"]`);
       if(cell) cell.style.outline = `2px solid ${getComputedStyle(document.documentElement).getPropertyValue('--accent')}`;
 
-      const citas = getCitas().filter(c => c.date === iso).sort((a,b)=>a.time.localeCompare(b.time));
+      const eventos = _todosEventos().filter(e => e.date === iso).sort((a,b)=>a.time.localeCompare(b.time));
       const head = $('#dayHead');
       const list = $('#dayList');
 
-      if(head) head.textContent = `Citas del ${fmtDMY(iso)}`;
+      if(head) head.textContent = `Agenda del ${fmtDMY(iso)}`;
       if(!list) return;
       list.innerHTML = '';
 
-      if(!citas.length){
+      if(!eventos.length){
         list.innerHTML = `
           <div class="cal-item">
-            <div class="t">Sin citas</div>
-            <div class="m">No hay citas programadas para este día.</div>
+            <div class="t">Sin eventos</div>
+            <div class="m">No hay citas, pedidos ni cotizaciones para este día.</div>
           </div>
         `;
         return;
       }
 
-      citas.forEach(c => {
+      eventos.forEach(e => {
         const el = document.createElement('div');
         el.className = 'cal-item';
-        const estadoTexto = {'nueva':'Nueva','confirmada':'Confirmada','completada':'Completada','cancelada':'Cancelada'}[c.estado] || c.estado;
-        const tipoTexto   = {'medicion':'Medición','instalacion':'Instalación','otro':'Otro'}[c.tipo] || c.tipo;
-        const dbId = c.datos?.id || '';
-        const cid = c.datos?.cliente_id || '';
-        el.innerHTML = `
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
-            <div>
-              <div class="t">${escapeHtml(c.time)} • ${escapeHtml(c.cliente)}${cid ? ` <span style="background:#2d6a3f20;color:#2d6a3f;border-radius:8px;padding:1px 7px;font-size:10px;font-weight:700;"><i class="fa-solid fa-user-check"></i> #${cid}</span>` : ''}</div>
-              <div class="m">${tipoTexto} • ${estadoTexto} • ${escapeHtml(c.id)}</div>
-            </div>
-            ${dbId ? `<button data-call="verDetalleCitaAdmin" data-args="[${dbId}]" class="btn btn-primary btn-small" style="flex-shrink:0;white-space:nowrap;"><i class='fa-solid fa-eye'></i> Ver</button>` : ''}
-          </div>
-        `;
+
+        if (e.eventoTipo === 'pedido') {
+          const estadoLabels = {pendiente:'Pendiente',anticipo_pagado:'Anticipo pagado',pagado:'Pagado',en_produccion:'En Producción',listo:'Listo',listo_para_entrega:'Listo para entrega',entregado:'Entregado',cancelado:'Cancelado'};
+          const dbId = e.datos?.id || '';
+          el.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+              <div>
+                <div class="t">📦 ${escapeHtml(e.cliente)} <span style="background:#c9a96e20;color:#c9a96e;border-radius:8px;padding:1px 7px;font-size:10px;font-weight:700;">Pedido</span></div>
+                <div class="m">${escapeHtml(e.time)} • ${estadoLabels[e.estado]||e.estado} • ${escapeHtml(e.id)}</div>
+              </div>
+              ${dbId ? `<button data-call="verDetallePedidoAdmin" data-args="[${dbId}]" class="btn btn-primary btn-small" style="flex-shrink:0;white-space:nowrap;"><i class='fa-solid fa-eye'></i> Ver</button>` : ''}
+            </div>`;
+        } else if (e.eventoTipo === 'cotizacion') {
+          const cotEstados = {nueva:'Nueva',en_revision:'En revisión',cotizada:'Cotizada',aceptada:'Aceptada',rechazada:'Rechazada',cancelada:'Cancelada'};
+          const dbId = e.datos?.id || '';
+          el.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+              <div>
+                <div class="t">📋 ${escapeHtml(e.cliente)} <span style="background:#4a8b5a20;color:#4a8b5a;border-radius:8px;padding:1px 7px;font-size:10px;font-weight:700;">Cotización</span></div>
+                <div class="m">${escapeHtml(e.time)} • ${cotEstados[e.estado]||e.estado} • ${escapeHtml(e.id)}</div>
+              </div>
+              ${dbId ? `<button data-call="verDetalleCotAdmin" data-args="[${dbId}]" class="btn btn-primary btn-small" style="flex-shrink:0;white-space:nowrap;"><i class='fa-solid fa-eye'></i> Ver</button>` : ''}
+            </div>`;
+        } else {
+          // Cita
+          const estadoTexto = {'nueva':'Nueva','confirmada':'Confirmada','completada':'Completada','cancelada':'Cancelada'}[e.estado] || e.estado;
+          const tipoTexto   = {'medicion':'Medición','instalacion':'Instalación','otro':'Otro'}[e.tipo] || e.tipo;
+          const dbId = e.datos?.id || '';
+          const cid = e.datos?.cliente_id || '';
+          el.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+              <div>
+                <div class="t">📅 ${escapeHtml(e.time)} • ${escapeHtml(e.cliente)}${cid ? ` <span style="background:#2d6a3f20;color:#2d6a3f;border-radius:8px;padding:1px 7px;font-size:10px;font-weight:700;"><i class="fa-solid fa-user-check"></i> #${cid}</span>` : ''}</div>
+                <div class="m">${tipoTexto} • ${estadoTexto} • ${escapeHtml(e.id)}</div>
+              </div>
+              ${dbId ? `<button data-call="verDetalleCitaAdmin" data-args="[${dbId}]" class="btn btn-primary btn-small" style="flex-shrink:0;white-space:nowrap;"><i class='fa-solid fa-eye'></i> Ver</button>` : ''}
+            </div>`;
+        }
         list.appendChild(el);
       });
     }
@@ -533,7 +601,7 @@
 
       title.textContent = `${monthName(calMonth)} ${calYear}`;
 
-      const citas = getCitas();
+      const eventos = _todosEventos();
       const monthStr = pad(calMonth+1);
 
       const first = new Date(calYear, calMonth, 1);
@@ -546,45 +614,48 @@
       const prevLast = new Date(calYear, calMonth, 0).getDate();
       for(let i=0;i<startDow;i++){
         const d = prevLast - (startDow - 1 - i);
-        const cell = makeDayCell(calYear, calMonth-1, d, true, citas);
+        const cell = makeDayCell(calYear, calMonth-1, d, true, eventos);
         grid.appendChild(cell);
       }
 
       for(let d=1; d<=daysInMonth; d++){
-        const cell = makeDayCell(calYear, calMonth, d, false, citas);
+        const cell = makeDayCell(calYear, calMonth, d, false, eventos);
         grid.appendChild(cell);
       }
 
       while(grid.children.length < 42){
         const idx = grid.children.length - (startDow + daysInMonth);
         const d = idx + 1;
-        const cell = makeDayCell(calYear, calMonth+1, d, true, citas);
+        const cell = makeDayCell(calYear, calMonth+1, d, true, eventos);
         grid.appendChild(cell);
       }
 
       const nextList = $('#nextList');
       if(nextList){
-        const next = citas
-          .slice()
+        const hoy = new Date().toISOString().substring(0,10);
+        const next = eventos
+          .filter(e => e.date >= hoy)
           .sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time))
           .slice(0, 8);
 
+        const iconoTipo = { cita:'📅', pedido:'📦', cotizacion:'📋' };
+        const labelTipo = { cita:'Cita', pedido:'Pedido', cotizacion:'Cotización' };
+
         nextList.innerHTML = '';
-        next.forEach(c => {
+        next.forEach(e => {
           const el = document.createElement('div');
           el.className = 'cal-item';
-          const tipoTexto = {'medicion':'Medición','instalacion':'Instalación','otro':'Otro'}[c.tipo] || c.tipo;
-          const hoy = new Date().toISOString().substring(0,10);
-          const esHoy = c.date === hoy;
-          const cidNext = c.datos?.cliente_id || '';
+          const esHoy = e.date === hoy;
+          const icono = iconoTipo[e.eventoTipo] || '📅';
+          const label = labelTipo[e.eventoTipo] || 'Evento';
           el.innerHTML = `
-            <div class="t">${escapeHtml(c.cliente)}${esHoy ? ' <span style="color:#2E7D32;font-size:11px;">● HOY</span>' : ''}${cidNext ? ` <span style="background:#2d6a3f20;color:#2d6a3f;border-radius:8px;padding:1px 7px;font-size:10px;font-weight:700;"><i class="fa-solid fa-user-check"></i> #${cidNext}</span>` : ''}</div>
-            <div class="m">${fmtDMY(c.date)} • ${escapeHtml(c.time)} • ${tipoTexto}</div>
+            <div class="t">${icono} ${escapeHtml(e.cliente)}${esHoy ? ' <span style="color:#2E7D32;font-size:11px;">● HOY</span>' : ''}</div>
+            <div class="m">${fmtDMY(e.date)} • ${escapeHtml(e.time)} • ${label}</div>
           `;
           nextList.appendChild(el);
         });
         if(!next.length){
-          nextList.innerHTML = `<div class="cal-item"><div class="t">Sin citas</div><div class="m">No hay próximas citas registradas.</div></div>`;
+          nextList.innerHTML = `<div class="cal-item"><div class="t">Sin eventos</div><div class="m">No hay eventos próximos.</div></div>`;
         }
       }
 
@@ -2251,11 +2322,28 @@ async function verDetallePedidoAdmin(id) {
         p.municipio_envio ? `Mpio. ${p.municipio_envio}` : '',
         p.cp_envio        ? `CP ${p.cp_envio}` : '',
       ].filter(Boolean).join(', ');
-      entrega = `🚚 Envío — ${partesDireccion || 'Sin dirección'}`;
+      // Si hay coordenadas exactas (mapa picker), usar lat/lng — si no, buscar por texto
+      let mapsUrl;
+      if (p.lat && p.lng) {
+        mapsUrl = `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`;
+      } else if (partesDireccion) {
+        mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(partesDireccion)}`;
+      }
+      const mapsBtn = mapsUrl
+        ? ` <a href="${mapsUrl}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;margin-left:8px;padding:3px 10px;background:#4285F420;border:1px solid #4285F460;border-radius:6px;color:#4285F4;font-size:11px;text-decoration:none;vertical-align:middle;"><i class="fa-solid fa-map-location-dot"></i> Ver en mapa${p.lat ? ' 📍' : ''}</a>`
+        : '';
+      entrega = `🚚 Envío — ${partesDireccion || 'Sin dirección'}${mapsBtn}`;
     }
     const instalacion = parseInt(p.incluye_instalacion) ? '✅ Incluye instalación' : '❌ Sin instalación';
 
     const items = p.items || [];
+    const renderSpecs = specs => {
+      if (!specs?.length) return '';
+      return `<div style="margin-top:4px;padding:6px 8px;background:var(--bg);border-radius:6px;font-size:11px;color:var(--muted);line-height:1.8;">
+        ${specs.map(s => `<span style="margin-right:12px;"><strong style="color:var(--muted2);">${escapeHtml(s.clave)}:</strong> ${escapeHtml(s.valor)}</span>`).join('')}
+      </div>`;
+    };
+
     const itemsHtml = items.length
       ? `<table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;">
           <thead><tr style="background:var(--bg);">
@@ -2266,7 +2354,10 @@ async function verDetallePedidoAdmin(id) {
           </tr></thead>
           <tbody>${items.map(i=>`
             <tr style="border-bottom:1px solid var(--border);">
-              <td style="padding:8px 6px;color:var(--muted2);">${escapeHtml(i.nombre_producto||i.producto_nombre||'Producto')}</td>
+              <td style="padding:8px 6px;color:var(--muted2);">
+                <div>${escapeHtml(i.nombre_producto||i.producto_nombre||'Producto')}</div>
+                ${renderSpecs(i.especificaciones)}
+              </td>
               <td style="padding:8px 6px;text-align:center;color:var(--muted2);">${i.cantidad}</td>
               <td style="padding:8px 6px;text-align:right;color:var(--muted2);">${money(i.precio_unitario)}</td>
               <td style="padding:8px 6px;text-align:right;font-weight:700;color:var(--accent);">${money(i.total||i.precio_unitario*i.cantidad)}</td>
@@ -3647,11 +3738,14 @@ async function confirmarDesactivar2FA() {
   }
 }
 
-// ── Exponer funciones para event-delegation.js (data-call) ────
+// ── Exponer funciones para event-delegation.js (data-call / data-onchange) ────
+window.openModal              = openModal;
+window.closeModal             = closeModal;
 window.verDetallePedidoAdmin  = verDetallePedidoAdmin;
 window.marcarSaldoManualAdmin = marcarSaldoManualAdmin;
 window.verDetalleCitaAdmin    = verDetalleCitaAdmin;
 window.cargarPedidosAPI       = cargarPedidosAPI;
+window.actualizarEstadoPedido = actualizarEstadoPedido;
 window.cambiarEstadoCotAdmin  = cambiarEstadoCotAdmin;
 window.verDetalleCotAdmin     = verDetalleCotAdmin;
 window.cargarCotizacionesAPI  = cargarCotizacionesAPI;
@@ -3667,3 +3761,64 @@ window.iniciarSetup2FA        = iniciarSetup2FA;
 window.confirmarActivar2FA    = confirmarActivar2FA;
 window.cancelarSetup2FA       = cancelarSetup2FA;
 window.confirmarDesactivar2FA = confirmarDesactivar2FA;
+window.prevMonth              = prevMonth;
+window.nextMonth              = nextMonth;
+window.abrirRutaDiaAdmin      = abrirRutaDiaAdmin;
+
+function abrirRutaDiaAdmin() {
+  const fecha = document.getElementById('rutaFechaAdmin')?.value;
+  if (!fecha) { showNotification('Selecciona una fecha para la ruta', 'warning'); return; }
+
+  // Recopilar pedidos del día con tipo envío desde la tabla en memoria
+  const filas = document.querySelectorAll('#pedidosTable tr[data-entrega]');
+  const destinos = [];
+  filas.forEach(tr => {
+    if ((tr.dataset.entrega || '').substring(0,10) !== fecha) return;
+    const estado = tr.dataset.status || '';
+    if (['cancelado','entregado'].includes(estado)) return;
+    // Leer el id del pedido y buscar en cache
+    const id = parseInt(tr.dataset.id);
+    if (!id) return;
+    destinos.push(id);
+  });
+
+  if (!destinos.length) {
+    showNotification(`No hay pedidos de envío pendientes para ${fecha}`, 'info');
+    return;
+  }
+
+  // Cargamos detalles de cada pedido para obtener la dirección
+  Promise.all(destinos.map(id => apiFetch(`${API_BASE}/pedidos.php?id=${id}`)))
+    .then(resultados => {
+      const waypoints = [];
+      resultados.forEach(r => {
+        if (!r?.success || !r.pedido) return;
+        const p = r.pedido;
+        if (p.tipo_entrega !== 'envio') return;
+        // Preferir coordenadas exactas del mapa picker, si no texto
+        if (p.lat && p.lng) {
+          waypoints.push(`${p.lat},${p.lng}`);
+        } else {
+          const addr = [p.direccion_envio, p.colonia_envio, p.ciudad_envio, p.cp_envio].filter(Boolean).join(', ');
+          if (addr) waypoints.push(addr);
+        }
+      });
+
+      if (!waypoints.length) {
+        showNotification(`Ningún pedido de ${fecha} tiene envío a domicilio`, 'info');
+        return;
+      }
+
+      let url;
+      if (waypoints.length === 1) {
+        url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(waypoints[0])}`;
+      } else {
+        const origin = encodeURIComponent(waypoints[0]);
+        const destination = encodeURIComponent(waypoints[waypoints.length - 1]);
+        const wps = waypoints.slice(1, -1).map(encodeURIComponent).join('|');
+        url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${wps ? '&waypoints=' + wps : ''}&travelmode=driving`;
+      }
+      window.open(url, '_blank', 'noopener');
+    })
+    .catch(() => showNotification('Error al obtener direcciones', 'error'));
+}

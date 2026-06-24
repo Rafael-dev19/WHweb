@@ -200,6 +200,8 @@ function guardarFormulario() {
         ciudad:      sanitizeText(document.getElementById('clienteCiudad')?.value    || '', 100),
         municipio:   sanitizeText(document.getElementById('clienteMunicipio')?.value || '', 100),
         cp:          sanitizeCP(document.getElementById('clienteCP')?.value           || ''),
+        lat:         parseFloat(document.getElementById('clienteLat')?.value)  || null,
+        lng:         parseFloat(document.getElementById('clienteLng')?.value)  || null,
         notas:       sanitizeText(document.getElementById('clienteNotas')?.value      || '', 500),
         tipoEntrega: estado.tipoEntrega,
         instalacion: estado.instalacion,
@@ -222,6 +224,8 @@ function restaurarFormulario() {
         set('clienteCiudad',    datos.ciudad);
         set('clienteMunicipio', datos.municipio);
         set('clienteCP',        datos.cp);
+        if (datos.lat) set('clienteLat', datos.lat);
+        if (datos.lng) set('clienteLng', datos.lng);
         set('clienteNotas',     datos.notas);
         if (datos.tipoEntrega) seleccionarEntrega(datos.tipoEntrega, false);
         if (typeof datos.instalacion === 'boolean') seleccionarInstalacion(datos.instalacion);
@@ -259,16 +263,17 @@ async function prefillSiLogueado() {
         setAuth('clienteCorreo',   cliente.correo   || '');
         setAuth('clienteTelefono', cliente.telefono || '');
 
-        // Dirección: solo rellenar si el campo está vacío
-        const set = (id, val) => {
+        // Dirección: siempre sobreescribir con datos del usuario actual
+        // (evita que datos de sesión anterior contaminen el formulario)
+        const setDir = (id, val) => {
             const el = document.getElementById(id);
-            if (el && val && !el.value) { el.value = val; el.setAttribute('data-prefilled', '1'); }
+            if (el) { el.value = val || ''; if (val) el.setAttribute('data-prefilled', '1'); }
         };
-        set('clienteDireccion', cliente.direccion || '');
-        set('clienteColonia',   cliente.colonia   || '');
-        set('clienteCiudad',    cliente.ciudad    || '');
-        set('clienteMunicipio', cliente.municipio || '');
-        set('clienteCP',        cliente.cp        || '');
+        setDir('clienteDireccion', cliente.direccion || '');
+        setDir('clienteColonia',   cliente.colonia   || '');
+        setDir('clienteCiudad',    cliente.ciudad    || '');
+        setDir('clienteMunicipio', cliente.municipio || '');
+        setDir('clienteCP',        cliente.cp        || '');
 
         const correoEl  = document.getElementById('clienteCorreo');
         const confirmEl = document.getElementById('clienteCorreoConfirm');
@@ -507,9 +512,97 @@ function seleccionarEntrega(tipo, recargarFechas = true) {
     if (secDir)   secDir.style.display   = tipo === 'envio' ? '' : 'none';
     if (lineaEnv) lineaEnv.style.display = tipo === 'envio' ? '' : 'none';
 
+    // Inicializar el mapa picker la primera vez que se muestra la sección de envío
+    if (tipo === 'envio') _initMapPickerCheckout();
+
     actualizarTotales();
     guardarFormulario();
     if (recargarFechas) setTimeout(() => cargarFechasDisponibles(), 100);
+}
+
+let _mapPickerInitialized = false;
+function _initMapPickerCheckout() {
+    if (_mapPickerInitialized || !window.MapsPicker) return;
+    const container = document.getElementById('mapPickerContainer');
+    if (!container) return;
+    _mapPickerInitialized = true;
+
+    MapsPicker.init(container, {
+        onConfirm(v) {
+            // Llenar los hidden inputs con los datos del mapa
+            const set = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.value = val || '';
+            };
+            set('clienteDireccion',  v.direccion);
+            set('clienteColonia',    v.colonia);
+            set('clienteCiudad',     v.ciudad);
+            set('clienteMunicipio',  v.municipio);
+            set('clienteCP',         v.cp);
+            set('clienteLat',        v.lat);
+            set('clienteLng',        v.lng);
+
+            // Rellenar y mostrar los campos editables
+            const setEdit = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.value = val || '';
+            };
+            setEdit('clienteDireccionEdit',  v.direccion);
+            setEdit('clienteColoniaEdit',    v.colonia);
+            setEdit('clienteCiudadEdit',     v.ciudad);
+            setEdit('clienteMunicipioEdit',  v.municipio);
+            setEdit('clienteCPEdit',         v.cp);
+
+            const detalle = document.getElementById('direccionDetalleEdit');
+            if (detalle) detalle.style.display = 'block';
+
+            guardarFormulario();
+        }
+    });
+
+    // Sincronizar edits manuales → hidden inputs
+    [
+        ['clienteDireccionEdit', 'clienteDireccion'],
+        ['clienteColoniaEdit',   'clienteColonia'],
+        ['clienteCiudadEdit',    'clienteCiudad'],
+        ['clienteMunicipioEdit', 'clienteMunicipio'],
+        ['clienteCPEdit',        'clienteCP'],
+    ].forEach(([editId, hiddenId]) => {
+        const editEl = document.getElementById(editId);
+        if (editEl) editEl.addEventListener('input', () => {
+            const hid = document.getElementById(hiddenId);
+            if (hid) hid.value = editEl.value;
+            guardarFormulario();
+        });
+    });
+
+    // Si ya había datos guardados (restaurarFormulario), pre-cargar en el picker
+    const dirVal = document.getElementById('clienteDireccion')?.value;
+    const latVal = document.getElementById('clienteLat')?.value;
+    const lngVal = document.getElementById('clienteLng')?.value;
+    if (dirVal) {
+        MapsPicker.setValue({
+            lat: latVal ? parseFloat(latVal) : null,
+            lng: lngVal ? parseFloat(lngVal) : null,
+            direccion: dirVal,
+            colonia:   document.getElementById('clienteColonia')?.value,
+            ciudad:    document.getElementById('clienteCiudad')?.value,
+            municipio: document.getElementById('clienteMunicipio')?.value,
+            cp:        document.getElementById('clienteCP')?.value,
+        });
+        // Mostrar los campos editables si ya hay dirección
+        const detalle = document.getElementById('direccionDetalleEdit');
+        const editDir = document.getElementById('clienteDireccionEdit');
+        if (detalle) detalle.style.display = 'block';
+        if (editDir) editDir.value = dirVal;
+        const fields = { clienteColoniaEdit: 'clienteColonia', clienteCiudadEdit: 'clienteCiudad',
+                         clienteMunicipioEdit: 'clienteMunicipio', clienteCPEdit: 'clienteCP' };
+        Object.entries(fields).forEach(([eId, hId]) => {
+            const e = document.getElementById(eId);
+            const h = document.getElementById(hId);
+            if (e && h) e.value = h.value;
+        });
+    }
 }
 
 function seleccionarInstalacion(conInstalacion) {
@@ -730,6 +823,8 @@ function resaltarCamposVaciosCheckout(ids) {
     ids.forEach(id => {
         const el = document.getElementById(id);
         if (!el) return;
+        // Saltar campos cuyo padre (o ellos mismos) esté oculto con display:none
+        if (el.offsetParent === null && el.closest('[style*="display: none"], [style*="display:none"]')) return;
         if (!el.value.trim()) {
             _marcarError(id);
             if (!primerVacio) primerVacio = el;
@@ -768,7 +863,9 @@ function procederAlPago() {
     if (!nombre   || nombre.length < 3)      { _marcarError('clienteNombre');       showToast('Ingresa tu nombre completo (mínimo 3 caracteres)', 'error'); return; }
     if (!telefono || !isValidPhone(telefono)) { _marcarError('clienteTelefono');     showToast('Ingresa un teléfono válido de 10 dígitos', 'error'); return; }
     if (!correo   || !isEmailValido(correo))  { _marcarError('clienteCorreo');       showToast('Ingresa un correo electrónico válido (ej: nombre@dominio.com)', 'error'); return; }
-    if (!correoConfirmVal || correoConfirmVal !== correo) { _marcarError('clienteCorreoConfirm'); showToast('Los correos electrónicos no coinciden. Verifícalos.', 'error'); return; }
+    const correoConfirmEl2 = document.getElementById('clienteCorreoConfirm');
+    const confirmOculto = correoConfirmEl2 && correoConfirmEl2.offsetParent === null;
+    if (!confirmOculto && (!correoConfirmVal || correoConfirmVal !== correo)) { _marcarError('clienteCorreoConfirm'); showToast('Los correos electrónicos no coinciden. Verifícalos.', 'error'); return; }
 
     if (estado.tipoEntrega === 'envio') {
         const dir = sanitizeText(document.getElementById('clienteDireccion')?.value || '', 250);
@@ -816,6 +913,8 @@ function procederAlPago() {
         ciudad_envio:        ciudad,
         municipio_envio:     municipio,
         cp_envio:            cp,
+        lat_envio:           parseFloat(document.getElementById('clienteLat')?.value) || null,
+        lng_envio:           parseFloat(document.getElementById('clienteLng')?.value) || null,
         tipo_pago:           estado.tipoPago,
         notas:        sanitizeText(document.getElementById('clienteNotas')?.value || '', 500) || null,
         subtotal, costo_envio: costoEnvio, costo_instalacion: costoInst,

@@ -54,10 +54,23 @@ switch ($method) {
             requerirEmpleado();
             $pedido = dbRow("SELECT p.*, p.estado, p.total FROM pedidos p WHERE p.id = ?", [$id]);
             if (!$pedido) jsonError('Pedido no encontrado', 404);
-            $pedido['items'] = dbRows(
+            $items = dbRows(
                 "SELECT dp.*, dp.nombre_producto AS producto_nombre FROM detalle_pedido dp WHERE dp.pedido_id = ?",
                 [$id]
             );
+            foreach ($items as &$item) {
+                if (!empty($item['producto_id'])) {
+                    $specs = dbRows(
+                        "SELECT clave, valor FROM especificaciones_producto WHERE producto_id = ? ORDER BY id",
+                        [$item['producto_id']]
+                    );
+                    $item['especificaciones'] = $specs ?: [];
+                } else {
+                    $item['especificaciones'] = [];
+                }
+            }
+            unset($item);
+            $pedido['items'] = $items;
             $pedido['pagos'] = dbRows(
                 "SELECT * FROM pagos WHERE pedido_id = ? ORDER BY fecha_creacion DESC",
                 [$id]
@@ -208,6 +221,16 @@ switch ($method) {
             }
             if ($tieneTipoPago) {
                 $datosPedido['tipo_pago'] = $tipoPago;
+            }
+
+            // Coordenadas GPS del mapa picker (opcionales)
+            $latEnvio = isset($body['lat_envio']) ? filter_var($body['lat_envio'], FILTER_VALIDATE_FLOAT) : false;
+            $lngEnvio = isset($body['lng_envio']) ? filter_var($body['lng_envio'], FILTER_VALIDATE_FLOAT) : false;
+            $tieneCoords = false;
+            try { dbRows("SELECT lat FROM pedidos LIMIT 0"); $tieneCoords = true; } catch (Exception $e) {}
+            if ($tieneCoords && $latEnvio !== false && $lngEnvio !== false) {
+                $datosPedido['lat'] = $latEnvio;
+                $datosPedido['lng'] = $lngEnvio;
             }
 
             $clienteSession = sesionClienteActiva();

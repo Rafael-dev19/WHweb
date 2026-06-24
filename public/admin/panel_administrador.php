@@ -258,6 +258,11 @@ unset($_usuario);
         <div class="section">
           <div class="section-header">
             <h2 class="section-title">Todos los Pedidos</h2>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+              <label style="font-size:13px;color:var(--muted);">Ruta del día:</label>
+              <input type="date" id="rutaFechaAdmin" style="padding:5px 10px;border:1px solid var(--border);background:var(--panel2);color:var(--muted2);border-radius:6px;font-size:13px;">
+              <button data-call="abrirRutaDiaAdmin" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:#4285F420;border:1px solid #4285F460;border-radius:6px;color:#4285F4;font-size:13px;cursor:pointer;"><i class="fa-solid fa-route"></i> Generar ruta</button>
+            </div>
           </div>
 
           <div class="table-container">
@@ -290,10 +295,10 @@ unset($_usuario);
         </div>
       </div>
 
-      <!-- CITAS -->
+      <!-- CITAS / AGENDA -->
       <div id="citas-section" class="content-section hidden">
-        <h1 class="page-title">Calendario de Citas</h1>
-        <p class="page-subtitle">Gestiona todas las citas programadas (vista calendario + lista)</p>
+        <h1 class="page-title">Agenda Operativa</h1>
+        <p class="page-subtitle">Vista unificada de citas, pedidos de entrega y cotizaciones en el calendario</p>
 
         <div class="section">
           <div class="section-header">

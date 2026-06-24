@@ -406,6 +406,14 @@ ALTER TABLE citas ADD COLUMN municipio  VARCHAR(100) NULL AFTER colonia;
 ALTER TABLE citas ADD COLUMN ciudad     VARCHAR(100) NULL AFTER municipio;
 ALTER TABLE citas ADD COLUMN cp         VARCHAR(10)  NULL AFTER ciudad;
 
+-- Coordenadas GPS confirmadas por el cliente via mapa (Google Maps picker)
+ALTER TABLE pedidos       ADD COLUMN lat DECIMAL(10,7) NULL AFTER cp_envio;
+ALTER TABLE pedidos       ADD COLUMN lng DECIMAL(10,7) NULL AFTER lat;
+ALTER TABLE citas         ADD COLUMN lat DECIMAL(10,7) NULL AFTER cp;
+ALTER TABLE citas         ADD COLUMN lng DECIMAL(10,7) NULL AFTER lat;
+ALTER TABLE cotizaciones  ADD COLUMN lat DECIMAL(10,7) NULL AFTER cp;
+ALTER TABLE cotizaciones  ADD COLUMN lng DECIMAL(10,7) NULL AFTER lat;
+
 -- Vincular cotizaciones a clientes
 ALTER TABLE cotizaciones ADD COLUMN cliente_id INT NULL AFTER numero_cotizacion;
 ALTER TABLE cotizaciones ADD CONSTRAINT fk_cotizaciones_cliente

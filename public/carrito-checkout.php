@@ -275,39 +275,55 @@ header('Content-Type: text/html; charset=utf-8');
                     <div id="seccionDireccion">
                         <div class="wh-info-box" style="margin-bottom:14px;">
                           <i class="fa-solid fa-location-dot"></i>
-                          <span>La siguiente dirección es <strong>donde entregaremos tu pedido</strong>. Asegúrate de que sea correcta.</span>
+                          <span>Busca tu dirección y confirma la ubicación en el mapa. <strong>Es donde entregaremos tu pedido.</strong></span>
                         </div>
-                        <div class="form-group">
-                            <label>Calle y número <span class="required">*</span>
-                              <span class="wh-help" data-tip="Solo la calle y el número exterior/interior. La colonia va en el campo siguiente.">?</span>
-                            </label>
-                            <input type="text" id="clienteDireccion" placeholder="Ej. Av. Chapultepec 1234 Int. 5" required>
-                        </div>
-                        <div class="row g-3 form-row">
-                            <div class="col-md-6 form-group">
-                                <label>Colonia <span class="required">*</span></label>
-                                <input type="text" id="clienteColonia" placeholder="Ej. Col. Americana" required>
+
+                        <!-- Picker de mapa (Google Maps) -->
+                        <div id="mapPickerContainer" class="form-group"></div>
+
+                        <!-- Campos individuales ocultos — se rellenan automáticamente desde el mapa -->
+                        <input type="hidden" id="clienteDireccion">
+                        <input type="hidden" id="clienteColonia">
+                        <input type="hidden" id="clienteCiudad">
+                        <input type="hidden" id="clienteMunicipio">
+                        <input type="hidden" id="clienteCP">
+                        <input type="hidden" id="clienteLat">
+                        <input type="hidden" id="clienteLng">
+
+                        <!-- Detalle editable (se muestra tras confirmar en el mapa) -->
+                        <div id="direccionDetalleEdit" style="display:none;margin-top:6px;">
+                          <p style="font-size:12px;color:var(--muted);margin-bottom:8px;">
+                            <i class="fa-solid fa-pen-to-square"></i> ¿Necesitas corregir algún campo? Edítalos aquí:
+                          </p>
+                          <div class="row g-2">
+                            <div class="col-md-8 form-group" style="margin-bottom:8px;">
+                              <label style="font-size:12px;">Calle y número</label>
+                              <input type="text" id="clienteDireccionEdit" placeholder="Calle y número" style="font-size:13px;">
                             </div>
-                            <div class="col-md-6 form-group">
-                                <label>Ciudad <span class="required">*</span></label>
-                                <input type="text" id="clienteCiudad" placeholder="Ej. Guadalajara" required>
+                            <div class="col-md-4 form-group" style="margin-bottom:8px;">
+                              <label style="font-size:12px;">CP</label>
+                              <input type="text" id="clienteCPEdit" placeholder="45000" maxlength="5" style="font-size:13px;">
                             </div>
-                        </div>
-                        <div class="row g-3 form-row">
-                            <div class="col-12 form-group">
-                                <label>Municipio <span class="required">*</span></label>
-                                <input type="text" id="clienteMunicipio" placeholder="Ej. Zapopan" required>
+                          </div>
+                          <div class="row g-2">
+                            <div class="col-md-4 form-group" style="margin-bottom:8px;">
+                              <label style="font-size:12px;">Colonia</label>
+                              <input type="text" id="clienteColoniaEdit" placeholder="Colonia" style="font-size:13px;">
                             </div>
+                            <div class="col-md-4 form-group" style="margin-bottom:8px;">
+                              <label style="font-size:12px;">Ciudad</label>
+                              <input type="text" id="clienteCiudadEdit" placeholder="Ciudad" style="font-size:13px;">
+                            </div>
+                            <div class="col-md-4 form-group" style="margin-bottom:8px;">
+                              <label style="font-size:12px;">Municipio</label>
+                              <input type="text" id="clienteMunicipioEdit" placeholder="Municipio" style="font-size:13px;">
+                            </div>
+                          </div>
                         </div>
-                        <div class="form-group">
-                            <label>Código Postal <span class="required">*</span>
-                              <span class="wh-help" data-tip="Tu CP de 5 dígitos. Lo usamos para confirmar que la dirección está dentro de nuestra zona de entrega (ZMG).">?</span>
-                            </label>
-                            <input type="text" id="clienteCP" placeholder="45000" required maxlength="5">
-                        </div>
-                        <div class="form-group">
+
+                        <div class="form-group" style="margin-top:8px;">
                             <label>Referencias adicionales
-                              <span class="wh-help" data-tip="Describe referencias para encontrar tu domicilio: color de la fachada, entre qué calles está, si hay portón o reja, etc.">?</span>
+                              <span class="wh-help" data-tip="Color de la fachada, entre qué calles está, si hay portón o reja, etc.">?</span>
                             </label>
                             <textarea id="clienteNotas" rows="3"
                                 placeholder="Entre calles X y Y, portón negro, casa color beige…"></textarea>
@@ -396,8 +412,12 @@ header('Content-Type: text/html; charset=utf-8');
 <script src="./assets/<?= av('js/firebase-config.js') ?>"></script>
 <script src="./assets/<?= av('js/modal-auth.js') ?>"></script>
 <script src="./assets/<?= av('js/carrito.js') ?>"></script>
+<script src="./assets/<?= av('js/maps-picker.js') ?>"></script>
 <script src="./assets/<?= av('js/checkout.js') ?>"></script>
 <script src="./assets/<?= av('js/event-delegation.js') ?>"></script>
 <script src="./assets/<?= av('js/animations.js') ?>"></script>
+<?php if (defined('GOOGLE_MAPS_API_KEY') && GOOGLE_MAPS_API_KEY): ?>
+<script src="https://maps.googleapis.com/maps/api/js?key=<?= htmlspecialchars(GOOGLE_MAPS_API_KEY) ?>&libraries=places&callback=initMapsPickerReady&loading=async" async defer></script>
+<?php endif; ?>
 </body>
 </html>

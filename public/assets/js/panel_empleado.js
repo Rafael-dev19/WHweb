@@ -621,8 +621,16 @@ const DOW = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
 let calCursor = new Date();
 let selectedDateISO = null;
 
+// Caches de API — no se persisten en localStorage
+let _empCitasApiCache   = [];
+let _empPedidosApiCache = [];
+
 function getCalEvents(){ return JSON.parse(localStorage.getItem(CAL_KEY) || '[]'); }
 function saveCalEvents(events){ localStorage.setItem(CAL_KEY, JSON.stringify(events)); }
+
+function _getAllEmpEvents(){
+  return [...getCalEvents(), ..._empCitasApiCache, ..._empPedidosApiCache];
+}
 
 function isoDate(d){
   const x = new Date(d);
@@ -661,7 +669,7 @@ function buildCalendar(){
   const startOffset = mondayIndex(first.getDay());
   const start = new Date(year, month, 1 - startOffset);
 
-  const events = getCalEvents();
+  const events = _getAllEmpEvents();
   const todayISO = isoDate(new Date());
 
   for(let i=0; i<42; i++){
@@ -679,7 +687,11 @@ function buildCalendar(){
     cell.innerHTML = `
       <div class="num">${day.getDate()}</div>
       <div class="cal-chip">
-        ${dayEvents.map(e => `<div class="chip ${e.type}">${escapeHtml(e.time || '')} ${escapeHtml(e.title)}</div>`).join('')}
+        ${dayEvents.map(e => {
+          const chipClass = e.eventoTipo || e.type || 'cita';
+          const icon = e.eventoTipo === 'pedido' ? '📦' : e.eventoTipo === 'cita' ? '📅' : '';
+          return `<div class="chip ${chipClass}">${icon} ${escapeHtml(e.time || '')} ${escapeHtml(e.title)}</div>`;
+        }).join('')}
       </div>
     `;
 
@@ -701,7 +713,7 @@ function renderDayEvents(dayISO){
   const title = document.getElementById('selectedDayTitle');
   title.textContent = `Eventos del día (${dayISO})`;
 
-  const events = getCalEvents()
+  const events = _getAllEmpEvents()
     .filter(e => e.date === dayISO)
     .sort((a,b) => (a.time||'').localeCompare(b.time||''));
 
@@ -710,26 +722,42 @@ function renderDayEvents(dayISO){
     return;
   }
 
-  list.innerHTML = events.map(e => `
+  list.innerHTML = events.map(e => {
+    const esApi = !!e.eventoTipo;
+    const esManual = !esApi;
+    const icon = e.eventoTipo === 'pedido' ? '📦' : e.eventoTipo === 'cita' ? '📅' : '';
+    const badge = e.eventoTipo === 'pedido'
+      ? `<span style="background:rgba(201,169,110,.2);color:#c9a96e;border-radius:8px;padding:1px 7px;font-size:10px;font-weight:700;">Pedido</span>`
+      : e.eventoTipo === 'cita'
+      ? `<span style="background:rgba(74,124,139,.2);color:#4a7c8b;border-radius:8px;padding:1px 7px;font-size:10px;font-weight:700;">Cita</span>`
+      : '';
+    const verBtn = e.eventoTipo === 'pedido' && e.datos?.id
+      ? `<button class="btn btn-primary btn-small" data-call="verDetallePedidoEmp" data-args="[${e.datos.id}]"><i class="fa-solid fa-eye"></i> Ver</button>`
+      : e.eventoTipo === 'cita' && e.datos?.id
+      ? `<button class="btn btn-primary btn-small" data-call="verDetalleCitaEmp" data-args="[${e.datos.id}]"><i class="fa-solid fa-eye"></i> Ver</button>`
+      : '';
+    const elimBtn = esManual
+      ? `<button class="btn btn-secondary btn-small" data-call="deleteEvent" data-args='["${e.id}"]'>Eliminar</button>`
+      : '';
+    return `
     <div class="cal-item">
-      <div class="t">${escapeHtml((e.time ? e.time + ' — ' : '') + e.title)}${e.cliente_id ? ` <span style="background:#e8f5e9;color:#2E7D32;border-radius:8px;padding:1px 7px;font-size:10px;font-weight:700;"><i class="fa-solid fa-user-check"></i> #${e.cliente_id}</span>` : ''}</div>
+      <div class="t">${icon} ${escapeHtml((e.time ? e.time + ' — ' : '') + e.title)} ${badge}${e.cliente_id ? ` <span style="background:#e8f5e9;color:#2E7D32;border-radius:8px;padding:1px 7px;font-size:10px;font-weight:700;"><i class="fa-solid fa-user-check"></i> #${e.cliente_id}</span>` : ''}</div>
       <div class="m">${escapeHtml(e.notes || '')}</div>
-      <div style="display:flex; gap:8px; margin-top:6px;">
-        <button class="btn btn-secondary btn-small" data-call="deleteEvent" data-args='["${e.id}"]'>Eliminar</button>
-      </div>
-    </div>
-  `).join('');
+      <div style="display:flex; gap:8px; margin-top:6px;">${verBtn}${elimBtn}</div>
+    </div>`;
+  }).join('');
 }
 
 function renderNext7(){
   const box = document.getElementById('nextEventsList');
-  const events = getCalEvents();
+  const events = _getAllEmpEvents();
 
   const now = new Date();
   const startISO = isoDate(now);
   const end = new Date(now); end.setDate(end.getDate()+7);
   const endISO = isoDate(end);
 
+  const iconTipo = { pedido:'📦', cita:'📅' };
   const next = events
     .filter(e => e.date >= startISO && e.date <= endISO)
     .sort((a,b) => (a.date + (a.time||'')).localeCompare(b.date + (b.time||'')))
@@ -740,12 +768,14 @@ function renderNext7(){
     return;
   }
 
-  box.innerHTML = next.map(e => `
+  box.innerHTML = next.map(e => {
+    const icon = iconTipo[e.eventoTipo] || '';
+    return `
     <div class="cal-item">
-      <div class="t">${escapeHtml(e.date)} ${escapeHtml(e.time || '')}</div>
+      <div class="t">${icon} ${escapeHtml(e.date)} ${escapeHtml(e.time || '')}</div>
       <div class="m">${escapeHtml(e.title)}</div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 function prevMonth(){
@@ -871,25 +901,43 @@ async function saveCotizacion() {
 }
 
 async function cargarCitasParaCalendario() {
+  // Carga desde API y almacena en caché — NO modifica localStorage
   try {
-    const data = await apiFetch(`${API_BASE}/citas.php?limit=50`);
-    if (!data.success || !data.citas?.length) return;
-    const existentes = getCalEvents();
-    const idsExistentes = new Set(existentes.map(e => e.apiId).filter(Boolean));
-    const nuevos = data.citas
-      .filter(c => !idsExistentes.has(String(c.id)))
-      .map(c => ({
-        id: 'API-' + c.id,
-        apiId: String(c.id),
+    const [dataCitas, dataPedidos] = await Promise.allSettled([
+      apiFetch(`${API_BASE}/citas.php?limit=100`),
+      apiFetch(`${API_BASE}/pedidos.php?limit=100`)
+    ]);
+
+    if (dataCitas.status === 'fulfilled' && dataCitas.value?.success) {
+      _empCitasApiCache = (dataCitas.value.citas || []).map(c => ({
+        id: 'ACITA-' + c.id,
+        eventoTipo: 'cita',
         date: (c.fecha_cita || '').substring(0, 10),
-        time: c.rango_horario || '10:00',
+        time: c.rango_horario || '',
         type: 'cita',
-        title: `${c.tipo === 'medicion' ? 'Medición' : 'Instalación'}: ${c.nombre_cliente}`,
+        title: `${c.tipo === 'medicion' ? 'Medición' : c.tipo === 'instalacion' ? 'Instalación' : 'Cita'}: ${c.nombre_cliente}`,
         notes: c.notas || '',
-        cliente_id: c.cliente_id || null
+        cliente_id: c.cliente_id || null,
+        datos: c
       }));
-    if (nuevos.length) saveCalEvents([...existentes, ...nuevos]);
-  } catch(e) { /* silencioso — el calendario muestra lo que tenga en local */ }
+    }
+
+    if (dataPedidos.status === 'fulfilled' && dataPedidos.value?.success) {
+      _empPedidosApiCache = (dataPedidos.value.pedidos || [])
+        .filter(p => p.fecha_estimada)
+        .map(p => ({
+          id: 'APED-' + p.id,
+          eventoTipo: 'pedido',
+          date: (p.fecha_estimada || '').substring(0, 10),
+          time: '',
+          type: 'pedido',
+          title: `Entrega: ${p.nombre_cliente}`,
+          notes: `Pedido ${p.numero_pedido} • ${p.tipo_entrega === 'envio' ? 'Envío' : 'Recoger'}`,
+          cliente_id: p.cliente_id || null,
+          datos: p
+        }));
+    }
+  } catch(e) { /* silencioso — el calendario muestra eventos de localStorage */ }
 }
 
 // ================== INIT (primer DOMContentLoaded) ==================
@@ -1190,11 +1238,26 @@ async function verDetallePedidoEmp(id) {
         p.municipio_envio ? `Mpio. ${p.municipio_envio}` : '',
         p.cp_envio        ? `CP ${p.cp_envio}` : '',
       ].filter(Boolean).join(', ');
-      entrega = `🚚 Envío — ${partesDireccion || 'Sin dirección'}`;
+      let mapsUrl;
+      if (p.lat && p.lng) {
+        mapsUrl = `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`;
+      } else if (partesDireccion) {
+        mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(partesDireccion)}`;
+      }
+      const mapsBtn = mapsUrl
+        ? ` <a href="${mapsUrl}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;margin-left:8px;padding:3px 10px;background:#4285F420;border:1px solid #4285F460;border-radius:6px;color:#4285F4;font-size:11px;text-decoration:none;vertical-align:middle;"><i class="fa-solid fa-map-location-dot"></i> Ver en mapa${p.lat ? ' 📍' : ''}</a>`
+        : '';
+      entrega = `🚚 Envío — ${partesDireccion || 'Sin dirección'}${mapsBtn}`;
     }
     const instalacion = parseInt(p.incluye_instalacion) ? '✅ Incluye instalación' : '❌ Sin instalación';
 
     const items = p.items || [];
+    const renderSpecsEmp = specs => {
+      if (!specs?.length) return '';
+      return `<div style="margin-top:4px;padding:6px 8px;background:var(--bg);border-radius:6px;font-size:11px;color:var(--muted);line-height:1.8;">
+        ${specs.map(s => `<span style="margin-right:12px;"><strong style="color:var(--muted2);">${escapeHtml(s.clave)}:</strong> ${escapeHtml(s.valor)}</span>`).join('')}
+      </div>`;
+    };
     const itemsHtml = items.length
       ? `<table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;">
           <thead><tr style="background:var(--bg);">
@@ -1205,7 +1268,10 @@ async function verDetallePedidoEmp(id) {
           </tr></thead>
           <tbody>${items.map(i=>`
             <tr style="border-bottom:1px solid var(--border);">
-              <td style="padding:8px 6px;color:var(--muted2);">${escapeHtml(i.nombre_producto||i.producto_nombre||'Producto')}</td>
+              <td style="padding:8px 6px;color:var(--muted2);">
+                <div>${escapeHtml(i.nombre_producto||i.producto_nombre||'Producto')}</div>
+                ${renderSpecsEmp(i.especificaciones)}
+              </td>
               <td style="padding:8px 6px;text-align:center;color:var(--muted2);">${i.cantidad}</td>
               <td style="padding:8px 6px;text-align:right;color:var(--muted2);">${money(i.precio_unitario)}</td>
               <td style="padding:8px 6px;text-align:right;font-weight:700;color:var(--accent);">${money(i.total_linea||i.precio_unitario*i.cantidad)}</td>
@@ -1650,3 +1716,57 @@ window.verDetallePedidoEmp = verDetallePedidoEmp;
 window.marcarSaldoManualEmp = marcarSaldoManualEmp;
 window.verDetalleCitaEmp  = verDetalleCitaEmp;
 window.verDetalleCotEmp   = verDetalleCotEmp;
+window.abrirRutaDiaEmp    = abrirRutaDiaEmp;
+
+function abrirRutaDiaEmp() {
+  const fecha = document.getElementById('rutaFechaEmp')?.value;
+  if (!fecha) { showNotification('Selecciona una fecha para la ruta', 'warning'); return; }
+
+  const filas = document.querySelectorAll('#pedidosTable tr[data-entrega]');
+  const destinos = [];
+  filas.forEach(tr => {
+    if ((tr.dataset.entrega || '').substring(0,10) !== fecha) return;
+    const estado = tr.dataset.status || '';
+    if (['cancelado','entregado'].includes(estado)) return;
+    const id = parseInt(tr.dataset.id);
+    if (id) destinos.push(id);
+  });
+
+  if (!destinos.length) {
+    showNotification(`No hay pedidos pendientes para ${fecha}`, 'info');
+    return;
+  }
+
+  Promise.all(destinos.map(id => apiFetch(`${API_BASE}/pedidos.php?id=${id}`)))
+    .then(resultados => {
+      const waypoints = [];
+      resultados.forEach(r => {
+        if (!r?.success || !r.pedido) return;
+        const p = r.pedido;
+        if (p.tipo_entrega !== 'envio') return;
+        if (p.lat && p.lng) {
+          waypoints.push(`${p.lat},${p.lng}`);
+        } else {
+          const addr = [p.direccion_envio, p.colonia_envio, p.ciudad_envio, p.cp_envio].filter(Boolean).join(', ');
+          if (addr) waypoints.push(addr);
+        }
+      });
+
+      if (!waypoints.length) {
+        showNotification(`Ningún pedido de ${fecha} tiene envío a domicilio`, 'info');
+        return;
+      }
+
+      let url;
+      if (waypoints.length === 1) {
+        url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(waypoints[0])}`;
+      } else {
+        const origin = encodeURIComponent(waypoints[0]);
+        const destination = encodeURIComponent(waypoints[waypoints.length - 1]);
+        const wps = waypoints.slice(1, -1).map(encodeURIComponent).join('|');
+        url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${wps ? '&waypoints=' + wps : ''}&travelmode=driving`;
+      }
+      window.open(url, '_blank', 'noopener');
+    })
+    .catch(() => showNotification('Error al obtener direcciones', 'error'));
+}

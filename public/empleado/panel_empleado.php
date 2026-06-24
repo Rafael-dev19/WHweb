@@ -171,6 +171,11 @@ unset($_usuario);
         <div class="section">
           <div class="section-header">
             <h2 class="section-title">Pedidos</h2>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+              <label style="font-size:13px;color:var(--muted);">Ruta del día:</label>
+              <input type="date" id="rutaFechaEmp" style="padding:5px 10px;border:1px solid var(--border);background:var(--panel2);color:var(--muted2);border-radius:6px;font-size:13px;">
+              <button data-call="abrirRutaDiaEmp" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:#4285F420;border:1px solid #4285F460;border-radius:6px;color:#4285F4;font-size:13px;cursor:pointer;"><i class="fa-solid fa-route"></i> Generar ruta</button>
+            </div>
           </div>
 
           <div class="table-container">

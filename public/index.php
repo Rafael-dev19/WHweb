@@ -159,13 +159,30 @@ if (!empty($_SESSION['_flash'])) {
         Desde cocinas integrales hasta clósets personalizados, cada proyecto es único y refleja nuestra pasión
         por la carpintería de excelencia.
       </p>
-      <p style="margin-top:14px; padding-top:14px; border-top:1px solid rgba(201,169,110,0.2); font-size:14px; color:#aaa; line-height:1.7;">
-        <strong style="color:#c9a96e;">Cuenta de cliente:</strong>
-        Wooden House permite crear una cuenta personal para gestionar tus pedidos, cotizaciones y citas de medición
-        desde un solo lugar. Puedes registrarte con tu correo electrónico o iniciar sesión rápidamente con
-        <strong>Google</strong> — utilizamos Google Sign-In únicamente para verificar tu identidad y autocompletar
-        tu nombre y correo. No accedemos a tu historial de búsqueda, contactos ni ningún otro dato fuera de tu perfil básico.
-        Consulta nuestra <a href="/privacidad" style="color:#c9a96e;">Política de Privacidad</a> para más información.
+    </div>
+
+    <!-- ── Sección: Plataforma y acceso con Google ──────────────────── -->
+    <div class="about-box" id="plataforma-digital" style="margin-top:24px;">
+      <h2><i class="fa-solid fa-user-shield" style="color:#c9a96e;"></i> Plataforma Digital de Wooden House</h2>
+      <p>
+        <strong>Wooden House</strong> es una plataforma integral de gestión comercial y operativa para la compra de muebles
+        de madera a medida. A través de este sitio los clientes pueden:
+      </p>
+      <ul style="color:#ccc; line-height:2; margin-bottom:16px; padding-left:20px;">
+        <li>Explorar el catálogo de productos con fichas técnicas, dimensiones y precios</li>
+        <li>Solicitar cotizaciones personalizadas y agendar citas de medición a domicilio</li>
+        <li>Realizar compras en línea y dar seguimiento al estado de producción de su pedido</li>
+        <li>Acceder a su historial de cotizaciones, pedidos y documentos desde un portal privado</li>
+      </ul>
+      <p style="padding:14px 18px; background:rgba(201,169,110,0.08); border-left:3px solid #c9a96e; border-radius:6px; font-size:14px; color:#ccc; line-height:1.8;">
+        <strong style="color:#c9a96e;"><i class="fa-brands fa-google"></i> Inicio de sesión con Google:</strong>
+        La aplicación <strong>Wooden House</strong> utiliza Google Sign-In para que los clientes puedan crear
+        su cuenta o iniciar sesión de forma segura. Al autenticarse con Google, únicamente accedemos a tu
+        <strong>nombre</strong> y <strong>dirección de correo electrónico</strong> de tu perfil básico de Google,
+        con el fin de identificarte como usuario y autocompletar tus datos de contacto.
+        No accedemos a tu historial de búsqueda, agenda, contactos, correos, archivos de Drive
+        ni ningún otro dato personal fuera del perfil básico de Google.
+        Consulta nuestra <a href="/privacidad" style="color:#c9a96e;">Política de Privacidad</a> para más información sobre el manejo de tus datos.
       </p>
     </div>
 

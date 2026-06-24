@@ -84,6 +84,9 @@ define('EMAIL_CITAS',          env('EMAIL_CITAS',          ''));
 define('EMAIL_COTIZACIONES',   env('EMAIL_COTIZACIONES',   ''));
 define('EMAIL_VENTAS',         env('EMAIL_VENTAS',         ''));
 
+// ── Google Maps ───────────────────────────────────────────────────
+define('GOOGLE_MAPS_API_KEY', env('GOOGLE_MAPS_API_KEY', ''));
+
 // ── Negocio ────────────────────────────────────────────────────────
 define('COSTO_INSTALACION', (float) env('COSTO_INSTALACION', 1500));
 define('COSTO_ENVIO',       (float) env('COSTO_ENVIO',       500));

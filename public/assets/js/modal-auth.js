@@ -78,10 +78,16 @@
       </div>
 
       <div class="auth-social-divider"><span>o continúa con</span></div>
-      <button type="button" class="btn-auth-google" id="btnAuthGoogle">
-        <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.35-8.16 2.35-6.26 0-11.57-3.59-13.46-8.83l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-        Continuar con Google
-      </button>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <button type="button" class="btn-auth-google" id="btnAuthGoogle">
+          <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.35-8.16 2.35-6.26 0-11.57-3.59-13.46-8.83l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          Continuar con Google
+        </button>
+        <button type="button" class="btn-auth-apple" id="btnAuthApple">
+          <svg width="17" height="20" viewBox="0 0 814 1000" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" fill="currentColor"><path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-43.4-150.3-109.1C77 411.7 130 280 130 280c25.8-41.3 56.8-68.7 94.3-91.8 37.8-23.4 78.7-35.6 112.1-35.6 70.1 0 113.3 36 164 36 48.8 0 99.9-37.6 166.1-37.6 23.8 0 108.8 2.9 166.9 79.9zm-97.4-180.2c30.6-37.1 51.4-88.9 51.4-140.7 0-7.7-.6-15.5-1.9-22.9-49 1.9-107.7 32.8-143.6 75.5-27.5 31.3-53.7 83.1-53.7 135.6 0 8.3 1.3 16.7 1.9 19.4 3.2.6 8.4 1.3 13.6 1.3 43.5 0 98.3-29.3 132.3-68.2z"/></svg>
+          Continuar con Apple
+        </button>
+      </div>
 
       <div class="auth-modal-footer">
         <a href="/terminos" target="_blank" rel="noopener">Condiciones del Servicio</a>
@@ -177,6 +183,9 @@
 
     const btnGoogle = document.getElementById('btnAuthGoogle');
     if (btnGoogle) btnGoogle.addEventListener('click', () => window._authLoginGoogle());
+
+    const btnApple = document.getElementById('btnAuthApple');
+    if (btnApple) btnApple.addEventListener('click', () => window._authLoginApple());
 
     // ── Sanitización de inputs ────────────────────────────────────
     const loginEmail = document.getElementById('loginEmail');
@@ -838,6 +847,47 @@
     }
   };
 
+  /* ── Login con Apple ────────────────────────────────────────────── */
+  window._authLoginApple = async function () {
+    _authClearAlert();
+    const btn = document.getElementById('btnAuthApple');
+    if (btn) {
+      btn._origHTML = btn.innerHTML;
+      btn.disabled  = true;
+      btn.innerHTML = '<span style="display:inline-block;width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:8px;"></span>Conectando…';
+    }
+    try {
+      const auth = await _getAuth();
+      const { OAuthProvider, signInWithPopup } =
+        await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js');
+      const provider = new OAuthProvider('apple.com');
+      provider.addScope('email');
+      provider.addScope('name');
+      provider.setCustomParameters({ locale: 'es' });
+      const cred  = await signInWithPopup(auth, provider);
+      const token = await cred.user.getIdToken();
+      const data  = await _llamarBackend('cliente-login', token);
+      if (!data.success) throw new Error(data.error || 'Error al iniciar sesión con Apple');
+      if (data.redirect) { window.location.href = data.redirect; return; }
+      _onAutenticado(data.cliente, true);
+    } catch (e) {
+      if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
+        // El usuario cerró el popup — silencioso
+      } else if (e.code === 'auth/account-exists-with-different-credential') {
+        _authShowAlert('Ya existe una cuenta con ese correo registrada con otro método. Intenta con Google o con tu contraseña.', 'error');
+      } else if (_esFalloDeConexion(e)) {
+        _authShowAlert('Sin conexión. Verifica tu internet e intenta de nuevo.', 'error');
+      } else {
+        _authShowAlert(e.message?.startsWith('Error') ? e.message : 'No se pudo iniciar sesión con Apple. Intenta de nuevo.', 'error');
+      }
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        if (btn._origHTML) btn.innerHTML = btn._origHTML;
+      }
+    }
+  };
+
   /* ── Logout ──────────────────────────────────────────────────── */
   window._authLogout = async function () {
     _detenerPollingVerificacion();
@@ -859,6 +909,17 @@
     _cliente = null;
     _actualizarNavBtn();
     AuthModal.close();
+
+    // Limpiar datos del carrito y formulario del usuario anterior
+    try {
+      ['wh_checkout_form', 'wh_carrito_backup', 'wh_delivery', 'wh_cliente',
+       'wh_descuento', 'wh_checkout'].forEach(k => {
+        localStorage.removeItem(k);
+        try { sessionStorage.removeItem(k); } catch (_) {}
+      });
+      sessionStorage.removeItem('wh_carrito');
+    } catch (_) {}
+
     location.reload();
   };
 
