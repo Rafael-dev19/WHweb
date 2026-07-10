@@ -59,7 +59,13 @@ function verificarPropiedadRecurso(
 // ═══════════════════════════════════════════════════════════════════
 
 function _calcularHuellaSesion(): string {
-    $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+    // CF-Connecting-IP contiene la IP real del cliente detrás de Cloudflare.
+    // REMOTE_ADDR es la IP del edge node de Cloudflare — cambia entre requests
+    // desde distintos PoPs y causaría falsos positivos en la verificación de huella.
+    $ip = $_SERVER['HTTP_CF_CONNECTING_IP']
+       ?? $_SERVER['HTTP_X_REAL_IP']
+       ?? $_SERVER['REMOTE_ADDR']
+       ?? '';
     $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
     // Solo los primeros 2 octetos de IPv4 (/16) para tolerar CGNAT, redes móviles y VPNs
     // que cambian el tercer/cuarto octeto entre peticiones del mismo usuario.
