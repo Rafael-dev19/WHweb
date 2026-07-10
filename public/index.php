@@ -428,10 +428,10 @@ if (!empty($_SESSION['_flash'])) {
       <p>Servicio de entrega e instalación en toda la Zona Metropolitana de Guadalajara</p>
       <div style="width:100%; height:450px; border-radius:15px; overflow:hidden; margin-top:20px;">
         <iframe
-          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3734.6659935791336!2d-103.4240335!3d20.601693400000002!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8428acf1f7ece931%3A0xcf2ad0ecc9c0376c!2sIgnacio%20Zaragoza%2C%20Zapopan%2C%20Jal.!5e0!3m2!1ses-419!2smx!4v1771103624242!5m2!1ses-419!2smx"
+          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3734.7034419414836!2d-103.4255144244022!3d20.60016500236058!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8428addd11e9ad7b%3A0x276a25157b3d3ffc!2sWooden%20House!5e0!3m2!1ses-419!2smx!4v1783654916357!5m2!1ses-419!2smx"
           width="100%" height="100%" style="border:0;"
           allowfullscreen="" loading="lazy"
-          referrerpolicy="no-referrer-when-downgrade">
+          referrerpolicy="strict-origin-when-cross-origin">
         </iframe>
       </div>
     </div>
