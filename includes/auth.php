@@ -298,7 +298,9 @@ function sesionActiva(): ?array {
 // ── Helpers de sesión ─────────────────────────────────────────────
 
 function _crearSesion(array $usuario): void {
-    session_regenerate_id(true);
+    // session_regenerate_id ya se ejecuta en config.php en la primera visita.
+    // Volver a llamarlo aquí con requests concurrentes destruye la sesión de otras
+    // llamadas paralelas (race condition) causando cierres de sesión intermitentes.
     $_SESSION['usuario_id']          = $usuario['id'];
     $_SESSION['usuario_rol']         = $usuario['rol'];
     $_SESSION['_usuario_login_time'] = time();
@@ -442,7 +444,6 @@ function registrarCliente(array $data): ?array {
 }
 
 function _crearSesionCliente(array $cliente): void {
-    session_regenerate_id(true);
     $_SESSION['cliente_id']          = $cliente['id'];
     $_SESSION['cliente_uid']         = $cliente['firebase_uid'];
     $_SESSION['cliente_rol']         = 'cliente';
