@@ -48,6 +48,11 @@ h1, h2, h3, h4, h5, h6 { margin-bottom: 0; }
   text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
 }
 
+.logo img {
+  height: 80px;
+  width: auto;
+}
+
 .nav-links {
   display: flex;
   gap: 30px;
