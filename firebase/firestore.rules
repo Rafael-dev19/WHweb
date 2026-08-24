@@ -7,7 +7,9 @@ service cloud.firestore {
       allow create: if request.resource.data.keys().hasAll(['tipo','titulo','mensaje','leida','fecha'])
                     && request.resource.data.tipo in [
                          'nuevo_pedido','estado_pedido',
-                         'nueva_cotizacion','cotizacion_respondida','nueva_cita'
+                         'nueva_cotizacion','cotizacion_respondida','nueva_cita',
+                         'cotizacion_en_produccion','cotizacion_lista','cotizacion_entregada',
+                         'invitacion_personal'
                        ]
                     && request.resource.data.leida == false
                     && request.resource.data.titulo is string

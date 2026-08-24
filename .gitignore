@@ -3,6 +3,7 @@
 # ================================================
 
 .claude/
+.impecable/
 
 # ── NUNCA SUBIR — Credenciales y datos sensibles ─────────────────
 .env

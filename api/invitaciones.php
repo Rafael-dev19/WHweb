@@ -12,7 +12,7 @@ switch ($action) {
     // Respuesta: enlace de invitación enviado al correo del empleado.
     case 'crear':
         if ($method !== 'POST') jsonError('Método no permitido', 405);
-        requerirAdmin();
+        $usuarioActual = requerirGestion();
         requerirCsrf();
         checkRateLimit('inv_crear', 10, 3600);
 
@@ -27,8 +27,12 @@ switch ($action) {
             jsonError('Nombre demasiado corto', 422);
         if (!isValidEmail($correo))
             jsonError('Correo inválido', 422);
-        if (!in_array($rol, ['administrador', 'empleado'], true))
+        if (!in_array($rol, ['jefe', 'administrador', 'empleado', 'disenador'], true))
             jsonError('Rol inválido', 422);
+        // Solo jefe puede otorgar roles de gestión (jefe/administrador);
+        // administrador solo puede invitar empleado/disenador.
+        if (in_array($rol, ['jefe', 'administrador'], true) && $usuarioActual['rol'] !== 'jefe')
+            jsonError('Solo el jefe puede invitar cuentas de jefe o administrador.', 403);
 
         // Verificar que el correo no esté ya en uso
         if (dbRow("SELECT id FROM usuarios_personal WHERE correo = ?", [$correo]))
@@ -145,7 +149,7 @@ switch ($action) {
         $usuario = dbRow("SELECT * FROM usuarios_personal WHERE id = ? LIMIT 1", [$empId]);
         if ($usuario) _crearSesion($usuario);
 
-        $redirect = $inv['rol'] === 'administrador' ? '/admin' : '/empleado';
+        $redirect = in_array($inv['rol'], ['jefe', 'administrador'], true) ? '/admin' : '/empleado';
         jsonSuccess([
             'activado' => true,
             'redirect' => $redirect . '?setup_2fa=1',   // forzar setup de 2FA al entrar

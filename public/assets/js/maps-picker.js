@@ -20,30 +20,53 @@
             type="text"
             placeholder="Escribe tu calle y número..."
             autocomplete="off"
-            style="width:100%;padding:10px 14px;border:1px solid var(--border,#444);
-                   background:var(--input,#1e1e1e);color:var(--muted2,#ddd);
+            style="width:100%;padding:10px 14px;border:1px solid var(--color-border);
+                   background:var(--color-bg-input);color:var(--color-text-main);
                    border-radius:8px;font-size:14px;box-sizing:border-box;outline:none;">
           <div id="mpStatus" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);
-               font-size:11px;color:var(--muted,#888);pointer-events:none;"></div>
+               font-size:11px;color:var(--color-text-muted);pointer-events:none;"></div>
         </div>
 
         <div id="mpMapCanvas"
              style="width:100%;height:280px;border-radius:10px;overflow:hidden;
-                    border:1px solid var(--border,#444);background:#2a2a2a;
+                    border:1px solid var(--color-border);background:var(--color-bg-card);
                     display:flex;align-items:center;justify-content:center;">
-          <span style="color:var(--muted,#888);font-size:13px;">Escribe una dirección para ver el mapa</span>
+          <span style="color:var(--color-text-muted);font-size:13px;">Escribe una dirección para ver el mapa</span>
         </div>
 
-        <div id="mpAddress" style="display:none;padding:10px 14px;background:var(--panel2,#1a1a1a);
-             border:1px solid var(--border,#444);border-radius:8px;font-size:13px;
-             color:var(--muted2,#ddd);line-height:1.7;">
+        <div id="mpAddress" style="display:none;padding:10px 14px;background:var(--color-bg-input);
+             border:1px solid var(--color-border);border-radius:8px;font-size:13px;
+             color:var(--color-text-main);line-height:1.7;">
         </div>
 
-        <p style="font-size:11px;color:var(--muted,#888);margin:0;">
+        <p style="font-size:11px;color:var(--color-text-muted);margin:0;">
           <i class="fa-solid fa-circle-info"></i>
           Puedes arrastrar el marcador para ajustar la ubicación exacta.
         </p>
       </div>`;
+  }
+
+  /* ── Estilos del mapa (Google Maps no lee variables CSS) ─────────── */
+  const _MAP_STYLES_DARK = [
+    { elementType: 'geometry',   stylers: [{ color: '#212121' }] },
+    { elementType: 'labels.text.stroke', stylers: [{ color: '#212121' }] },
+    { elementType: 'labels.text.fill',   stylers: [{ color: '#757575' }] },
+    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#383838' }] },
+    { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#9ca5b3' }] },
+    { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#17263c' }] },
+  ];
+  const _MAP_STYLES_LIGHT = [
+    { elementType: 'geometry',   stylers: [{ color: '#f7f5f2' }] },
+    { elementType: 'labels.text.stroke', stylers: [{ color: '#ffffff' }] },
+    { elementType: 'labels.text.fill',   stylers: [{ color: '#6b6255' }] },
+    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
+    { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#8b8072' }] },
+    { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#c8dae8' }] },
+  ];
+  function _mapStyles() {
+    return document.documentElement.getAttribute('data-theme') === 'light' ? _MAP_STYLES_LIGHT : _MAP_STYLES_DARK;
   }
 
   /* ── Inicializar mapa en el canvas ─────────────────────────────── */
@@ -57,15 +80,7 @@
       mapTypeControl: false,
       streetViewControl: false,
       fullscreenControl: false,
-      styles: [
-        { elementType: 'geometry',   stylers: [{ color: '#212121' }] },
-        { elementType: 'labels.text.stroke', stylers: [{ color: '#212121' }] },
-        { elementType: 'labels.text.fill',   stylers: [{ color: '#757575' }] },
-        { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#383838' }] },
-        { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#9ca5b3' }] },
-        { featureType: 'poi', stylers: [{ visibility: 'off' }] },
-        { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#17263c' }] },
-      ],
+      styles: _mapStyles(),
     });
 
     _marker = new google.maps.Marker({

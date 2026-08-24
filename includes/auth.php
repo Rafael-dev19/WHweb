@@ -256,17 +256,40 @@ function requerirAutenticacion(): array {
     return $usuario;
 }
 
-function requerirAdmin(): array {
+// Roles de personal: 'jefe' (dueño del taller, acceso total), 'administrador'
+// (soporte técnico del sitio: todo excepto financiero/ofertas/reportes avanzados),
+// 'empleado' (solo pedidos ya liberados a producción) y 'disenador' (SketchUp/VCarve).
+
+function requerirJefe(): array {
     $usuario = requerirAutenticacion();
-    if ($usuario['rol'] !== 'administrador') {
-        jsonError('Acceso denegado: se requiere rol administrador', 403);
+    if ($usuario['rol'] !== 'jefe') {
+        jsonError('Acceso denegado: se requiere rol jefe', 403);
     }
     return $usuario;
 }
 
-function requerirEmpleado(): array {
+// Módulos de gestión del negocio (pedidos, cotizaciones, citas, catálogo,
+// personal, clientes, capacidad): jefe y administrador.
+function requerirGestion(): array {
     $usuario = requerirAutenticacion();
-    if (!in_array($usuario['rol'], ['administrador', 'empleado'], true)) {
+    if (!in_array($usuario['rol'], ['jefe', 'administrador'], true)) {
+        jsonError('Acceso denegado', 403);
+    }
+    return $usuario;
+}
+
+function requerirDisenador(): array {
+    $usuario = requerirAutenticacion();
+    if ($usuario['rol'] !== 'disenador') {
+        jsonError('Acceso denegado: se requiere rol diseñador', 403);
+    }
+    return $usuario;
+}
+
+// Cualquiera de los 4 roles de personal (ver pedidos, notificaciones propias, 2FA propio).
+function requerirPersonal(): array {
+    $usuario = requerirAutenticacion();
+    if (!in_array($usuario['rol'], ['jefe', 'administrador', 'empleado', 'disenador'], true)) {
         jsonError('Acceso denegado', 403);
     }
     return $usuario;
@@ -408,7 +431,7 @@ function verificarCsrfToken(string $token): bool {
 function obtenerClientePorFirebaseUid(string $uid): ?array {
     if (!preg_match('/^[a-zA-Z0-9]{20,128}$/', $uid)) return null;
     return dbRow(
-        "SELECT id, firebase_uid, nombre, correo, telefono, direccion, colonia, municipio, ciudad, cp, activo
+        "SELECT id, firebase_uid, nombre, correo, telefono, direccion, colonia, municipio, ciudad, cp, lat, lng, activo
          FROM clientes WHERE firebase_uid = ? AND activo = 1 LIMIT 1",
         [$uid]
     );
@@ -470,7 +493,7 @@ function sesionClienteActiva(): ?array {
     if (!empty($_SESSION['_last_activity']) && ($now - $_SESSION['_last_activity']) > 7200) { _destruirSesionCliente(); return null; }
     $_SESSION['_last_activity'] = $now;
     return dbRow(
-        "SELECT id, firebase_uid, nombre, correo, telefono, direccion, colonia, municipio, ciudad, cp
+        "SELECT id, firebase_uid, nombre, correo, telefono, direccion, colonia, municipio, ciudad, cp, lat, lng
          FROM clientes WHERE id = ? AND activo = 1 LIMIT 1",
         [$_SESSION['cliente_id']]
     );

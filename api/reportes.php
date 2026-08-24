@@ -1,16 +1,20 @@
 <?php
 require_once __DIR__ . '/_helpers.php';
 
-$usuario = requerirEmpleado(); // Admin y empleado pueden ver KPIs básicos
-$esAdmin = $usuario['rol'] === 'administrador';
+// tipo=resumen alimenta las tarjetas KPI del Dashboard (todo el personal las ve,
+// ver matriz de permisos: "Dashboard (solo pedidos)" es para los 4 roles).
+// El resto de tipos (pedidos/productos/ingresos/clientes/cotizaciones/citas) es
+// el módulo "Reportes Avanzados" propiamente, exclusivo de jefe.
+$usuario = requerirPersonal();
 
 if (requestMethod() !== 'GET') jsonError('Método no permitido', 405);
 
 $tipo = $_GET['tipo'] ?? 'resumen';
 
-if (in_array($tipo, ['ingresos', 'clientes']) && !$esAdmin) {
-    jsonError('Acceso denegado: se requiere rol administrador', 403);
+if ($tipo !== 'resumen' && $usuario['rol'] !== 'jefe') {
+    jsonError('Acceso denegado: Reportes Avanzados es exclusivo del jefe', 403);
 }
+
 $desde = trim($_GET['desde'] ?? date('Y-m-01'));
 $hasta = trim($_GET['hasta'] ?? date('Y-m-d'));
 $limit = min(100, max(1, sanitizeInt($_GET['limit'] ?? 20)));
@@ -37,19 +41,30 @@ switch ($tipo) {
             "SELECT estado, COUNT(*) AS total FROM pedidos GROUP BY estado ORDER BY total DESC"
         );
 
-        jsonSuccess([
+        $resumen = [
             'total_pedidos'       => $totalPedidos,
             'pedidos_mes'         => $pedidosMes,
-            'ingresos_mes'        => $ingresosMes,
             'pedidos_pendientes'  => $pendientes,
             'pedidos_pendientes_mes' => $pendientesMes,
-            'citas_hoy'           => $citasHoy,
-            'cotizaciones_nuevas' => $cotNuevas,
             'productos_activos'   => $productosAct,
             'clientes_unicos'     => $clientesUnicos,
             'clientes_mes'        => $clientesMes,
             'estados_pedidos'     => $estadosPedidos,
-        ]);
+        ];
+        // Ingresos ($) son dato financiero: exclusivo de jefe (ver matriz de
+        // permisos, "Dashboard widgets financieros"), no de administrador/
+        // empleado/diseñador aunque sí puedan pedir tipo=resumen.
+        if ($usuario['rol'] === 'jefe') {
+            $resumen['ingresos_mes'] = $ingresosMes;
+        }
+        // Citas y cotizaciones son módulos exclusivos de jefe/administrador
+        // (matriz de permisos): empleado/diseñador no deben ver ni sus conteos,
+        // su dashboard es "solo pedidos".
+        if (in_array($usuario['rol'], ['jefe', 'administrador'], true)) {
+            $resumen['citas_hoy']           = $citasHoy;
+            $resumen['cotizaciones_nuevas'] = $cotNuevas;
+        }
+        jsonSuccess($resumen);
         break;
 
     case 'pedidos':

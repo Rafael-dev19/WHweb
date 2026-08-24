@@ -2,8 +2,8 @@
 
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #1a1a1a;
-      color: #e0e0e0;
+      background: var(--color-bg-main);
+      color: var(--color-text-main);
       line-height: 1.6;
       overflow-x: hidden;
     }
@@ -12,7 +12,7 @@
        HEADER — responsive
        ========================= */
     .header-nav {
-      background: #2d2d2d;
+      background: var(--color-bg-card);
       padding: 16px 40px;
       display: flex;
       justify-content: space-between;
@@ -29,7 +29,7 @@
     .logo {
       font-size: 28px;
       font-weight: bold;
-      color: #8b7355;
+      color: var(--color-primary);
       text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
       flex-shrink: 0;
     }
@@ -43,17 +43,17 @@
     }
 
     .nav-links a {
-      color: #e0e0e0;
+      color: var(--color-text-main);
       text-decoration: none;
       transition: color 0.3s;
       font-weight: 500;
       white-space: nowrap;
     }
 
-    .nav-links a:hover { color: #8b7355; }
+    .nav-links a:hover { color: var(--color-primary); }
 
     .login-btn {
-      background: #8b7355;
+      background: var(--color-primary);
       color: white;
       padding: 10px 25px;
       border-radius: 8px;
@@ -67,7 +67,7 @@
     }
 
     .login-btn:hover {
-      background: #a0865f;
+      background: var(--color-primary-hover);
       transform: scale(1.05);
     }
 
@@ -97,8 +97,8 @@
     .menu-toggle {
       display: none;
       background: transparent;
-      border: 2px solid #3d3d3d;
-      color: #e0e0e0;
+      border: 2px solid var(--color-border);
+      color: var(--color-text-main);
       font-size: 22px;
       padding: 8px 12px;
       border-radius: 10px;
@@ -108,8 +108,8 @@
       font-family: inherit;
     }
     .menu-toggle:hover {
-      border-color: #8b7355;
-      color: #8b7355;
+      border-color: var(--color-primary);
+      color: var(--color-primary);
     }
 
     /* =========================
@@ -124,7 +124,7 @@
     .main-image {
       width: 100%;
       aspect-ratio: 4/5;           /* Ratio vertical para muebles de baño */
-      background: linear-gradient(135deg, #3d3d3d, #2a2a2a);
+      background: linear-gradient(135deg, var(--color-bg-input), var(--color-border));
       border-radius: 15px;
       display: flex;
       align-items: center;
@@ -132,7 +132,7 @@
       color: #777;
       font-size: 18px;
       overflow: hidden;
-      border: 2px solid #3d3d3d;
+      border: 2px solid var(--color-border);
       box-shadow: 0 10px 25px rgba(0,0,0,.25);
     }
 
@@ -144,14 +144,14 @@
       display: block;
       padding: 6px;               /* pequeño margen para que no toque los bordes */
       box-sizing: border-box;
-      background: linear-gradient(135deg, #3d3d3d, #2a2a2a);
+      background: linear-gradient(135deg, var(--color-bg-input), var(--color-border));
     }
 
     /* .thumbnails layout handled by Bootstrap row row-cols-4 g-2 */
 
     .thumbnail, .thumb {
       height: 80px;
-      background: linear-gradient(135deg, #3d3d3d, #2d2d2d);
+      background: linear-gradient(135deg, var(--color-bg-input), var(--color-bg-card));
       border-radius: 12px;
       display: flex;
       align-items: center;
@@ -159,26 +159,26 @@
       color: #777;
       font-size: 12px;
       cursor: pointer;
-      border: 2px solid #3d3d3d;
+      border: 2px solid var(--color-border);
       transition: all 0.3s;
       overflow: hidden;
     }
     .thumbnail:hover, .thumb:hover {
-      border-color: #8b7355;
+      border-color: var(--color-primary);
       box-shadow: 0 10px 25px rgba(139,115,85,.18);
       transform: translateY(-2px);
     }
-    .thumbnail.active, .thumb.active { border-color: #8b7355; box-shadow: 0 0 0 2px #8b7355; }
+    .thumbnail.active, .thumb.active { border-color: var(--color-primary); box-shadow: 0 0 0 2px var(--color-primary); }
     .thumbnail img { width: 100%; height: 100%; object-fit: cover; }
 
     .product-info { display: flex; flex-direction: column; gap: 20px; }
 
-    .product-title { font-size: clamp(24px, 4vw, 32px); color: #8b7355; font-weight: bold; }
+    .product-title { font-size: clamp(24px, 4vw, 32px); color: var(--color-primary); font-weight: bold; }
 
     .rating { display: flex; align-items: center; gap: 10px; color: #ffa500; }
-    .rating span { color: #a0a0a0; }
+    .rating span { color: var(--color-text-muted); }
 
-    .price-large { font-size: clamp(32px, 5vw, 42px); color: #8b7355; font-weight: bold; }
+    .price-large { font-size: clamp(32px, 5vw, 42px); color: var(--color-primary); font-weight: bold; }
 
     .stock-indicator {
       display: flex;
@@ -191,35 +191,35 @@
       border: 2px solid rgba(127,219,127,.18);
     }
 
-    .description { color: #a0a0a0; line-height: 1.8; font-size: 16px; }
+    .description { color: var(--color-text-muted); line-height: 1.8; font-size: 16px; }
 
     .features-box {
-      background: #2d2d2d;
+      background: var(--color-bg-card);
       padding: 20px;
       border-radius: 15px;
-      border: 2px solid #3d3d3d;
+      border: 2px solid var(--color-border);
       box-shadow: 0 10px 25px rgba(0,0,0,.2);
     }
-    .features-box h3 { color: #8b7355; margin-bottom: 15px; }
+    .features-box h3 { color: var(--color-primary); margin-bottom: 15px; }
 
     .feature-item {
       display: flex;
       align-items: center;
       gap: 15px;
       padding: 12px 0;
-      border-bottom: 1px solid #3d3d3d;
+      border-bottom: 1px solid var(--color-border);
     }
     .feature-item:last-child { border-bottom: none; }
-    .feature-icon { font-size: 24px; color: #8b7355; }
+    .feature-icon { font-size: 24px; color: var(--color-primary); }
 
     .cart-section {
-      background: #2d2d2d;
+      background: var(--color-bg-card);
       padding: 25px;
       border-radius: 15px;
-      border: 2px solid #3d3d3d;
+      border: 2px solid var(--color-border);
       box-shadow: 0 10px 25px rgba(0,0,0,.2);
     }
-    .cart-section h3 { color: #8b7355; margin-bottom: 15px; }
+    .cart-section h3 { color: var(--color-primary); margin-bottom: 15px; }
 
     .quantity-selector {
       display: flex;
@@ -232,17 +232,17 @@
     .quantity-btn {
       width: 40px;
       height: 40px;
-      background: #3d3d3d;
-      border: 2px solid #4a4a4a;
+      background: var(--color-bg-input);
+      border: 2px solid var(--color-border-light);
       border-radius: 10px;
-      color: #e0e0e0;
+      color: var(--color-text-main);
       font-size: 20px;
       cursor: pointer;
       transition: all 0.3s;
     }
     .quantity-btn:hover {
-      background: #8b7355;
-      border-color: #8b7355;
+      background: var(--color-primary);
+      border-color: var(--color-primary);
       transform: translateY(-2px);
     }
 
@@ -251,7 +251,7 @@
     .btn-add-cart {
       width: 100%;
       padding: 15px;
-      background: #8b7355;
+      background: var(--color-primary);
       color: white;
       border: none;
       border-radius: 12px;
@@ -262,19 +262,19 @@
       margin-bottom: 10px;
     }
     .btn-add-cart:hover {
-      background: #a0865f;
+      background: var(--color-primary-hover);
       transform: translateY(-2px);
       box-shadow: 0 5px 20px rgba(139, 115, 85, 0.35);
     }
 
-    .shipping-note { text-align: center; color: #a0a0a0; font-size: 14px; margin-top: 10px; }
+    .shipping-note { text-align: center; color: var(--color-text-muted); font-size: 14px; margin-top: 10px; }
 
     .tabs { margin-top: 50px; }
 
     .tabs-header {
       display: flex;
       gap: 10px;
-      border-bottom: 2px solid #3d3d3d;
+      border-bottom: 2px solid var(--color-border);
       margin-bottom: 20px;
       flex-wrap: wrap;
     }
@@ -286,16 +286,16 @@
       background: transparent;
       border: none;
       border-bottom: 3px solid transparent;
-      color: #a0a0a0;
+      color: var(--color-text-muted);
       font-size: 15px;
       cursor: pointer;
       transition: all 0.3s;
       font-weight: 700;
     }
     /* alias para compatibilidad */
-    .tab-btn { padding: 14px 22px; background: transparent; border: none; border-bottom: 3px solid transparent; color: #a0a0a0; font-size: 15px; cursor: pointer; transition: all 0.3s; font-weight: 700; }
+    .tab-btn { padding: 14px 22px; background: transparent; border: none; border-bottom: 3px solid transparent; color: var(--color-text-muted); font-size: 15px; cursor: pointer; transition: all 0.3s; font-weight: 700; }
 
-    .tab-button.active, .tab-btn.active { color: #8b7355; border-bottom-color: #8b7355; }
+    .tab-button.active, .tab-btn.active { color: var(--color-primary); border-bottom-color: var(--color-primary); }
 
     .tab-pane { display: none; }
     .tab-pane.active { display: block; }
@@ -304,16 +304,16 @@
     /* El JS genera .spec-key y .spec-val, el CSS viejo tenía .spec-label y .spec-value */
     /* Unificamos ambos */
     .spec-table {
-      background: #2d2d2d;
+      background: var(--color-bg-card);
       padding: 24px;
       border-radius: 15px;
-      border: 2px solid #3d3d3d;
+      border: 2px solid var(--color-border);
     }
 
     .spec-section-title {
       font-size: 12px;
       font-weight: 700;
-      color: #8b7355;
+      color: var(--color-primary);
       text-transform: uppercase;
       letter-spacing: .6px;
       padding: 14px 0 6px;
@@ -329,7 +329,7 @@
       display: grid;
       grid-template-columns: 180px 1fr;
       padding: 10px 0;
-      border-bottom: 1px solid #2a2a2a;
+      border-bottom: 1px solid var(--color-border);
       gap: 12px;
       align-items: start;
     }
@@ -342,7 +342,7 @@
       font-weight: 600;
     }
     .spec-val, .spec-value {
-      color: #e0e0e0;
+      color: var(--color-text-main);
       font-size: 13px;
       line-height: 1.5;
     }
@@ -353,21 +353,21 @@
       margin: 0 -8px;
     }
     .spec-row-highlight .spec-key,
-    .spec-row-highlight .spec-label { color: #8b7355; }
+    .spec-row-highlight .spec-label { color: var(--color-primary); }
 
     /* Feature items */
     .feature-key { color: #aaa; font-size: 13px; font-weight: 600; }
-    .feature-val { color: #e0e0e0; font-size: 13px; }
+    .feature-val { color: var(--color-text-main); font-size: 13px; }
     .feature-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
       gap: 12px;
       padding: 10px 0;
-      border-bottom: 1px solid #3d3d3d;
+      border-bottom: 1px solid var(--color-border);
     }
     .feature-item:last-child { border-bottom: none; }
-    .feature-icon { font-size: 20px; color: #8b7355; }
+    .feature-icon { font-size: 20px; color: var(--color-primary); }
 
     /* Btn ver carrito */
     .btn-ver-carrito {
@@ -376,8 +376,8 @@
       text-align: center;
       padding: 12px;
       background: transparent;
-      color: #8b7355;
-      border: 2px solid #8b7355;
+      color: var(--color-primary);
+      border: 2px solid var(--color-primary);
       border-radius: 12px;
       font-size: 15px;
       font-weight: 700;
@@ -385,11 +385,11 @@
       transition: all .3s;
       margin-bottom: 10px;
     }
-    .btn-ver-carrito:hover { background: #8b7355; color: #fff; }
+    .btn-ver-carrito:hover { background: var(--color-primary); color: #fff; }
 
     @media (max-width: 500px) {
       .spec-row { grid-template-columns: 1fr; gap: 2px; }
-      .spec-key, .spec-label { font-size: 11px; color: #8b7355; }
+      .spec-key, .spec-label { font-size: 11px; color: var(--color-primary); }
     }
 
     /* =========================
@@ -408,7 +408,7 @@
       .product-title { font-size: 22px; }
       .price-large { font-size: 28px; }
       .spec-row { grid-template-columns: 1fr; gap: 4px; }
-      .spec-key { font-size: 11px; color: #8b7355; }
+      .spec-key { font-size: 11px; color: var(--color-primary); }
     }
 
     @media (max-width: 520px) {
@@ -423,12 +423,12 @@
     .spec-section-title {
       font-size: 13px;
       font-weight: 700;
-      color: #8b7355;
+      color: var(--color-primary);
       text-transform: uppercase;
       letter-spacing: .6px;
       padding: 14px 0 6px;
       margin-top: 4px;
-      border-top: 1px solid #2a2a2a;
+      border-top: 1px solid var(--color-border);
       display: flex;
       align-items: center;
       gap: 7px;
@@ -439,7 +439,7 @@
       display: grid;
       grid-template-columns: 190px 1fr;
       padding: 10px 0;
-      border-bottom: 1px solid #2a2a2a;
+      border-bottom: 1px solid var(--color-border);
       gap: 12px;
       align-items: start;
     }
@@ -450,7 +450,7 @@
       font-weight: 600;
     }
     .spec-val {
-      color: #e0e0e0;
+      color: var(--color-text-main);
       font-size: 13px;
       line-height: 1.5;
     }
@@ -460,39 +460,39 @@
       padding: 10px 8px;
       margin: 0 -8px;
     }
-    .spec-row-highlight .spec-key { color: #8b7355; }
+    .spec-row-highlight .spec-key { color: var(--color-primary); }
 
     @media (max-width: 520px) {
       .spec-row { grid-template-columns: 1fr; gap: 4px; }
     }
     @media (max-width: 500px) {
       .spec-row { grid-template-columns: 1fr; gap: 2px; }
-      .spec-key { font-size: 11px; color: #8b7355; }
+      .spec-key { font-size: 11px; color: var(--color-primary); }
     }
     /* ===== BREADCRUMB ===== */
     .breadcrumb-bar {
-      background: #232323;
-      border-bottom: 1px solid #2a2a2a;
+      background: var(--color-border);
+      border-bottom: 1px solid var(--color-border);
       padding: 10px 0;
       font-size: 13px;
     }
     .breadcrumb-bar .container { padding-top: 0; padding-bottom: 0; }
     .breadcrumb-bar a {
-      color: #8b7355;
+      color: var(--color-primary);
       text-decoration: none;
       transition: color .2s;
     }
-    .breadcrumb-bar a:hover { color: #a0865f; text-decoration: underline; }
+    .breadcrumb-bar a:hover { color: var(--color-primary-hover); text-decoration: underline; }
     .breadcrumb-bar span { color: #aaa; }
 
     /* ===== QUANTITY INPUT — ocultar número, solo usar +/- ===== */
     .quantity-input {
       width: 52px;
       text-align: center;
-      background: #3d3d3d;
-      border: 2px solid #4a4a4a;
+      background: var(--color-bg-input);
+      border: 2px solid var(--color-border-light);
       border-radius: 8px;
-      color: #e0e0e0;
+      color: var(--color-text-main);
       font-size: 16px;
       font-weight: 700;
       padding: 6px 4px;
@@ -504,17 +504,17 @@
     .quantity-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     .quantity-input:focus {
       outline: none;
-      border-color: #8b7355;
+      border-color: var(--color-primary);
     }
 
     /* ===== RELATED SECTION ===== */
     .related-section {
       margin-top: 60px;
       padding-top: 40px;
-      border-top: 2px solid #2a2a2a;
+      border-top: 2px solid var(--color-border);
     }
     .related-section h2 {
-      color: #8b7355;
+      color: var(--color-primary);
       font-size: 22px;
       font-weight: 800;
       margin-bottom: 24px;
@@ -526,17 +526,17 @@
       gap: 18px;
     }
     .related-card {
-      background: #2d2d2d;
+      background: var(--color-bg-card);
       border-radius: 12px;
       overflow: hidden;
-      border: 2px solid #3d3d3d;
+      border: 2px solid var(--color-border);
       text-decoration: none;
       color: inherit;
       transition: all .3s;
       display: block;
     }
     .related-card:hover {
-      border-color: #8b7355;
+      border-color: var(--color-primary);
       transform: translateY(-4px);
       box-shadow: 0 8px 24px rgba(139,115,85,.2);
     }
@@ -544,7 +544,7 @@
       width: 100%;
       aspect-ratio: 3/4;
       overflow: hidden;
-      background: #232323;
+      background: var(--color-border);
     }
     .related-img img {
       width: 100%;
@@ -563,27 +563,27 @@
     }
     .related-info { padding: 12px; }
     .related-name {
-      color: #e0e0e0;
+      color: var(--color-text-main);
       font-size: 13px;
       font-weight: 600;
       margin-bottom: 4px;
       line-height: 1.3;
     }
     .related-price {
-      color: #8b7355;
+      color: var(--color-primary);
       font-size: 14px;
       font-weight: 700;
     }
 
     /* ===== TAB DELIVERY (tab-pane contenido) ===== */
     .tab-pane {
-      background: #2d2d2d;
+      background: var(--color-bg-card);
       padding: 28px;
       border-radius: 14px;
-      border: 2px solid #3d3d3d;
+      border: 2px solid var(--color-border);
     }
     .tab-pane h3 {
-      color: #8b7355;
+      color: var(--color-primary);
       font-size: 17px;
       font-weight: 800;
       margin-bottom: 18px;
@@ -599,18 +599,18 @@
       font-size: 14px;
       line-height: 1.6;
       padding: 10px 14px;
-      background: #232323;
+      background: var(--color-border);
       border-radius: 8px;
-      border-left: 3px solid #8b7355;
+      border-left: 3px solid var(--color-primary);
     }
-    .tab-pane ul li strong { color: #e0e0e0; }
+    .tab-pane ul li strong { color: var(--color-text-main); }
     .tab-pane p {
       color: #888;
       font-size: 14px;
       margin-top: 14px;
     }
     .tab-pane p a {
-      color: #8b7355;
+      color: var(--color-primary);
       text-decoration: none;
       font-weight: 600;
     }
@@ -620,7 +620,7 @@
     .product-category-badge {
       display: inline-block;
       background: rgba(139,115,85,.15);
-      color: #8b7355;
+      color: var(--color-primary);
       font-size: 11px;
       font-weight: 700;
       text-transform: uppercase;
@@ -632,7 +632,7 @@
     }
     .product-etiqueta {
       display: inline-block;
-      background: #8b7355;
+      background: var(--color-primary);
       color: #fff;
       font-size: 11px;
       font-weight: 700;

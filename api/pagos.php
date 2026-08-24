@@ -338,7 +338,7 @@ if ($action === 'paypal_capturar') {
 // ── Liquidar saldo manualmente (efectivo/transferencia/terminal) ──
 if ($action === 'marcar_saldo_manual') {
     if ($method !== 'POST') jsonError('Método no permitido', 405);
-    requerirEmpleado();
+    requerirPersonal();
     requerirCsrf();
     $body     = $_jsonBody;
     requireFields($body, ['pedido_id']);
@@ -362,9 +362,9 @@ if ($action === 'marcar_saldo_manual') {
     jsonSuccess(['mensaje' => 'Saldo registrado como pagado', 'monto' => $saldo]);
 }
 
-// ── GET: Listar pagos (admin/empleado) ────────────────
+// ── GET: Listar pagos (jefe/administrador — ledger financiero) ────
 if ($method === 'GET') {
-    requerirEmpleado();
+    requerirGestion();
     $pedidoId = sanitizeInt($_GET['pedido_id'] ?? 0);
     if ($pedidoId) {
         $pagos = dbRows("SELECT * FROM pagos WHERE pedido_id = ? ORDER BY fecha_creacion DESC", [$pedidoId]);

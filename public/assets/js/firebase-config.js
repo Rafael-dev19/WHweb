@@ -47,10 +47,12 @@ function initFirebase() {
     import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js'),
     import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js'),
     import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js'),
+    import('https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js'),
   ]).then(([
     { initializeApp, getApps, getApp },
     { getAuth },
     { initializeAppCheck, ReCaptchaV3Provider },
+    storageMod,
   ]) => {
     const app  = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
@@ -62,10 +64,32 @@ function initFirebase() {
 
     window.firebaseApp  = app;
     window.firebaseAuth = getAuth(app);
+    window._fbStorageModular = { storage: storageMod.getStorage(app), mod: storageMod };
   }).catch(err => console.warn('[Firebase] init modular error:', err));
 
   return false;
 }
+
+// ── Subida de archivos a Storage, compatible con ambos SDK (compat/modular) ──
+// Devuelve la URL pública de descarga. Úsalo en vez de tocar firebaseStorage
+// directamente para que funcione igual en paneles (compat) y páginas públicas
+// (modular) como solicitudes.php.
+async function uploadFileToStorage(path, file) {
+  if (window.firebaseStorage?.ref) {
+    // SDK compat (paneles)
+    const snap = await window.firebaseStorage.ref(path).put(file);
+    return await snap.ref.getDownloadURL();
+  }
+  if (window._fbStorageModular) {
+    // SDK modular (páginas públicas)
+    const { storage, mod } = window._fbStorageModular;
+    const fileRef = mod.ref(storage, path);
+    await mod.uploadBytes(fileRef, file);
+    return await mod.getDownloadURL(fileRef);
+  }
+  throw new Error('Firebase Storage no está listo todavía. Intenta de nuevo en un momento.');
+}
+window.uploadFileToStorage = uploadFileToStorage;
 
 initFirebase();
 window.initFirebase = initFirebase;

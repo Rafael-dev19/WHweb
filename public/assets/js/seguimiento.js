@@ -22,12 +22,19 @@ function initCartBadge() {
 }
 
 function checkURLParams() {
-  const params = new URLSearchParams(window.location.search);
-  const token  = params.get('token');
-  const pedido = params.get('pedido');
+  const params      = new URLSearchParams(window.location.search);
+  const token       = params.get('token');
+  const pedido      = params.get('pedido');
+  const cotizacion  = params.get('cotizacion');
   if (token && pedido) {
     const trackInput = document.getElementById('trackingNumber');
     if (trackInput) { trackInput.value = pedido; trackOrder(); }
+    return;
+  }
+  // Enlace de confirmación de cotización (viene del correo de la propuesta) —
+  // usa el token secreto, no el folio público, para poder mostrar precio/PDF.
+  if (token && cotizacion) {
+    trackCotizacionPorToken(token);
   }
 }
 
@@ -105,8 +112,9 @@ async function trackOrder() {
 
     const estadoLabels = {
       nueva:'Nueva', pendiente:'Pendiente', anticipo_pagado:'Anticipo pagado', pagado:'Pago confirmado',
-      en_produccion:'En producción', listo:'Listo para entrega',
-      entregado:'Entregado', cancelado:'Cancelado',
+      listo_para_produccion:'En diseño', en_produccion:'En producción',
+      alistando_pedido:'Alistando pedido', en_camino_instalacion:'En camino a instalación',
+      finalizado:'Finalizado', cancelado:'Cancelado',
       en_revision:'En revisión', respondida:'Respondida', cerrada:'Cerrada',
       confirmada:'Confirmada', completada:'Completada'
     };
@@ -116,9 +124,12 @@ async function trackOrder() {
 
     let timelineHtml = '';
     if (data.pedido && est !== 'cancelado') {
-      const stages      = ['pendiente','pagado','en_produccion','listo','entregado'];
-      const stageLabels = ['Recibido','Pagado','En fab.','Listo','Entregado'];
-      const stageIdx    = stages.indexOf(est === 'anticipo_pagado' ? 'pendiente' : est);
+      const stages      = ['pendiente','en_produccion','alistando_pedido','en_camino_instalacion','finalizado'];
+      const stageLabels = ['Recibido','En fabricación','Alistando','En camino','Finalizado'];
+      // anticipo_pagado/pagado/listo_para_produccion todavía no entran a fabricación —
+      // se muestran en la misma posición que "Recibido".
+      const stageAlias = { anticipo_pagado:'pendiente', pagado:'pendiente', listo_para_produccion:'pendiente' };
+      const stageIdx    = stages.indexOf(stageAlias[est] || est);
       timelineHtml = `
         <div class="track-timeline">
           <div class="track-timeline-label">Progreso del pedido</div>
@@ -252,6 +263,127 @@ async function trackOrder() {
   }
 }
 
+// ── Cotización por token (enlace del correo de la propuesta) ──────
+// A diferencia de trackOrder() (búsqueda pública por folio, datos limitados),
+// esta vista es la única que muestra precio/partidas/PDF y el botón de
+// confirmar — solo alcanzable con el token secreto que llega por correo.
+async function trackCotizacionPorToken(token) {
+  const resultBox = document.getElementById('trackingResult');
+  const input     = document.getElementById('trackingNumber');
+  if (resultBox) { resultBox.style.display = 'none'; resultBox.innerHTML = ''; }
+
+  try {
+    const res  = await fetch(`${API_URL}/cotizaciones.php?token=${encodeURIComponent(token)}`);
+    const data = await res.json();
+    if (!data.success || !data.cotizacion) {
+      showAlert('No se encontró tu cotización. Verifica el enlace de tu correo.', 'error');
+      return;
+    }
+    const cot = data.cotizacion;
+    if (input) input.value = cot.numero_cotizacion || '';
+    renderCotizacionToken(cot, token);
+  } catch (err) {
+    console.error('[seguimiento token]', err);
+    showAlert('Error al consultar tu cotización. Intenta de nuevo más tarde.', 'error');
+  }
+}
+
+function renderCotizacionToken(cot, token) {
+  const resultBox = document.getElementById('trackingResult');
+  if (!resultBox) return;
+
+  const estadoLabels = {
+    en_revision:'En revisión', respondida:'Propuesta lista', aceptada:'Confirmada',
+    convertida_a_pedido:'En producción', cancelada:'Cancelada',
+  };
+  const est   = cot.estado || 'en_revision';
+  const label = estadoLabels[est] || est;
+  const money = (n) => new Intl.NumberFormat('es-MX', { style:'currency', currency:'MXN' }).format(n || 0);
+
+  const itemsRows = (cot.items || []).map(it => `
+    <tr>
+      <td style="padding:6px 8px;border-bottom:1px solid #e5ddd4;">${escapeHtml(it.nombre_item)}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #e5ddd4;text-align:center;">${it.cantidad} ${escapeHtml(it.unidad)}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #e5ddd4;text-align:right;">${money(it.subtotal)}</td>
+    </tr>`).join('');
+
+  let accionHtml = '';
+  if (est === 'respondida') {
+    accionHtml = `
+      <div style="text-align:center;margin-top:18px;">
+        <button class="btn-track" onclick="confirmarCotizacion('${token}')"><i class="fa-solid fa-check"></i> Confirmar y continuar con mi proyecto</button>
+      </div>`;
+  } else if (est === 'aceptada') {
+    accionHtml = `<p style="text-align:center;color:#4a8b5a;font-weight:600;margin-top:14px;"><i class="fa-solid fa-circle-check"></i> Confirmado — en espera de que agendemos tu producción.</p>`;
+  } else if (est === 'convertida_a_pedido' && cot.numero_pedido) {
+    accionHtml = `
+      <div style="text-align:center;margin-top:18px;">
+        <a href="/seguimiento?pedido=${encodeURIComponent(cot.numero_pedido)}" class="btn-track" style="display:inline-flex;text-decoration:none;">
+          <i class="fa-solid fa-box"></i> Ver seguimiento de tu pedido ${escapeHtml(cot.numero_pedido)}
+        </a>
+      </div>`;
+  }
+
+  resultBox.innerHTML = `
+    <div style="background:#fff8f0;border:2px solid #c9a96e;border-radius:10px;padding:6px 0;margin-bottom:16px;text-align:center;">
+      <p style="margin:10px 0;color:#7a5a1a;font-size:12px;">Este cotizador es solo un estimado — esta es tu <strong>propuesta final</strong> ya confirmada por el jefe tras revisar tu proyecto.</p>
+    </div>
+    <div class="track-result-card">
+      <div class="track-result-header">
+        <div>
+          <div class="track-tipo">Cotización</div>
+          <div class="track-folio">${escapeHtml(cot.numero_cotizacion)}</div>
+        </div>
+        <span class="track-status-badge st-${est}">${escapeHtml(label)}</span>
+      </div>
+      <div class="track-result-body">
+        <div style="text-align:center;background:#fff;border:1px solid #e5ddd4;border-radius:8px;padding:16px;margin-bottom:16px;">
+          <div style="color:#888;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Precio total</div>
+          <div style="font-size:28px;font-weight:700;color:#5C3D11;">${money(cot.precio_cotizado)}</div>
+          ${cot.fecha_visita ? `<div style="color:#888;font-size:12px;margin-top:6px;">📍 Visita: ${escapeHtml(cot.fecha_visita)}${cot.hora_visita ? ' — ' + escapeHtml(cot.hora_visita) : ''}</div>` : ''}
+          <div style="color:#888;font-size:12px;margin-top:4px;">${parseInt(cot.requiere_instalacion) ? '✅ Incluye instalación' : '— Sin instalación'}</div>
+        </div>
+
+        ${itemsRows ? `<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px;">
+          <thead><tr style="background:#f8f4ef;"><th style="padding:6px 8px;text-align:left;">Concepto</th><th style="padding:6px 8px;">Cant.</th><th style="padding:6px 8px;text-align:right;">Subtotal</th></tr></thead>
+          <tbody>${itemsRows}</tbody>
+        </table>` : ''}
+
+        ${cot.descripcion_respuesta ? `<div style="background:#fff;border:1px solid #e5ddd4;border-radius:6px;padding:14px;line-height:1.7;color:#3a3a3a;margin-bottom:12px;">${escapeHtml(cot.descripcion_respuesta).replace(/\n/g,'<br>')}</div>` : ''}
+
+        ${cot.pdf_url ? `<p style="text-align:center;"><a href="${cot.pdf_url}" target="_blank" rel="noopener" style="color:#8b7355;font-weight:600;"><i class="fa-solid fa-file-pdf"></i> Descargar propuesta en PDF</a></p>` : ''}
+
+        ${accionHtml}
+      </div>
+      <div class="track-result-footer">
+        <i class="fa-solid fa-envelope"></i>
+        ¿Dudas? Escríbenos a <a href="mailto:${siteEmail}">${siteEmail}</a>
+      </div>
+    </div>`;
+  resultBox.style.display = 'block';
+  resultBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+async function confirmarCotizacion(token) {
+  if (!confirm('¿Confirmas que quieres continuar con tu proyecto bajo esta propuesta?')) return;
+  try {
+    const res = await fetch(`${API_URL}/cotizaciones.php?action=confirmar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      showAlert(data.mensaje || '¡Confirmado!', 'success');
+      trackCotizacionPorToken(token);
+    } else {
+      showAlert(data.error || 'No se pudo confirmar. Intenta de nuevo.', 'error');
+    }
+  } catch (e) {
+    showAlert('Error de conexión al confirmar.', 'error');
+  }
+}
+
 function showAlert(message, type = 'info') {
   const alertDiv = document.getElementById('alertMessage');
   if (alertDiv) {
@@ -288,4 +420,6 @@ function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
-window.trackOrder = trackOrder;
+window.trackOrder            = trackOrder;
+window.confirmarCotizacion   = confirmarCotizacion;
+window.trackCotizacionPorToken = trackCotizacionPorToken;

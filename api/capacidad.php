@@ -1,9 +1,9 @@
 <?php
-// api/capacidad.php — Gestión de capacidad de producción (solo admin)
+// api/capacidad.php — Gestión de capacidad de producción (jefe/administrador)
 
 require_once __DIR__ . '/_helpers.php';
 
-$admin  = requerirAdmin();
+$admin  = requerirGestion();
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
 
@@ -18,7 +18,7 @@ if ($method === 'GET') {
             (SELECT COUNT(*) FROM pedidos p
              WHERE p.fecha_estimada BETWEEN cp.semana_inicio
                AND DATE_ADD(cp.semana_inicio, INTERVAL 6 DAY)
-               AND p.estado NOT IN ('cancelado','entregado')
+               AND p.estado NOT IN ('cancelado','finalizado')
             ) AS pedidos_agendados
          FROM capacidad_produccion cp
          WHERE semana_inicio BETWEEN ? AND ?

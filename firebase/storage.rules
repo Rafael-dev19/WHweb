@@ -19,5 +19,32 @@ service firebase.storage {
                         'image/jpeg', 'image/png', 'image/webp', 'image/gif'
                       ];
     }
+    // Cotizaciones - imágenes del cliente (Fase 8) y del jefe (Fase 6)
+    match /cotizaciones/{cotId}/cliente/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType in [
+                        'image/jpeg', 'image/png', 'image/webp', 'image/gif'
+                      ];
+    }
+    match /cotizaciones/{cotId}/jefe/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType in [
+                        'image/jpeg', 'image/png', 'image/webp', 'image/gif'
+                      ];
+    }
+    // PDF de la propuesta de cotización (generado en el navegador del jefe).
+    // Un wildcard de segmento completo no puede mezclarse con texto literal
+    // (ej. "propuesta_{fileName}" no es válido) — el nombre del archivo ya
+    // incluye el prefijo "propuesta_" del lado de la app, no de la regla.
+    match /cotizaciones/{cotId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null
+                   && request.resource.size < 8 * 1024 * 1024
+                   && request.resource.contentType == 'application/pdf';
+    }
   }
 }

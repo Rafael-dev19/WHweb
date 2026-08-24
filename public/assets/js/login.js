@@ -144,7 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await res.json();
       if (data.success && data.autenticado) {
         const rol = data.usuario?.rol || '';
-        window.location.href = rol === 'administrador'
+        window.location.href = (rol === 'jefe' || rol === 'administrador')
           ? '/admin/panel_administrador.php'
           : '/empleado/panel_empleado.php';
       }

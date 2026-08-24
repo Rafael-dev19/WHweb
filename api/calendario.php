@@ -1,20 +1,25 @@
 <?php
 require_once __DIR__ . '/_helpers.php';
 
-requerirEmpleado();
+// Lectura combinada de citas+pedidos para el widget de calendario del dashboard.
+// Citas es un módulo exclusivo de jefe/administrador (matriz de permisos):
+// empleado/diseñador solo ven los eventos de pedidos, su calendario es "solo pedidos".
+$usuario = requerirPersonal();
 if (requestMethod() !== 'GET') jsonError('Método no permitido', 405);
 
 $desde = trim($_GET['desde'] ?? date('Y-m-01'));
 $hasta = trim($_GET['hasta'] ?? date('Y-m-t'));
 
 $colorCita = ['nueva' => '#f59e0b', 'confirmada' => '#3b82f6', 'completada' => '#22c55e', 'cancelada' => '#ef4444'];
-$colorPedido = ['pendiente' => '#a855f7', 'en_produccion' => '#f97316', 'listo' => '#06b6d4', 'entregado' => '#22c55e', 'cancelado' => '#ef4444'];
+$colorPedido = ['pendiente' => '#a855f7', 'anticipo_pagado' => '#a855f7', 'pagado' => '#a855f7',
+    'listo_para_produccion' => '#f97316', 'en_produccion' => '#f97316', 'alistando_pedido' => '#06b6d4',
+    'en_camino_instalacion' => '#06b6d4', 'finalizado' => '#22c55e', 'cancelado' => '#ef4444'];
 
-$citas = dbRows(
+$citas = in_array($usuario['rol'], ['jefe', 'administrador'], true) ? dbRows(
     "SELECT id, numero_cita, nombre_cliente, fecha_cita, rango_horario, tipo, estado, direccion
      FROM citas WHERE DATE(fecha_cita) BETWEEN ? AND ?",
     [$desde, $hasta]
-);
+) : [];
 
 $pedidos = dbRows(
     "SELECT id, numero_pedido, nombre_cliente, fecha_estimada, estado

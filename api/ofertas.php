@@ -67,7 +67,7 @@ if ($method === 'POST' && $action === 'validar') {
 
 // ── GET listar todas las ofertas (admin) ──────────────────────────
 if ($method === 'GET' && !$id && !$action) {
-    requerirAdmin();
+    requerirJefe();
     $ofertas = dbRows(
         "SELECT *,
                 CASE WHEN activo=1
@@ -82,7 +82,7 @@ if ($method === 'GET' && !$id && !$action) {
 
 // ── GET oferta individual (admin) ─────────────────────────────────
 if ($method === 'GET' && $id) {
-    requerirAdmin();
+    requerirJefe();
     $oferta = dbRow("SELECT * FROM ofertas WHERE id=? LIMIT 1", [$id]);
     if (!$oferta) jsonError('Oferta no encontrada', 404);
     jsonSuccess(['oferta' => $oferta]);
@@ -90,7 +90,7 @@ if ($method === 'GET' && $id) {
 
 // ── POST crear oferta (admin) ─────────────────────────────────────
 if ($method === 'POST' && !$action) {
-    requerirAdmin();
+    requerirJefe();
     requerirCsrf();
     $body        = getJsonBody();
     $nombre      = sanitize($body['nombre'] ?? '');
@@ -122,7 +122,7 @@ if ($method === 'POST' && !$action) {
 
 // ── PUT actualizar oferta (admin) ─────────────────────────────────
 if ($method === 'PUT' && $id) {
-    requerirAdmin();
+    requerirJefe();
     requerirCsrf();
     if (!dbRow("SELECT id FROM ofertas WHERE id=?", [$id])) jsonError('Oferta no encontrada', 404);
 
@@ -154,7 +154,7 @@ if ($method === 'PUT' && $id) {
 
 // ── DELETE eliminar oferta (admin) ────────────────────────────────
 if ($method === 'DELETE' && $id) {
-    requerirAdmin();
+    requerirJefe();
     requerirCsrf();
     if (!dbRow("SELECT id FROM ofertas WHERE id=?", [$id])) jsonError('Oferta no encontrada', 404);
     dbExecute("DELETE FROM ofertas WHERE id=?", [$id]);

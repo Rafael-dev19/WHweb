@@ -41,12 +41,13 @@ switch ($action) {
 
         _crearSesion($usuario);
 
-        $redirect    = $usuario['rol'] === 'administrador'
+        $redirect    = in_array($usuario['rol'], ['jefe', 'administrador'], true)
             ? '/admin/panel_administrador.php'
             : '/empleado/panel_empleado.php';
         $tiene2fa    = !empty($usuario['totp_activo']);
         // Si el usuario aún no tiene 2FA configurado, forzar que lo configure
-        // antes de entrar al panel (obligatorio para admin y empleado).
+        // antes de entrar al panel (obligatorio para jefe/administrador, sugerido
+        // para empleado/disenador).
         $forzar2fa   = !$tiene2fa;
 
         jsonSuccess([
@@ -155,7 +156,7 @@ switch ($action) {
             $usuario = obtenerUsuarioPorFirebaseUid($uid);
             if (!$usuario) jsonError('Tu cuenta de personal no está activa. Contacta al administrador.', 403);
             _crearSesion($usuario);
-            $redirect   = $usuario['rol'] === 'administrador' ? '/admin' : '/empleado';
+            $redirect   = in_array($usuario['rol'], ['jefe', 'administrador'], true) ? '/admin' : '/empleado';
             $tiene2fa   = !empty($usuario['totp_activo']);
             jsonSuccess([
                 'redirect'     => $redirect,
@@ -265,7 +266,7 @@ switch ($action) {
     // El secreto provisional se almacena en sesión hasta que se active.
     case '2fa-setup':
         if ($method !== 'GET') jsonError('Método no permitido', 405);
-        $usuario = requerirEmpleado();   // admin y empleado pueden configurar su propio 2FA
+        $usuario = requerirPersonal();   // cualquier rol de personal puede configurar su propio 2FA
         requerirReautenticacion('2fa_setup', 300);
         $secreto = generarSecreto2FA();
         $_SESSION['_2fa_secreto_provisional'] = $secreto;
@@ -279,7 +280,7 @@ switch ($action) {
     case '2fa-activar':
         if ($method !== 'POST') jsonError('Método no permitido', 405);
         requerirCsrf();
-        $usuario = requerirEmpleado();
+        $usuario = requerirPersonal();
         requerirReautenticacion('2fa_setup', 300);
         $body    = getJsonBody();
         $codigo  = trim($body['codigo'] ?? '');
@@ -297,15 +298,18 @@ switch ($action) {
         jsonSuccess(['activado' => true, 'mensaje' => 'Autenticación de dos factores activada correctamente.']);
         break;
 
-    // ── 2FA: desactivar (solo admin sobre sí mismo o sobre empleados) ─
+    // ── 2FA: desactivar (cada quien la suya; jefe/administrador sobre cualquiera) ─
     case '2fa-desactivar':
         if ($method !== 'POST') jsonError('Método no permitido', 405);
         requerirCsrf();
-        $usuario = requerirEmpleado();
+        $usuario = requerirPersonal();
         requerirReautenticacion('2fa_desactivar', 300);
         $body       = getJsonBody();
-        // Un empleado solo puede desactivar su propia cuenta; admin puede desactivar cualquiera
-        $objetivoId = isset($body['usuario_id']) && $usuario['rol'] === 'administrador'
+        // empleado/disenador solo pueden desactivar su propia cuenta; jefe/administrador
+        // pueden desactivarla sobre cualquier cuenta de personal (mismo poder que ya
+        // tienen por SQL directo, ver Fase 2 — auditoria_seguridad_personal).
+        $puedeGestionarOtros = in_array($usuario['rol'], ['jefe', 'administrador'], true);
+        $objetivoId = isset($body['usuario_id']) && $puedeGestionarOtros
             ? (int)$body['usuario_id']
             : (int)$usuario['id'];
         dbQuery(

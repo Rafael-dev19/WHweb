@@ -203,7 +203,7 @@ function calcularFechaInteligente(string $tipoEntrega, string $cp, int $numProdu
          FROM pedidos p
          INNER JOIN detalle_pedido dp ON dp.pedido_id = p.id
          WHERE p.fecha_estimada BETWEEN ? AND ?
-           AND p.estado NOT IN ('cancelado','entregado')
+           AND p.estado NOT IN ('cancelado','finalizado')
          GROUP BY p.fecha_estimada, p.tipo_entrega, p.cp_envio",
         [$minima->format('Y-m-d'), $hasta]
     );

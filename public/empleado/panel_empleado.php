@@ -6,10 +6,14 @@ require_once dirname(__DIR__, 2) . "/includes/functions.php";
 require_once dirname(__DIR__, 2) . "/includes/auth.php";
 
 $_usuario = sesionActiva();
-if (!$_usuario || !in_array($_usuario["rol"], ["administrador", "empleado"], true)) {
+if (!$_usuario || !in_array($_usuario["rol"], ["empleado", "disenador"], true)) {
     header("Location: /acceso-denegado?area=empleado");
     exit;
 }
+// Se conserva el rol para diferenciar la vista de "disenador" (Fase 3) del
+// resto del panel; el resto de datos de sesión no se expone en el HTML.
+$_rolPanel   = $_usuario["rol"];
+$_esDisenador = $_rolPanel === "disenador";
 unset($_usuario);
 ?>
 
@@ -18,7 +22,7 @@ unset($_usuario);
 <head>
   <meta charset="UTF-8" />
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Panel Empleado - Wooden House</title>
   <meta name="description" content="Panel de empleados de Wooden House. Gestión de pedidos, cotizaciones y citas del personal.">
   <meta name="robots" content="noindex, nofollow">
@@ -32,6 +36,7 @@ unset($_usuario);
 </head>
 
 <body>
+  <script>window.WH_ROL = <?= json_encode($_rolPanel) ?>;</script>
   <div class="header">
     <div class="header-left">
     <button class="menu-toggle" id="menuToggle" aria-label="Abrir menú" aria-expanded="false">
@@ -77,8 +82,6 @@ unset($_usuario);
 
     <a href="#" data-section="dashboard" class="active"><i class="fa-solid fa-chart-bar"></i> Dashboard</a>
     <a href="#" data-section="pedidos"><i class="fa-solid fa-box"></i> Gestión de Pedidos</a>
-    <a href="#" data-section="citas"><i class="fa-solid fa-calendar-days"></i> Citas Programadas</a>
-    <a href="#" data-section="cotizaciones"><i class="fa-solid fa-briefcase"></i> Cotizaciones</a>
     <a href="#" data-section="seguridad"><i class="fa-solid fa-shield-halved"></i> Seguridad</a>
   </div>
 
@@ -94,16 +97,6 @@ unset($_usuario);
       <div class="sidebar-item" data-section="pedidos">
         <span class="icon"><i class="fa-solid fa-box"></i></span>
         <span>Gestión de Pedidos</span>
-      </div>
-
-      <div class="sidebar-item" data-section="citas">
-        <span class="icon"><i class="fa-solid fa-calendar-days"></i></span>
-        <span>Citas Programadas</span>
-      </div>
-
-      <div class="sidebar-item" data-section="cotizaciones">
-        <span class="icon"><i class="fa-solid fa-briefcase"></i></span>
-        <span>Cotizaciones</span>
       </div>
 
       <div class="sidebar-section">MI CUENTA</div>
@@ -125,20 +118,6 @@ unset($_usuario);
               <div class="stat-title">Pedidos Pendientes <span class="wh-help" data-tip="Pedidos en estado 'pendiente' o 'en producción' que requieren seguimiento. Haz clic para ir a Gestión de Pedidos.">?</span></div>
               <div class="stat-value" id="kpiPendientes">—</div>
               <div class="stat-subtitle">Requieren atención</div>
-            </div>
-          </div>
-          <div class="col">
-            <div class="stat-card">
-              <div class="stat-title">Citas Hoy <span class="wh-help" data-tip="Citas agendadas para hoy. Incluye visitas a domicilio y citas de medición.">?</span></div>
-              <div class="stat-value" id="kpiCitasHoy">—</div>
-              <div class="stat-subtitle">Programadas para hoy</div>
-            </div>
-          </div>
-          <div class="col">
-            <div class="stat-card">
-              <div class="stat-title">Cotizaciones Nuevas</div>
-              <div class="stat-value" id="kpiCotNuevas">—</div>
-              <div class="stat-subtitle">Sin atender</div>
             </div>
           </div>
         </div>
@@ -226,77 +205,6 @@ unset($_usuario);
             </div>
 
           </div>
-        </div>
-      </div>
-
-      <!-- CITAS -->
-      <div id="citas-section" class="content-section hidden">
-        <h1 class="page-title">Citas Programadas</h1>
-        <p class="page-subtitle">Gestiona tus citas y reuniones</p>
-
-        <div class="section">
-          <div class="section-header">
-            <h2 class="section-title">Próximas Citas</h2>
-            <button class="btn btn-primary btn-small" data-call="openModal" data-args='["nuevaCita"]'>+ Nueva cita</button>
-          </div>
-
-          <div class="table-container">
-            <div style="overflow:auto;">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Folio</th>
-                    <th>Cliente</th>
-                    <th>ID Cliente</th>
-                    <th>Fecha</th>
-                    <th>Hora</th>
-                    <th>Tipo</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr><td colspan="8" style="text-align:center;color:#888;padding:20px;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando citas...</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- COTIZACIONES -->
-      <div id="cotizaciones-section" class="content-section hidden">
-        <h1 class="page-title">Cotizaciones</h1>
-        <p class="page-subtitle">Gestiona cotizaciones y propuestas</p>
-
-        <div class="section">
-          <div class="section-header">
-            <h2 class="section-title">Cotizaciones Activas</h2>
-            <button class="btn btn-primary btn-small" data-call="openModal" data-args='["nuevaCotizacion"]'>+ Nueva cotización</button>
-          </div>
-
-          <div class="table-container">
-            <div style="overflow:auto;">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Folio</th>
-                    <th>Cliente</th>
-                    <th>ID Cliente</th>
-                    <th>Modelo</th>
-                    <th>Presupuesto</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr><td colspan="7" style="text-align:center;color:#888;padding:20px;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando cotizaciones...</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
         </div>
       </div>
 
@@ -673,10 +581,22 @@ unset($_usuario);
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
+  <script src="../assets/<?= av('js/theme-toggle.js') ?>"></script>
   <script src="../assets/<?= av('js/firebase-config.js') ?>"></script>
   <script src="../assets/<?= av('js/panel_empleado.js') ?>"></script>
   <script src="../assets/<?= av('js/event-delegation.js') ?>"></script>
   <script src="../assets/<?= av('js/animations.js') ?>"></script>
+  <script>window.WH_FCM_VAPID_KEY = <?= json_encode(FCM_VAPID_KEY) ?>;</script>
+  <script src="../assets/<?= av('js/push-notifications.js') ?>"></script>
+  <script>
+    if (typeof firebaseAuth !== 'undefined') {
+      firebaseAuth.onAuthStateChanged(function (user) {
+        if (user) registerPush();
+      });
+    }
+  </script>
 </body>
 </html>

@@ -1,8 +1,8 @@
 <?php
-// api/dias_bloqueados.php — Gestión de días bloqueados (solo admin)
+// api/dias_bloqueados.php — Gestión de días bloqueados (jefe/administrador)
 
 require_once __DIR__ . '/_helpers.php';
-requerirAdmin();
+requerirGestion();
 
 switch ($_SERVER['REQUEST_METHOD']) {
 
@@ -33,7 +33,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
              FROM pedidos p
              INNER JOIN detalle_pedido dp ON dp.pedido_id = p.id
              WHERE p.fecha_estimada BETWEEN ? AND ?
-               AND p.estado NOT IN ('cancelado','entregado')
+               AND p.estado NOT IN ('cancelado','finalizado')
              GROUP BY p.fecha_estimada
              ORDER BY p.fecha_estimada ASC",
             [$desde, $hasta]
@@ -87,7 +87,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
 
         $pedidosEnDia = dbRow(
             "SELECT COUNT(*) AS total FROM pedidos
-             WHERE fecha_estimada = ? AND estado NOT IN ('cancelado','entregado')",
+             WHERE fecha_estimada = ? AND estado NOT IN ('cancelado','finalizado')",
             [$fecha]
         );
 

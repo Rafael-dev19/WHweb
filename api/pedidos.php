@@ -51,7 +51,7 @@ switch ($method) {
         }
 
         if ($id) {
-            requerirEmpleado();
+            requerirPersonal();
             $pedido = dbRow("SELECT p.*, p.estado, p.total FROM pedidos p WHERE p.id = ?", [$id]);
             if (!$pedido) jsonError('Pedido no encontrado', 404);
             $items = dbRows(
@@ -79,10 +79,43 @@ switch ($method) {
                 "SELECT * FROM pagos WHERE pedido_id = ? ORDER BY fecha_creacion DESC",
                 [$id]
             );
+            try {
+                $pedido['imagenes_diseno'] = dbRows(
+                    "SELECT id, url_imagen, tipo, fecha_creacion FROM pedido_imagenes_diseno WHERE pedido_id = ? ORDER BY id",
+                    [$id]
+                );
+            } catch (\Throwable $e) {
+                $pedido['imagenes_diseno'] = [];
+            }
+            // Si el pedido nace de una cotización convertida (Fase 7), las partidas
+            // cotizadas no caben en detalle_pedido (cantidades con decimales, ej.
+            // "12.5 m²") — se adjunta aquí la cotización de origen completa para
+            // que el diseñador/empleado vean qué se cotizó y con qué fotos.
+            try {
+                $cotOrigen = dbRow(
+                    "SELECT id, numero_cotizacion, descripcion_respuesta, pdf_url
+                     FROM cotizaciones WHERE pedido_id = ? LIMIT 1",
+                    [$id]
+                );
+                if ($cotOrigen) {
+                    $cotOrigen['items'] = dbRows(
+                        "SELECT nombre_item, cantidad, unidad, precio_unitario, subtotal
+                         FROM cotizacion_respuesta_items WHERE cotizacion_id = ? ORDER BY orden ASC, id ASC",
+                        [$cotOrigen['id']]
+                    );
+                    $cotOrigen['imagenes'] = dbRows(
+                        "SELECT url_imagen, tipo FROM cotizacion_imagenes WHERE cotizacion_id = ? ORDER BY tipo, orden ASC",
+                        [$cotOrigen['id']]
+                    );
+                    $pedido['cotizacion_origen'] = $cotOrigen;
+                }
+            } catch (\Throwable $e) {
+                // Tablas de la Fase 6 aún no migradas — no bloquear el detalle del pedido.
+            }
             jsonSuccess(['pedido' => $pedido]);
         }
 
-        requerirEmpleado();
+        requerirPersonal();
         $page   = max(1, sanitizeInt($_GET['page'] ?? 1));
         $limit  = min(50, max(1, sanitizeInt($_GET['limit'] ?? 20)));
         $offset = ($page - 1) * $limit;
@@ -91,7 +124,9 @@ switch ($method) {
         $desde  = preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['fecha_desde'] ?? '') ? $_GET['fecha_desde'] : '';
         $hasta  = preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['fecha_hasta'] ?? '') ? $_GET['fecha_hasta'] : '';
 
-        $estadosValidos = ['pendiente','anticipo_pagado','pagado','en_produccion','listo','listo_para_entrega','entregado','cancelado'];
+        $estadosValidos = ['pendiente','anticipo_pagado','pagado',
+            'listo_para_produccion','en_produccion','alistando_pedido','en_camino_instalacion','finalizado',
+            'cancelado'];
         if ($estado && !in_array($estado, $estadosValidos, true)) $estado = '';
 
         $where = ['1=1']; $params = [];
@@ -185,7 +220,7 @@ switch ($method) {
                 "SELECT COALESCE(SUM(dp.cantidad),0) AS total
                   FROM pedidos p
                   INNER JOIN detalle_pedido dp ON dp.pedido_id = p.id
-                  WHERE p.fecha_estimada = ? AND p.estado NOT IN ('cancelado','entregado')",
+                  WHERE p.fecha_estimada = ? AND p.estado NOT IN ('cancelado','finalizado')",
                 [$fechaClienteRaw]
             )['total'] ?? 0);
             if (($limite - $cargaDia) >= $totalProductos) $fechaEst = $fechaClienteRaw;
@@ -301,7 +336,7 @@ switch ($method) {
         break;
 
     case 'PUT':
-        $usuarioActual = requerirEmpleado();
+        $usuarioActual = requerirPersonal();
         requerirCsrf();
         if (!$id) jsonError('ID requerido', 400);
         $pedido = dbRow("SELECT * FROM pedidos WHERE id = ?", [$id]);
@@ -316,35 +351,75 @@ switch ($method) {
         if (isset($body['estado'])) {
             // Validar contra una whitelist ANTES de reflejar el valor en cualquier
             // mensaje de error — nunca interpolar input crudo del cliente sin filtrar.
-            $estadosConocidos = ['pendiente','anticipo_pagado','pagado','en_produccion','listo','listo_para_entrega','entregado','cancelado'];
+            $estadosConocidos = ['pendiente','anticipo_pagado','pagado',
+                'listo_para_produccion','en_produccion','alistando_pedido','en_camino_instalacion','finalizado',
+                'cancelado'];
             if (!is_string($body['estado']) || !in_array($body['estado'], $estadosConocidos, true)) {
                 jsonError('Estado inválido', 422);
             }
-            // Cancelar es exclusivo de administrador — un empleado no debe
-            // poder hacerlo ni siquiera llamando la API directamente.
-            if ($body['estado'] === 'cancelado' && $usuarioActual['rol'] !== 'administrador') {
-                jsonError('Solo un administrador puede cancelar pedidos', 403);
+            // Cancelar es exclusivo de jefe/administrador — un empleado o disenador
+            // no debe poder hacerlo ni siquiera llamando la API directamente.
+            if ($body['estado'] === 'cancelado' && !in_array($usuarioActual['rol'], ['jefe', 'administrador'], true)) {
+                jsonError('Solo jefe o administrador pueden cancelar pedidos', 403);
             }
             $estadoActual = $pedido['estado'];
             $transicionesValidas = [
-                // Flujo principal: pagado/anticipo_pagado → pendiente → listo → listo_para_entrega → entregado
-                'pendiente'          => ['listo', 'cancelado'],
-                'anticipo_pagado'    => ['pendiente', 'cancelado'],
-                'pagado'             => ['pendiente', 'cancelado'],
-                'en_produccion'      => ['listo', 'cancelado'],      // compatibilidad pedidos anteriores
-                'listo'              => ['listo_para_entrega', 'cancelado'],
-                'listo_para_entrega' => ['entregado'],
-                'entregado'          => [],
-                'cancelado'          => [],
+                'pendiente'             => ['cancelado'],
+                'anticipo_pagado'       => ['listo_para_produccion', 'cancelado'],
+                'pagado'                => ['listo_para_produccion', 'cancelado'],
+                'listo_para_produccion' => ['en_produccion', 'cancelado'],
+                'en_produccion'         => ['alistando_pedido', 'cancelado'],
+                'alistando_pedido'      => ['en_camino_instalacion', 'finalizado', 'cancelado'],
+                'en_camino_instalacion' => ['finalizado'],
+                'finalizado'            => [],
+                'cancelado'             => [],
             ];
             $permitidos = $transicionesValidas[$estadoActual] ?? [];
             if (!in_array($body['estado'], $permitidos, true)) {
                 jsonError("No se puede cambiar de '$estadoActual' a '{$body['estado']}'", 422);
             }
-            // Avanzar a 'listo' requiere al menos el anticipo o pago registrado
-            if ($body['estado'] === 'listo' && (float)($pedido['monto_pagado'] ?? 0) <= 0) {
-                jsonError('No se puede marcar como listo sin al menos el anticipo o pago registrado', 422);
+
+            if ($body['estado'] === 'listo_para_produccion') {
+                // Solo el disenador (flujo normal) o jefe/administrador (override) pueden
+                // liberar un pedido a producción. Un empleado nunca puede.
+                if (!in_array($usuarioActual['rol'], ['disenador', 'jefe', 'administrador'], true)) {
+                    jsonError('Solo el diseñador (o jefe/administrador) puede marcar un pedido listo para producción', 403);
+                }
+                // El requisito de pago (antes exigido para 'listo') se traslada aquí:
+                // no tiene sentido diseñar/producir un pedido que nadie ha pagado.
+                if ((float)($pedido['monto_pagado'] ?? 0) <= 0) {
+                    jsonError('No se puede marcar listo para producción sin al menos el anticipo o pago registrado', 422);
+                }
+                // El diseñador (flujo normal, no el override de jefe/administrador) debe
+                // adjuntar al menos una imagen de su diseño.
+                if ($usuarioActual['rol'] === 'disenador') {
+                    $imagenes = $body['imagenes'] ?? [];
+                    if (!is_array($imagenes) || count($imagenes) < 1) {
+                        jsonError('Adjunta al menos una imagen del diseño antes de marcar listo para producción', 422);
+                    }
+                    foreach ($imagenes as $urlImg) {
+                        if (!is_string($urlImg) || !filter_var($urlImg, FILTER_VALIDATE_URL)) {
+                            jsonError('Una de las imágenes de diseño no es una URL válida', 422);
+                        }
+                    }
+                    foreach ($imagenes as $urlImg) {
+                        dbInsert('pedido_imagenes_diseno', [
+                            'pedido_id'  => $id,
+                            'url_imagen' => $urlImg,
+                            'tipo'       => 'otro',
+                            'subido_por' => (int)$usuarioActual['id'],
+                        ]);
+                    }
+                    $update['disenador_id'] = (int)$usuarioActual['id'];
+                    if (isset($body['mensaje_disenador'])) {
+                        $update['mensaje_disenador'] = sanitize($body['mensaje_disenador']);
+                    }
+                }
+            } elseif ($usuarioActual['rol'] === 'disenador') {
+                // El disenador SOLO puede ejecutar la transición de arriba — nada más.
+                jsonError('El rol diseñador solo puede marcar pedidos como listos para producción', 403);
             }
+
             $update['estado'] = $body['estado'];
         }
         if (isset($body['fecha_estimada'])) $update['fecha_estimada'] = $body['fecha_estimada'];
@@ -360,7 +435,12 @@ switch ($method) {
 
         if (!empty($update['estado']) && $update['estado'] !== $pedido['estado']) {
             try {
-                notificarCambioPedido(array_merge($pedido, $update), $pedido['estado']);
+                if ($update['estado'] === 'listo_para_produccion') {
+                    // Push a empleados: el pedido se vuelve visible/accionable para ellos.
+                    notificarPedidoListoParaProduccion(array_merge($pedido, $update));
+                } else {
+                    notificarCambioPedido(array_merge($pedido, $update), $pedido['estado']);
+                }
             } catch (Throwable $e) {}
         }
 

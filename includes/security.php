@@ -299,8 +299,30 @@ function generarUrlQr2FA(string $secreto, string $correo, string $emisor = 'Wood
  * activado pero NO ha verificado el código en esta sesión PHP.
  */
 function requerir2FA(array $usuario): void {
-    if (!in_array($usuario['rol'] ?? '', ['administrador', 'empleado'], true)) return;
-    if (empty($usuario['totp_activo'])) return;   // 2FA no activado → permitir
+    $rol = $usuario['rol'] ?? '';
+    if (!in_array($rol, ['jefe', 'administrador', 'empleado', 'disenador'], true)) return;
+
+    // Los propios endpoints para configurar/activar/desactivar 2FA deben quedar
+    // siempre alcanzables — si no, un jefe/administrador sin 2FA configurado nunca
+    // podría llamar a 2fa-setup/2fa-activar para completarlo (auto-bloqueo).
+    $accionActual = $_GET['action'] ?? '';
+    if (in_array($accionActual, ['2fa-setup', '2fa-activar', '2fa-desactivar', '2fa-check', 'perfil'], true)) {
+        return;
+    }
+
+    // 2FA es obligatorio para jefe/administrador (poder total o casi total sobre el
+    // negocio); si aún no lo activaron, se bloquea hasta que lo configuren en vez de
+    // dejarlos pasar sin él. Para empleado/disenador sigue siendo opcional.
+    // (La excepción de arriba —acciones 2fa-setup/2fa-activar/etc.— es lo que evita
+    // el auto-bloqueo: sin ella, nadie podría completar la configuración.)
+    $obligatorio = in_array($rol, ['jefe', 'administrador'], true);
+
+    if (empty($usuario['totp_activo'])) {
+        if ($obligatorio) {
+            jsonError('Debes configurar la verificación de dos factores antes de continuar.', 403, ['2fa_setup_required' => true]);
+        }
+        return;
+    }
 
     if (!empty($_SESSION['_2fa_verified']) && (int)$_SESSION['_2fa_verified'] === (int)$usuario['id']) {
         return;   // ya verificado en esta sesión

@@ -118,7 +118,7 @@ switch ($method) {
 
     // ---- POST: Crear producto (admin) ----
     case 'POST':
-        requerirAdmin();
+        requerirGestion();
         requerirCsrf();
         $body = getJsonBody();
         requireFields($body, ['nombre', 'categoria_id', 'precio_base']);
@@ -179,7 +179,7 @@ switch ($method) {
 
     // ---- PUT: Actualizar producto (admin) ----
     case 'PUT':
-        requerirAdmin();
+        requerirGestion();
         requerirCsrf();
         if (!$id) jsonError('ID requerido', 400);
         if (!dbRow("SELECT id FROM productos WHERE id = ?", [$id])) {
@@ -235,7 +235,7 @@ switch ($method) {
 
     // ---- DELETE: Desactivar (soft delete) ----
     case 'DELETE':
-        requerirAdmin();
+        requerirGestion();
         requerirCsrf();
         if (!$id) jsonError('ID requerido', 400);
         $rows = dbUpdate('productos', ['activo' => 0], 'id = ?', [$id]);

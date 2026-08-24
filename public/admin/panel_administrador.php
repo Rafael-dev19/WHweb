@@ -7,11 +7,14 @@ require_once dirname(__DIR__, 2) . "/includes/functions.php";
 require_once dirname(__DIR__, 2) . "/includes/auth.php";
 
 $_usuario = sesionActiva();
-if (!$_usuario || $_usuario["rol"] !== "administrador") {
+if (!$_usuario || !in_array($_usuario["rol"], ["jefe", "administrador"], true)) {
     header("Location: /acceso-denegado?area=admin");
     exit;
 }
-// No exponer datos de sesión en el HTML
+// Solo se conserva el rol (no el resto de datos de sesión) para poder ocultar
+// server-side las secciones exclusivas de jefe (financiero, ofertas, reportes).
+$_rolPanel = $_usuario["rol"];
+$_esJefe   = $_rolPanel === "jefe";
 unset($_usuario);
 ?>
 
@@ -20,7 +23,7 @@ unset($_usuario);
 <head>
   <meta charset="UTF-8" />
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <title>Panel Administrador - Wooden House</title>
   <meta name="description" content="Panel de administración de Wooden House. Gestión de productos, pedidos, empleados y reportes.">
   <meta name="robots" content="noindex, nofollow">
@@ -83,10 +86,14 @@ unset($_usuario);
 
     <a href="#" data-section="catalogo"><span class="icon"><i class="fa-solid fa-gear"></i></span> Gestionar Catálogo</a>
     <a href="#" data-section="empleados"><span class="icon"><i class="fa-solid fa-briefcase"></i></span> Gestionar Empleados</a>
+    <?php if ($_esJefe): ?>
     <a href="#" data-section="reportes"><span class="icon"><i class="fa-solid fa-chart-bar"></i></span> Reportes Avanzados</a>
     <a href="#" data-section="financiero"><span class="icon"><i class="fa-solid fa-tag"></i></span> Análisis Financiero</a>
+    <?php endif; ?>
     <a href="#" data-section="clientes"><span class="icon"><i class="fa-solid fa-users"></i></span> Clientes Registrados</a>
+    <?php if ($_esJefe): ?>
     <a href="#" data-section="ofertas"><span class="icon"><i class="fa-solid fa-tag"></i></span> Ofertas & Marketing</a>
+    <?php endif; ?>
     <a href="#" data-section="seguridad"><span class="icon"><i class="fa-solid fa-shield-halved"></i></span> Seguridad</a>
   </div>
 
@@ -104,12 +111,16 @@ unset($_usuario);
       <div class="sidebar-section">ADMIN</div>
       <div class="sidebar-item" data-section="catalogo"><span class="icon"><i class="fa-solid fa-gear"></i></span><span>Gestionar Catálogo</span></div>
       <div class="sidebar-item" data-section="empleados"><span class="icon"><i class="fa-solid fa-briefcase"></i></span><span>Gestionar Empleados</span></div>
+      <?php if ($_esJefe): ?>
       <div class="sidebar-item" data-section="reportes"><span class="icon"><i class="fa-solid fa-chart-bar"></i></span><span>Reportes Avanzados</span></div>
       <div class="sidebar-item" data-section="financiero"><span class="icon"><i class="fa-solid fa-tag"></i></span><span>Análisis Financiero</span></div>
+      <?php endif; ?>
 
       <div class="sidebar-section">CLIENTES & MARKETING</div>
       <div class="sidebar-item" data-section="clientes"><span class="icon"><i class="fa-solid fa-users"></i></span><span>Clientes Registrados</span></div>
+      <?php if ($_esJefe): ?>
       <div class="sidebar-item" data-section="ofertas"><span class="icon"><i class="fa-solid fa-tag"></i></span><span>Ofertas & Marketing</span></div>
+      <?php endif; ?>
 
       <div class="sidebar-section">PRODUCCIÓN</div>
       <div class="sidebar-item" data-section="capacidad"><span class="icon"><i class="fa-solid fa-industry"></i></span><span>Capacidad del Taller</span></div>
@@ -125,6 +136,7 @@ unset($_usuario);
         <p class="page-subtitle">Control total del sistema</p>
 
         <div class="row row-cols-2 row-cols-md-4 g-3 stats-grid">
+          <?php if ($_esJefe): ?>
           <div class="col">
             <div class="stat-card">
               <div class="stat-title">Ventas del Mes <span class="wh-help" data-tip="Total de ingresos por pedidos pagados en el mes actual (desde el día 1 hasta hoy).">?</span></div>
@@ -132,6 +144,7 @@ unset($_usuario);
               <div class="stat-subtitle" id="kpiVentasHint">—</div>
             </div>
           </div>
+          <?php endif; ?>
           <div class="col">
             <div class="stat-card">
               <div class="stat-title">Pedidos Totales <span class="wh-help" data-tip="Número total de pedidos registrados en el sistema (todos los estados: pendiente, en producción, entregado, etc.).">?</span></div>
@@ -162,6 +175,7 @@ unset($_usuario);
           </div>
 
           <div class="row g-3 charts-grid">
+            <?php if ($_esJefe): ?>
             <div class="col-md-6">
               <div class="chart-card">
                 <div class="chart-title">Ventas (últimos 7 días)</div>
@@ -169,6 +183,7 @@ unset($_usuario);
                 <div class="chart-meta" id="chartVentasMeta">—</div>
               </div>
             </div>
+            <?php endif; ?>
 
             <div class="col-md-6">
               <div class="chart-card">
@@ -318,9 +333,14 @@ unset($_usuario);
         <div class="section">
           <div class="section-header">
             <h2 class="section-title">Cotizaciones</h2>
-            <button class="btn btn-secondary btn-small" data-call="cargarCotizacionesAPI">
-              <i class="fa-solid fa-rotate-right"></i> Actualizar
-            </button>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn btn-secondary btn-small" data-call="abrirCatalogoCotizador">
+                <i class="fa-solid fa-tags"></i> Catálogo de precios
+              </button>
+              <button class="btn btn-secondary btn-small" data-call="cargarCotizacionesAPI">
+                <i class="fa-solid fa-rotate-right"></i> Actualizar
+              </button>
+            </div>
           </div>
 
           <div class="table-container">
@@ -425,7 +445,8 @@ unset($_usuario);
         </div>
       </div>
 
-      <!-- REPORTES -->
+      <!-- REPORTES (solo jefe) -->
+      <?php if ($_esJefe): ?>
       <div id="reportes-section" class="content-section hidden">
         <h1 class="page-title">Reportes Avanzados</h1>
         <p class="page-subtitle">Métricas de ventas, top productos, conversión de cotizaciones, análisis de citas. Exportable PDF/Excel (CSV).</p>
@@ -493,8 +514,10 @@ unset($_usuario);
           </p>
         </div>
       </div>
+      <?php endif; // fin reportes-section (solo jefe) ?>
 
-      <!-- FINANCIERO -->
+      <!-- FINANCIERO (solo jefe) -->
+      <?php if ($_esJefe): ?>
       <div id="financiero-section" class="content-section hidden">
         <h1 class="page-title">Análisis Financiero</h1>
         <p class="page-subtitle">Ingresos y métricas del negocio — datos en tiempo real</p>
@@ -518,6 +541,7 @@ unset($_usuario);
           </div>
         </div>
       </div>
+      <?php endif; // fin financiero-section (solo jefe) ?>
 
       <!-- MODAL: RUTA DEL DÍA (Admin) -->
       <div class="modal" id="admRutaDiaModal">
@@ -732,7 +756,11 @@ unset($_usuario);
             <label class="form-label">Rol *</label>
             <select class="form-select" id="emp_rol">
               <option value="empleado">Empleado</option>
+              <option value="disenador">Diseñador</option>
+              <?php if ($_esJefe): ?>
               <option value="administrador">Administrador</option>
+              <option value="jefe">Jefe</option>
+              <?php endif; ?>
             </select>
           </div>
 
@@ -934,7 +962,8 @@ unset($_usuario);
         </div>
       </div>
 
-      <!-- OFERTAS & MARKETING -->
+      <!-- OFERTAS & MARKETING (solo jefe) -->
+      <?php if ($_esJefe): ?>
       <div id="ofertas-section" class="content-section hidden">
         <h1 class="page-title"><i class="fa-solid fa-tag"></i> Ofertas & Marketing</h1>
         <p class="page-subtitle">Descuentos, promociones y códigos de cupón para tus clientes</p>
@@ -982,6 +1011,7 @@ unset($_usuario);
           </div>
         </div>
       </div>
+      <?php endif; // fin ofertas-section (solo jefe) ?>
 
       <!-- MODAL: CREAR/EDITAR OFERTA -->
       <div class="modal" id="ofertaModal">
@@ -1182,7 +1212,9 @@ unset($_usuario);
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
+  <script src="../assets/<?= av('js/theme-toggle.js') ?>"></script>
   <script src="../assets/<?= av('js/firebase-config.js') ?>"></script>
   <!-- ═══ MODAL: DETALLE PEDIDO (admin) ══════════════════════════ -->
   <div class="modal" id="adminPedidoDetalleModal">
@@ -1221,15 +1253,46 @@ unset($_usuario);
           <button class="btn btn-secondary btn-small" data-admin-cita-estado="confirmada">✅ Confirmar</button>
           <button class="btn btn-secondary btn-small" data-admin-cita-estado="completada">🏁 Completar</button>
           <button class="btn btn-danger btn-small"    data-admin-cita-estado="cancelada">❌ Cancelar</button>
+          <button class="btn btn-primary btn-small" data-call="generarCotizacionDesdeCita">
+            <i class="fa-solid fa-file-invoice-dollar"></i> Generar cotización
+          </button>
         </div>
         <button class="btn btn-secondary" data-dismiss="adminCitaDetalleModal">Cerrar</button>
       </div>
     </div>
   </div>
 
-  <!-- ═══ MODAL: DETALLE COTIZACIÓN (admin) ══════════════════════ -->
+  <!-- ═══ MODAL: CATÁLOGO DE PRECIOS DEL COTIZADOR (admin) ════════ -->
+  <div class="modal" id="catalogoCotizadorModal">
+    <div class="modal-content" style="max-width:640px;">
+      <div class="modal-header" style="background:#8b7355;color:#fff;border-radius:8px 8px 0 0;margin:-18px -18px 16px;padding:16px 18px;">
+        <h3 class="modal-title" style="color:#fff;"><i class="fa-solid fa-tags"></i> Catálogo de precios del cotizador</h3>
+        <button class="modal-close" data-dismiss="catalogoCotizadorModal" style="color:#fff;">×</button>
+      </div>
+      <p style="color:var(--muted);font-size:12px;margin:0 0 12px;">
+        Configura aquí el precio de cada partida una sola vez. Al cotizar, solo capturas cantidades y el total se calcula solo (los precios siguen siendo editables en cada cotización si hace falta un ajuste puntual).
+      </p>
+      <div id="catalogoCotizadorBody">
+        <div style="text-align:center;padding:30px;color:var(--muted);"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>
+      </div>
+      <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px;">
+        <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Agregar partida nueva</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <input type="text" id="catNombreNuevo" placeholder="Nombre (ej: Jaladera)" style="flex:1 1 140px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px;">
+          <input type="text" id="catUnidadNuevo" placeholder="Unidad (pza, m2, ml…)" value="pza" style="width:110px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px;">
+          <input type="number" id="catPrecioNuevo" placeholder="Precio" min="0" step="0.01" style="width:100px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px;">
+          <button class="btn btn-primary btn-small" data-call="agregarPartidaCatalogoNueva"><i class="fa-solid fa-plus"></i> Agregar</button>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;padding:12px 0 0;">
+        <button class="btn btn-secondary" data-dismiss="catalogoCotizadorModal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MODAL: DETALLE COTIZACIÓN + COTIZADOR (admin) ═══════════ -->
   <div class="modal" id="adminCotDetalleModal">
-    <div class="modal-content" style="max-width:650px;">
+    <div class="modal-content" style="max-width:1180px;width:min(1180px,97vw);">
       <div class="modal-header" style="background:#1e5c22;color:#fff;border-radius:8px 8px 0 0;margin:-18px -18px 16px;padding:16px 18px;">
         <h3 class="modal-title" style="color:#fff;">
           <i class="fa-solid fa-briefcase"></i> Detalle de Cotización
@@ -1240,12 +1303,7 @@ unset($_usuario);
       <div id="adm_cot_body" style="overflow-x:auto;">
         <div style="text-align:center;padding:40px;color:var(--muted);"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>
       </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:center;padding:12px 0 0;margin-top:4px;border-top:1px solid var(--border);">
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-secondary btn-small" data-admin-cot-estado="en_revision">📋 En Revisión</button>
-          <button class="btn btn-secondary btn-small" data-admin-cot-estado="respondida">✅ Respondida</button>
-          <button class="btn btn-secondary btn-small" data-admin-cot-estado="cerrada">🔒 Cerrar</button>
-        </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;align-items:center;padding:12px 0 0;margin-top:4px;border-top:1px solid var(--border);">
         <button class="btn btn-secondary" data-dismiss="adminCotDetalleModal">Cerrar</button>
       </div>
     </div>
@@ -1255,5 +1313,14 @@ unset($_usuario);
   <script src="../assets/<?= av('js/event-delegation.js') ?>"></script>
   <script src="../assets/<?= av('js/animations.js') ?>"></script>
   <script src="../assets/<?= av('js/sse-notificaciones.js') ?>"></script>
+  <script>window.WH_FCM_VAPID_KEY = <?= json_encode(FCM_VAPID_KEY) ?>;</script>
+  <script src="../assets/<?= av('js/push-notifications.js') ?>"></script>
+  <script>
+    if (typeof firebaseAuth !== 'undefined') {
+      firebaseAuth.onAuthStateChanged(function (user) {
+        if (user) registerPush();
+      });
+    }
+  </script>
 </body>
 </html>

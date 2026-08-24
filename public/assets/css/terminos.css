@@ -6,8 +6,8 @@
 /* ── Override header (más compacto en esta página) ── */
 .header-nav {
   padding: 0 32px;
-  background: var(--color-surface, #242424);
-  border-bottom: 1px solid #2e2e2e;
+  background: var(--color-bg-card);
+  border-bottom: 1px solid var(--color-border);
   box-shadow: none;
 }
 
@@ -21,32 +21,32 @@
 }
 
 .nav-links a {
-  color: var(--color-text-muted, #a0a0a0);
+  color: var(--color-text-muted);
   font-size: 14px;
   font-weight: normal;
 }
 
 .nav-links a:hover {
-  color: var(--color-primary, #8b7355);
+  color: var(--color-primary);
 }
 
 /* ── Override footer (más oscuro y sutil en esta página) ── */
 .footer {
-  background: #141414;
+  background: var(--color-bg-main);
   padding: 28px 24px;
-  color: #666;
+  color: var(--color-text-dark);
   font-size: 13px;
-  border-top: 1px solid #2a2a2a;
+  border-top: 1px solid var(--color-border);
   margin-top: 0;
 }
 
 .footer p {
-  color: #666;
+  color: var(--color-text-dark);
   font-size: 13px;
 }
 
 .footer a {
-  color: var(--color-primary, #8b7355);
+  color: var(--color-primary);
   text-decoration: none;
 }
 
@@ -61,18 +61,18 @@
   text-align: center;
   margin-bottom: 48px;
   padding-bottom: 28px;
-  border-bottom: 1px solid #2e2e2e;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .page-header h1 {
   font-size: 28px;
   font-weight: 700;
-  color: var(--color-primary, #8b7355);
+  color: var(--color-primary);
   margin-bottom: 8px;
 }
 
 .page-header p {
-  color: var(--color-text-muted, #a0a0a0);
+  color: var(--color-text-muted);
   font-size: 14px;
 }
 
@@ -83,7 +83,7 @@
 .section h2 {
   font-size: 17px;
   font-weight: 600;
-  color: var(--color-primary, #8b7355);
+  color: var(--color-primary);
   margin-bottom: 12px;
   display: flex;
   align-items: center;
@@ -111,13 +111,13 @@
 }
 
 .highlight-box {
-  background: #242424;
-  border-left: 3px solid var(--color-primary, #8b7355);
+  background: var(--color-bg-card);
+  border-left: 3px solid var(--color-primary);
   border-radius: 0 8px 8px 0;
   padding: 14px 18px;
   margin: 14px 0;
   font-size: 13px;
-  color: var(--color-text-muted, #a0a0a0);
+  color: var(--color-text-muted);
 }
 
 /* ── Responsive ──────────────────────────────────────────────────── */

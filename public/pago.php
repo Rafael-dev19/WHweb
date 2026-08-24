@@ -26,7 +26,7 @@ if (!$paypalId)  error_log('[pago.php] PAYPAL_CLIENT_ID vacío o no definido');
 <head>
   <meta charset="UTF-8">
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Proceso de Pago - Wooden House</title>
   <meta name="description" content="Completa tu compra en Wooden House de forma segura. Pago con tarjeta de crédito/débito o PayPal. Transacciones cifradas con SSL.">
 
@@ -52,6 +52,7 @@ if (!$paypalId)  error_log('[pago.php] PAYPAL_CLIENT_ID vacío o no definido');
   <link rel="stylesheet" href="/assets/<?= av('css/variables.css') ?>">
   <link rel="stylesheet" href="/assets/<?= av('css/styles.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/pago.css') ?>">
+  <link rel="stylesheet" href="./assets/<?= av('css/theme-toggle.css') ?>">
   <link rel="stylesheet" href="/assets/<?= av('css/animations.css') ?>">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous" defer></script>
@@ -186,7 +187,8 @@ if (!$paypalId)  error_log('[pago.php] PAYPAL_CLIENT_ID vacío o no definido');
   </footer>
 
   <script src="./assets/<?= av('js/utils.js') ?>"></script>
-  <script src="/assets/<?= av('js/firebase-config.js') ?>"></script>
+  <script src="/assets/<?= av('js/theme-toggle.js') ?>"></script>
+<script src="/assets/<?= av('js/firebase-config.js') ?>"></script>
   <script src="/assets/<?= av('js/modal-auth.js') ?>"></script>
   <script src="./assets/<?= av('js/pago.js') ?>"></script>
   <script src="./assets/<?= av('js/event-delegation.js') ?>"></script>

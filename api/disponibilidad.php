@@ -123,7 +123,7 @@ function cargarCargaPorDia(string $desde, string $hasta, string $tipoEntrega = '
          FROM pedidos p
          INNER JOIN detalle_pedido dp ON dp.pedido_id = p.id
          WHERE p.fecha_estimada BETWEEN ? AND ?
-           AND p.estado NOT IN ('cancelado', 'entregado')
+           AND p.estado NOT IN ('cancelado', 'finalizado')
          GROUP BY p.fecha_estimada, p.cp_envio",
         [$desde, $hasta]
     );

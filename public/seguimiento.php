@@ -7,12 +7,13 @@ header('Content-Type: text/html; charset=utf-8');
 <head>
   <meta charset="UTF-8">
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Seguimiento de Solicitud – Wooden House</title>
   <meta name="description" content="Consulta el estado de tu pedido, cita o cotización en Wooden House. Ingresa tu número de folio WH-, CIT- o COT- para ver el estado en tiempo real.">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
   <link rel="stylesheet" href="./assets/<?= av('css/variables.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/solicitudes.css') ?>">
+  <link rel="stylesheet" href="./assets/<?= av('css/theme-toggle.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/animations.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/modal-auth.css') ?>">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -134,7 +135,8 @@ header('Content-Type: text/html; charset=utf-8');
     </div>
   </nav>
 
-  <script src="./assets/<?= av('js/firebase-config.js') ?>"></script>
+  <script src="./assets/<?= av('js/theme-toggle.js') ?>"></script>
+<script src="./assets/<?= av('js/firebase-config.js') ?>"></script>
   <script src="./assets/<?= av('js/modal-auth.js') ?>"></script>
   <script src="./assets/<?= av('js/seguimiento.js') ?>"></script>
   <script src="./assets/<?= av('js/event-delegation.js') ?>"></script>

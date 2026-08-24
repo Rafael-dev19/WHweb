@@ -20,7 +20,7 @@ header('Content-Type: text/html; charset=utf-8');
 <head>
   <meta charset="UTF-8">
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Mi Cuenta – Wooden House</title>
   <meta name="description" content="Gestiona tu cuenta en Wooden House. Consulta tu historial de pedidos, cotizaciones y actualiza tus datos personales.">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
@@ -28,6 +28,8 @@ header('Content-Type: text/html; charset=utf-8');
   <link rel="stylesheet" href="./assets/<?= av('css/styles.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/modal-auth.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/mi-cuenta.css') ?>">
+  <link rel="stylesheet" href="./assets/<?= av('css/locked-field.css') ?>">
+  <link rel="stylesheet" href="./assets/<?= av('css/theme-toggle.css') ?>">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous" defer></script>
 </head>
@@ -128,42 +130,6 @@ header('Content-Type: text/html; charset=utf-8');
             </label>
             <input type="tel" id="pfTelefono" name="telefono" maxlength="20" placeholder="10 dígitos">
           </div>
-          <div class="col-12 mc-form-group">
-            <label>Calle y número
-              <span class="mc-tooltip" title="Escribe solo la calle y número exterior/interior. La colonia va en el campo siguiente.">
-                <i class="fa-solid fa-circle-question"></i>
-              </span>
-            </label>
-            <input type="text" id="pfDireccion" name="direccion" maxlength="255" placeholder="Ej: Av. Lázaro Cárdenas 1234 Int. 5">
-          </div>
-          <div class="col-md-6 mc-form-group">
-            <label>Colonia
-              <span class="mc-tooltip" title="Nombre de tu colonia o fraccionamiento.">
-                <i class="fa-solid fa-circle-question"></i>
-              </span>
-            </label>
-            <input type="text" id="pfColonia" name="colonia" maxlength="120" placeholder="Ej: Col. Chapalita">
-          </div>
-          <div class="col-md-6 mc-form-group">
-            <label>Municipio / Alcaldía
-              <span class="mc-tooltip" title="En Jalisco generalmente es Guadalajara, Zapopan, Tlaquepaque, etc.">
-                <i class="fa-solid fa-circle-question"></i>
-              </span>
-            </label>
-            <input type="text" id="pfMunicipio" name="municipio" maxlength="100" placeholder="Ej: Zapopan">
-          </div>
-          <div class="col-md-6 mc-form-group">
-            <label>Ciudad</label>
-            <input type="text" id="pfCiudad" name="ciudad" maxlength="100" placeholder="Ej: Guadalajara">
-          </div>
-          <div class="col-md-6 mc-form-group">
-            <label>Código postal
-              <span class="mc-tooltip" title="Tu CP de 5 dígitos. Lo usamos para calcular el costo de envío.">
-                <i class="fa-solid fa-circle-question"></i>
-              </span>
-            </label>
-            <input type="text" id="pfCP" name="cp" maxlength="10" placeholder="Ej: 45040">
-          </div>
         </div>
         <div class="mc-form-actions">
           <button type="submit" class="btn-mc-primary" id="btnGuardarPerfil">
@@ -171,6 +137,12 @@ header('Content-Type: text/html; charset=utf-8');
           </button>
         </div>
       </form>
+
+      <div class="mc-section-title" style="margin-top:28px;">
+        <i class="fa-solid fa-location-dot"></i> Dirección
+      </div>
+      <p class="mc-form-hint"><i class="fa-solid fa-circle-info"></i> Guárdala una vez y la usaremos para tus próximas cotizaciones y pedidos, sin volver a pedírtela.</p>
+      <div id="mcDireccionWrap"></div>
     </div>
 
   </div><!-- /mcContent -->
@@ -200,10 +172,16 @@ header('Content-Type: text/html; charset=utf-8');
     <button class="mbn-item mbn-item--active" data-auth-action="openMenuMovil"><i class="fa-solid fa-user"></i><span>Mi cuenta</span></button>
   </div>
 </nav>
+<script src="./assets/<?= av('js/theme-toggle.js') ?>"></script>
 <script src="./assets/<?= av('js/firebase-config.js') ?>"></script>
 <script src="./assets/<?= av('js/modal-auth.js') ?>"></script>
+<script src="./assets/<?= av('js/maps-picker.js') ?>"></script>
+<script src="./assets/<?= av('js/locked-field.js') ?>"></script>
 <script src="./assets/<?= av('js/mi-cuenta.js') ?>"></script>
 <script src="./assets/<?= av('js/event-delegation.js') ?>"></script>
 <script src="./assets/<?= av('js/animations.js') ?>"></script>
+<?php if (defined('GOOGLE_MAPS_API_KEY') && GOOGLE_MAPS_API_KEY): ?>
+<script src="https://maps.googleapis.com/maps/api/js?key=<?= htmlspecialchars(GOOGLE_MAPS_API_KEY) ?>&libraries=places&callback=initMapsPickerReady&loading=async" async defer></script>
+<?php endif; ?>
 </body>
 </html>

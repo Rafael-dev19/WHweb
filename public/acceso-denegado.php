@@ -22,7 +22,7 @@ if ($area === 'admin') {
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Acceso restringido — Wooden House</title>
   <meta name="description" content="Acceso restringido a Wooden House. Inicia sesión con tu cuenta para continuar.">
   <link rel="icon" type="image/x-icon" href="/favicon.ico">

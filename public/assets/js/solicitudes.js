@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', function () {
   initTabs();
   initFormCotizacion();
   initFormCita();
-  initMedidasField();
+  initMapPickerCotizacion();
   setMinDate();
   checkURLParams();
   initRealTimeValidation();
@@ -215,14 +215,14 @@ function initFormCotizacion() {
       municipio:             sanitizeText(fd.get('municipio') || '', 100),
       ciudad:                sanitizeText(fd.get('ciudad')    || '', 100),
       cp:                    sanitizeText(fd.get('cp')        || '', 10),
-      modelo_mueble:         sanitizeText(fd.get('modeloMueble') || '', 100),
+      lat:                   fd.get('lat') || null,
+      lng:                   fd.get('lng') || null,
+      tipo_mueble:           sanitizeText(fd.get('tipoMueble') || '', 20),
       descripcion_solicitud: sanitizeDescription(fd.get('descripcion') || ''),
-      tiene_medidas:         fd.get('tieneMedidas') === 'si' ? 1 : 0,
-      medidas:               sanitizeDescription(fd.get('medidas') || '', 500),
-      rango_presupuesto:     sanitizeText(fd.get('presupuesto') || '', 50),
-      requiere_instalacion:  fd.get('instalacion') === 'si' ? 1 : 0,
+      ancho_espacio:         fd.get('anchoEspacio') || null,
+      alto_espacio:          fd.get('altoEspacio')  || null,
+      fondo_espacio:         fd.get('fondoEspacio') || null,
       urgencia:              sanitizeText(fd.get('urgencia') || '', 50),
-      instalacion:           sanitizeText(fd.get('instalacion') || '', 30),
       // Anti-bot honeypot fields (always empty for real users)
       _hp:     fd.get('_hp')      || '',
       website: fd.get('website')  || '',
@@ -249,6 +249,11 @@ function initFormCotizacion() {
     }
     if (!isValidPhone(datos.telefono_cliente)) {
       showAlert('El teléfono debe tener al menos 10 dígitos', 'error'); return;
+    }
+    if (!datos.tipo_mueble) {
+      showAlert('Selecciona el tipo de proyecto', 'error');
+      document.querySelector('#formCotizacion [name="tipoMueble"]')?.focus();
+      return;
     }
     if (!datos.descripcion_solicitud || datos.descripcion_solicitud.length < 10) {
       showAlert('Por favor describe tu proyecto con al menos 10 caracteres', 'error');
@@ -278,12 +283,23 @@ function initFormCotizacion() {
       const data = await res.json();
       if (!data.success) throw new Error(data.error || 'Error al enviar cotización');
 
+      // Subir fotos/boceto (opcional) — ya con el id de la cotización recién creada.
+      const cotId = data.cotizacion_id;
+      if (cotId) {
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Subiendo fotos...';
+        await subirImagenesCotizacionCliente(cotId, document.getElementById('cotFotosEspacio')?.files, 'cliente_espacio');
+        await subirImagenesCotizacionCliente(cotId, document.getElementById('cotBoceto')?.files, 'cliente_boceto');
+      }
+
       showAlert(
-        `<i class="fa-solid fa-circle-check"></i> ¡Cotización enviada! Tu número de seguimiento es <strong>${data.numero_cotizacion}</strong>. Recibirás confirmación en tu correo.`,
+        `<i class="fa-solid fa-circle-check"></i> ¡Cotización enviada! Tu número de seguimiento es <strong>${data.numero_cotizacion}</strong>. Recuerda: es un estimado rápido — el jefe la revisará y te responderá por correo con el siguiente paso.`,
         'success'
       );
       form.reset();
-      document.getElementById('medidasField')?.setAttribute('style', 'display:none');
+      // No se reinicia MapsPicker: es un singleton (ver Fase 9) y "clear()" deja
+      // su estado interno inconsistente para una siguiente inicialización. El
+      // mapa se queda mostrando la última ubicación confirmada, lo cual es
+      // razonable si el cliente va a cotizar otro proyecto en la misma dirección.
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       showAlert(err.message || 'Error al enviar cotización. Intenta nuevamente.', 'error');
@@ -292,6 +308,117 @@ function initFormCotizacion() {
       btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Enviar Solicitud de Cotización';
     }
   });
+}
+
+// ── Subir fotos del cliente (espacio/boceto) a la cotización recién creada ──
+async function subirImagenesCotizacionCliente(cotId, fileList, tipo) {
+  if (!fileList || !fileList.length) return;
+  const ALLOWED = ['image/jpeg', 'image/png', 'image/webp'];
+  const ts = Date.now();
+  for (let i = 0; i < fileList.length; i++) {
+    const file = fileList[i];
+    if (!ALLOWED.includes(file.type)) continue; // el accept del input ya filtra; doble verificación
+    const ext  = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    const path = `cotizaciones/${cotId}/cliente/${tipo}-${ts}-${i}.${ext}`;
+    try {
+      const url = await uploadFileToStorage(path, file);
+      await fetch(`${API_URL}/cotizaciones.php?action=agregar_imagen_cliente&id=${cotId}`, {
+        method:      'POST',
+        credentials: 'same-origin',
+        headers:     { 'Content-Type': 'application/json' },
+        body:        JSON.stringify({ url_imagen: url, tipo }),
+      });
+    } catch (err) {
+      console.warn('[solicitudes] No se pudo subir una imagen:', err);
+    }
+  }
+}
+
+// ── Mapa interactivo de dirección (cotización) ────────────────────
+function initMapPickerCotizacion() {
+  const container = document.getElementById('cotMapPickerContainer');
+  if (!container || !window.MapsPicker) return;
+
+  const _mapsLoadTimer = setTimeout(() => {
+    if (!window.google?.maps) {
+      const editSection = document.getElementById('cotDireccionDetalleEdit');
+      if (editSection) editSection.style.display = 'block';
+      container.innerHTML =
+        '<p style="text-align:center;padding:20px 12px;color:#888;font-size:13px;">' +
+        '<i class="fa-solid fa-map-location-dot" style="font-size:28px;display:block;margin-bottom:8px;"></i>' +
+        'Mapa no disponible. Ingresa tu dirección en los campos de abajo.</p>';
+    }
+  }, 4000);
+  document.addEventListener('maps-picker-ready', () => clearTimeout(_mapsLoadTimer), { once: true });
+
+  MapsPicker.init(container, {
+    onConfirm(v) {
+      const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+      set('cotDireccion', v.direccion);
+      set('cotColonia',   v.colonia);
+      set('cotCiudad',    v.ciudad);
+      set('cotMunicipio', v.municipio);
+      set('cotCP',        v.cp);
+      set('cotLat',       v.lat);
+      set('cotLng',       v.lng);
+
+      set('cotDireccionEdit', v.direccion);
+      set('cotColoniaEdit',   v.colonia);
+      set('cotCiudadEdit',    v.ciudad);
+      set('cotMunicipioEdit', v.municipio);
+      set('cotCPEdit',        v.cp);
+
+      const detalle = document.getElementById('cotDireccionDetalleEdit');
+      if (detalle) detalle.style.display = 'block';
+    }
+  });
+
+  // Sincronizar edición manual → hidden inputs
+  [
+    ['cotDireccionEdit', 'cotDireccion'],
+    ['cotColoniaEdit',   'cotColonia'],
+    ['cotCiudadEdit',    'cotCiudad'],
+    ['cotMunicipioEdit', 'cotMunicipio'],
+    ['cotCPEdit',        'cotCP'],
+  ].forEach(([editId, hiddenId]) => {
+    const editEl = document.getElementById(editId);
+    if (editEl) editEl.addEventListener('input', () => {
+      const hid = document.getElementById(hiddenId);
+      if (hid) hid.value = editEl.value;
+    });
+  });
+
+  const btnSkip = document.getElementById('cotBtnSkipMapa');
+  if (btnSkip) {
+    btnSkip.addEventListener('click', () => {
+      const detalle = document.getElementById('cotDireccionDetalleEdit');
+      if (detalle) detalle.style.display = 'block';
+      detalle?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      btnSkip.style.display = 'none';
+    });
+  }
+}
+
+// Precarga el mapa con una dirección ya guardada (perfil del cliente logueado).
+function precargarMapaCotizacion(cliente) {
+  if (!cliente?.direccion || !window.MapsPicker) return;
+  const intentar = () => {
+    if (!window.google?.maps) { setTimeout(intentar, 300); return; }
+    MapsPicker.setValue({
+      lat: cliente.lat ? parseFloat(cliente.lat) : null,
+      lng: cliente.lng ? parseFloat(cliente.lng) : null,
+      direccion: cliente.direccion, colonia: cliente.colonia,
+      ciudad: cliente.ciudad, municipio: cliente.municipio, cp: cliente.cp,
+    });
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+    set('cotDireccion', cliente.direccion); set('cotColonia', cliente.colonia);
+    set('cotCiudad', cliente.ciudad); set('cotMunicipio', cliente.municipio); set('cotCP', cliente.cp);
+    set('cotDireccionEdit', cliente.direccion); set('cotColoniaEdit', cliente.colonia);
+    set('cotCiudadEdit', cliente.ciudad); set('cotMunicipioEdit', cliente.municipio); set('cotCPEdit', cliente.cp);
+    const detalle = document.getElementById('cotDireccionDetalleEdit');
+    if (detalle) detalle.style.display = 'block';
+  };
+  intentar();
 }
 
 // ── Formulario Cita ───────────────────────────────────────────────
@@ -453,19 +580,6 @@ function selectTime(element) {
 
 
 // ── Mostrar/ocultar campo medidas ─────────────────────────────────
-function initMedidasField() {
-  const sel   = document.getElementById('tieneMedidas');
-  const campo = document.getElementById('medidasField');
-  if (!sel || !campo) return;
-  campo.style.display = 'none';
-  sel.addEventListener('change', (e) => {
-    const show = e.target.value === 'si';
-    campo.style.display = show ? 'block' : 'none';
-    const inp = campo.querySelector('input, textarea');
-    if (inp) inp.required = show;
-  });
-}
-
 // ── Fecha mínima cita: mañana ─────────────────────────────────────
 function setMinDate() {
   const fechaCita = document.getElementById('fechaCita');
@@ -616,11 +730,18 @@ async function prefillContactoSiLogueado() {
     setVal('email',        cliente.correo   || '');
     setVal('emailConfirm', cliente.correo   || '');
     setVal('telefono',     cliente.telefono || '');
-    setVal('direccion',    cliente.direccion || '');
-    setVal('colonia',      cliente.colonia   || '');
-    setVal('municipio',    cliente.municipio || '');
-    setVal('ciudad',       cliente.ciudad    || '');
-    setVal('cp',           cliente.cp        || '');
+    if (formId === 'formCotizacion') {
+      // La dirección de esta forma vive en el mapa interactivo, no en un
+      // input de texto visible — precargarla ahí para que el cliente la VEA
+      // confirmada, en vez de solo rellenar el campo oculto en silencio.
+      precargarMapaCotizacion(cliente);
+    } else {
+      setVal('direccion',    cliente.direccion || '');
+      setVal('colonia',      cliente.colonia   || '');
+      setVal('municipio',    cliente.municipio || '');
+      setVal('ciudad',       cliente.ciudad    || '');
+      setVal('cp',           cliente.cp        || '');
+    }
 
     const _partes   = (cliente.nombre || 'C').trim().split(/\s+/).filter(Boolean);
     const inicial   = _partes.length >= 2

@@ -18,13 +18,14 @@ if (empty($_SESSION['cliente_email_verified'])) {
 <head>
   <meta charset="UTF-8">
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Solicitudes - Wooden House</title>
   <meta name="description" content="Solicita una cotización personalizada o agenda una visita técnica con Wooden House. Asesoría gratuita para tu proyecto de muebles a medida.">
   
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
   <link rel="stylesheet" href="./assets/<?= av('css/variables.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/solicitudes.css') ?>">
+  <link rel="stylesheet" href="./assets/<?= av('css/theme-toggle.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/animations.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/modal-auth.css') ?>">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -90,15 +91,19 @@ if (empty($_SESSION['cliente_email_verified'])) {
     <!-- TAB 1: COTIZACIÓN -->
     <div id="tab-cotizacion" class="tab-content active">
       <div class="info-box">
-        <h4><i class="fa-solid fa-file-invoice-dollar"></i> Cotización en línea — respuesta en 24 horas</h4>
-        <p><strong>¿Cuándo usar esta opción?</strong> Cuando ya tienes una idea del mueble que necesitas y quieres saber el precio antes de comprometerte.</p>
+        <h4><i class="fa-solid fa-file-invoice-dollar"></i> Cotizador rápido — respuesta en 24 horas</h4>
+        <p><strong>¿Cuándo usar esta opción?</strong> Cuando quieres una idea rápida de tu proyecto antes de comprometerte.</p>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
           <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><i class="fa-solid fa-check" style="color:#8b7355;"></i> No requiere visita</div>
-          <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><i class="fa-solid fa-check" style="color:#8b7355;"></i> Cotización detallada</div>
           <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><i class="fa-solid fa-check" style="color:#8b7355;"></i> Respuesta en 24 hrs</div>
           <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><i class="fa-solid fa-check" style="color:#8b7355;"></i> Sin compromiso</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><i class="fa-solid fa-check" style="color:#8b7355;"></i> 100% gratis</div>
         </div>
-        <p style="margin-top:10px;font-size:13px;color:#888;"><i class="fa-solid fa-circle-info"></i> Si no tienes medidas exactas, no te preocupes — indícalas aproximadas y nuestro equipo te orientará.</p>
+        <p style="margin-top:12px;font-size:13px;color:#e0b060;background:#3a2f1a;border-radius:8px;padding:10px 12px;">
+          <i class="fa-solid fa-triangle-exclamation"></i> <strong>Este cotizador es solo un estimado rápido, no un precio final.</strong>
+          Si necesitas la información ya, envíala así. Si la quieres exacta, genera tu cotización y espera nuestra respuesta:
+          el jefe la revisará, te la responderá por correo y agendaremos una visita para confirmar medidas y darte un precio real.
+        </p>
       </div>
 
       <form id="formCotizacion" autocomplete="off">
@@ -129,25 +134,51 @@ if (empty($_SESSION['cliente_email_verified'])) {
               <div class="help-text">Escribe tu correo nuevamente para confirmarlo</div>
             </div>
             <div class="col-12 form-group">
-              <label>Dirección</label>
-              <input type="text" name="direccion" placeholder="Calle y número" maxlength="255" autocomplete="street-address">
-            </div>
-            <div class="col-md-6 form-group">
-              <label>Colonia</label>
-              <input type="text" name="colonia" placeholder="Ej: Col. Providencia" maxlength="120" autocomplete="address-line2">
-            </div>
-            <div class="col-md-6 form-group">
-              <label>Municipio / Alcaldía</label>
-              <input type="text" name="municipio" placeholder="Ej: Zapopan" maxlength="100">
-            </div>
-            <div class="col-md-6 form-group">
-              <label>Ciudad</label>
-              <input type="text" name="ciudad" placeholder="Ej: Guadalajara" maxlength="100" autocomplete="address-level2">
-              <div class="help-text">Nos ayuda a calcular costos de envío/instalación</div>
-            </div>
-            <div class="col-md-6 form-group">
-              <label>Código Postal</label>
-              <input type="text" name="cp" placeholder="Ej: 44100" maxlength="10" autocomplete="postal-code">
+              <div class="wh-info-box" style="margin-bottom:10px;">
+                <i class="fa-solid fa-location-dot"></i>
+                <span>Busca tu dirección y confirma la ubicación en el mapa — así llegamos exacto el día de la visita o instalación.</span>
+              </div>
+              <div id="cotMapPickerContainer" class="form-group"></div>
+              <div style="text-align:right;margin-top:-4px;margin-bottom:4px;">
+                <button type="button" id="cotBtnSkipMapa"
+                  style="background:none;border:none;color:var(--muted,#888);font-size:12px;cursor:pointer;text-decoration:underline;padding:0;">
+                  Ingresar dirección manualmente
+                </button>
+              </div>
+              <input type="hidden" name="direccion" id="cotDireccion">
+              <input type="hidden" name="colonia"   id="cotColonia">
+              <input type="hidden" name="ciudad"    id="cotCiudad">
+              <input type="hidden" name="municipio" id="cotMunicipio">
+              <input type="hidden" name="cp"        id="cotCP">
+              <input type="hidden" name="lat"       id="cotLat">
+              <input type="hidden" name="lng"       id="cotLng">
+              <div id="cotDireccionDetalleEdit" style="display:none;margin-top:6px;">
+                <p style="font-size:12px;color:var(--muted);margin-bottom:8px;"><i class="fa-solid fa-pen-to-square"></i> Ingresa o corrige tu dirección:</p>
+                <div class="row g-2">
+                  <div class="col-md-8 form-group" style="margin-bottom:8px;">
+                    <label style="font-size:12px;">Calle y número</label>
+                    <input type="text" id="cotDireccionEdit" placeholder="Calle y número" style="font-size:13px;">
+                  </div>
+                  <div class="col-md-4 form-group" style="margin-bottom:8px;">
+                    <label style="font-size:12px;">CP</label>
+                    <input type="text" id="cotCPEdit" placeholder="45000" maxlength="5" style="font-size:13px;">
+                  </div>
+                </div>
+                <div class="row g-2">
+                  <div class="col-md-4 form-group" style="margin-bottom:8px;">
+                    <label style="font-size:12px;">Colonia</label>
+                    <input type="text" id="cotColoniaEdit" placeholder="Colonia" style="font-size:13px;">
+                  </div>
+                  <div class="col-md-4 form-group" style="margin-bottom:8px;">
+                    <label style="font-size:12px;">Ciudad</label>
+                    <input type="text" id="cotCiudadEdit" placeholder="Ciudad" style="font-size:13px;">
+                  </div>
+                  <div class="col-md-4 form-group" style="margin-bottom:8px;">
+                    <label style="font-size:12px;">Municipio</label>
+                    <input type="text" id="cotMunicipioEdit" placeholder="Municipio" style="font-size:13px;">
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -156,61 +187,55 @@ if (empty($_SESSION['cliente_email_verified'])) {
           <h2 class="section-title"><i class="fa-solid fa-ruler-combined"></i> Especificaciones del Proyecto</h2>
           <div class="row g-3">
             <div class="col-md-6 form-group">
-              <label>Modelo de Mueble <span class="required">*</span>
-                <span class="wh-help" data-tip="Si no estás seguro del modelo, selecciona 'Diseño Personalizado' y descríbelo en el campo de descripción. Puedes ver los modelos en nuestro catálogo.">?</span>
-              </label>
-              <select name="modeloMueble" required>
+              <label>Tipo de proyecto <span class="required">*</span></label>
+              <select name="tipoMueble" required>
                 <option value="">Selecciona una opción</option>
-                <option value="sevilla">Modelo Sevilla</option>
-                <option value="roma">Modelo Roma</option>
-                <option value="edinburgo">Modelo Edinburgo</option>
-                <option value="singapur">Modelo Singapur</option>
-                <option value="sydney">Modelo Sydney</option>
-                <option value="palermo">Modelo Palermo</option>
-                <option value="budapest">Modelo Budapest</option>
-                <option value="quebec">Modelo Quebec</option>
-                <option value="toronto">Modelo Toronto</option>
-                <option value="amsterdam">Modelo Amsterdam</option>
-                <option value="oslo">Mueble Oslo</option>
-                <option value="paris">Muebles Paris</option>
-                <option value="tokio">Mueble Tokio</option>
-                <option value="personalizado">Diseño Personalizado</option>
+                <option value="cocina">Cocina</option>
+                <option value="closet">Closet</option>
+                <option value="lavamanos">Lavamanos</option>
+                <option value="otro">Otro</option>
               </select>
-            </div>
-
-            <div class="col-md-6 form-group">
-              <label>¿Tienes las medidas?
-                <span class="wh-help" data-tip="Si tienes medidas aproximadas también puedes indicarlas — no necesitan ser exactas para obtener una cotización inicial.">?</span>
-              </label>
-              <select name="tieneMedidas" id="tieneMedidas">
-                <option value="si">Sí, tengo las medidas</option>
-                <option value="aproximadas">Tengo medidas aproximadas</option>
-              </select>
-            </div>
-
-            <div class="col-12 form-group" id="medidasField">
-              <label>Medidas del Mueble</label>
-              <input type="text" name="medidas" placeholder="Ej: Ancho 2.5m x Alto 2.4m x Profundidad 0.6m" maxlength="300">
-              <div class="help-text">Proporciona las medidas disponibles (alto, ancho, profundidad)</div>
             </div>
 
             <div class="col-12 form-group">
-              <label>Descripción y Características Deseadas <span class="required">*</span></label>
+              <label>Medidas del espacio (aproximadas)
+                <span class="wh-help" data-tip="Ancho (x) = de izquierda a derecha. Alto (y) = de piso a techo. Fondo (z) = qué tan profundo entra hacia la pared. No necesitan ser exactas.">?</span>
+              </label>
+              <div class="row g-2">
+                <div class="col-4 form-group" style="margin-bottom:0;">
+                  <label style="font-size:12px;">Ancho — x (m)</label>
+                  <input type="number" name="anchoEspacio" min="0" step="0.01" placeholder="Ej: 2.50" style="font-size:13px;">
+                </div>
+                <div class="col-4 form-group" style="margin-bottom:0;">
+                  <label style="font-size:12px;">Alto — y (m)</label>
+                  <input type="number" name="altoEspacio" min="0" step="0.01" placeholder="Ej: 2.40" style="font-size:13px;">
+                </div>
+                <div class="col-4 form-group" style="margin-bottom:0;">
+                  <label style="font-size:12px;">Fondo — z (m)</label>
+                  <input type="number" name="fondoEspacio" min="0" step="0.01" placeholder="Ej: 0.60" style="font-size:13px;">
+                </div>
+              </div>
+              <div class="help-text">x = ancho del espacio, y = altura (piso a techo), z = qué tan hondo entra hacia la pared. Aproximadas está bien.</div>
+            </div>
+
+            <div class="col-12 form-group">
+              <label>Descripción — ¿cómo te imaginas tu proyecto? <span class="required">*</span></label>
               <textarea name="descripcion" placeholder="Describe tu proyecto: estilo, colores, materiales, funcionalidades (cajones, puertas, iluminación), etc." required maxlength="1000"></textarea>
               <div class="help-text">Entre más detalles proporciones, más precisa será la cotización</div>
             </div>
 
             <div class="col-md-6 form-group">
-              <label>Presupuesto Estimado
-                <span class="wh-help" data-tip="Es opcional y confidencial. Nos permite enfocar la propuesta en opciones que se ajusten a tu inversión sin mostrarte alternativas fuera de rango.">?</span>
+              <label>Fotos del espacio
+                <span class="wh-help" data-tip="Fotos de dónde va tu proyecto — nos ayudan muchísimo a darte una idea más precisa.">?</span>
               </label>
-              <select name="presupuesto">
-                <option value="">Selecciona un rango</option>
-                <option value="5-20">$5,000 - $20,000</option>
-                <option value="20-50">$20,000 - $50,000</option>
-                <option value="50+">Más de $50,000</option>
-              </select>
-              <div class="help-text">Opcional: Nos ayuda a orientar mejor la propuesta</div>
+              <input type="file" name="fotosEspacio" id="cotFotosEspacio" accept="image/jpeg,image/jpg,image/png,image/webp" multiple>
+              <div class="help-text">Opcional pero muy recomendado. Solo imágenes (jpg, png, webp), máx. 5.</div>
+            </div>
+
+            <div class="col-md-6 form-group">
+              <label>Boceto o imagen de referencia (opcional)</label>
+              <input type="file" name="boceto" id="cotBoceto" accept="image/jpeg,image/jpg,image/png,image/webp" multiple>
+              <div class="help-text">Si tienes una imagen de Pinterest, un dibujo, o algo similar a lo que buscas.</div>
             </div>
 
             <div class="col-md-6 form-group">
@@ -222,15 +247,6 @@ if (empty($_SESSION['cliente_email_verified'])) {
                 <option value="urgente">Menos de 1 mes</option>
                 <option value="1-3meses">1 a 3 meses</option>
                 <option value="flexible">Sin prisa, evaluando opciones</option>
-              </select>
-            </div>
-
-            <div class="col-md-6 form-group">
-              <label>¿Necesitas instalación?</label>
-              <select name="instalacion">
-                <option value="">Selecciona una opción</option>
-                <option value="si">Sí, requiero instalación</option>
-                <option value="no">No requiero instalación</option>
               </select>
             </div>
           </div>
@@ -382,10 +398,15 @@ if (empty($_SESSION['cliente_email_verified'])) {
     </div>
   </nav>
 
-  <script src="./assets/<?= av('js/firebase-config.js') ?>"></script>
+  <script src="./assets/<?= av('js/theme-toggle.js') ?>"></script>
+<script src="./assets/<?= av('js/firebase-config.js') ?>"></script>
   <script src="./assets/<?= av('js/modal-auth.js') ?>"></script>
+  <script src="./assets/<?= av('js/maps-picker.js') ?>"></script>
   <script src="./assets/<?= av('js/solicitudes.js') ?>"></script>
   <script src="./assets/<?= av('js/event-delegation.js') ?>"></script>
   <script src="./assets/<?= av('js/animations.js') ?>"></script>
+  <?php if (defined('GOOGLE_MAPS_API_KEY') && GOOGLE_MAPS_API_KEY): ?>
+  <script src="https://maps.googleapis.com/maps/api/js?key=<?= htmlspecialchars(GOOGLE_MAPS_API_KEY) ?>&libraries=places&callback=initMapsPickerReady&loading=async" async defer></script>
+  <?php endif; ?>
 </body>
 </html>

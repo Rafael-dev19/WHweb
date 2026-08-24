@@ -38,7 +38,7 @@ CREATE TABLE usuarios_personal (
   firebase_uid VARCHAR(128) NOT NULL UNIQUE,
   nombre_completo VARCHAR(120) NOT NULL,
   correo VARCHAR(150) NOT NULL UNIQUE,
-  rol ENUM('administrador','empleado') NOT NULL DEFAULT 'empleado',
+  rol ENUM('jefe','administrador','empleado','disenador') NOT NULL DEFAULT 'empleado',
   activo TINYINT(1) NOT NULL DEFAULT 1,
   fecha_creacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   fecha_actualizacion TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
@@ -515,7 +515,7 @@ CREATE TABLE IF NOT EXISTS invitaciones_personal (
   token         VARCHAR(64)  NOT NULL UNIQUE,
   correo        VARCHAR(255) NOT NULL,
   nombre_completo VARCHAR(255) NOT NULL,
-  rol           ENUM('administrador','empleado') NOT NULL DEFAULT 'empleado',
+  rol           ENUM('jefe','administrador','empleado','disenador') NOT NULL DEFAULT 'empleado',
   creada_por    INT          NOT NULL,
   expira_en     DATETIME     NOT NULL,
   usada_en      DATETIME     NULL DEFAULT NULL,
@@ -523,3 +523,195 @@ CREATE TABLE IF NOT EXISTS invitaciones_personal (
   INDEX idx_token  (token),
   INDEX idx_correo (correo)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ================================================================
+-- FASE 1 — NUEVOS ROLES: jefe, administrador (soporte técnico),
+-- empleado, disenador (ejecutar en instalaciones existentes)
+--
+-- IMPORTANTE — orden estricto, ejecutar los 4 bloques en orden:
+--   1) Ampliar el ENUM sin quitar los valores viejos todavía.
+--   2) Reasignar TODAS las cuentas 'administrador' actuales a 'jefe'
+--      (el dueño del taller). Si ya tienes una cuenta que NO debe
+--      volverse jefe, avisa antes de correr este paso.
+--   3) Estrechar el ENUM al set final (ya no quedan filas 'administrador').
+--   4) Mismo ENUM en invitaciones_personal.
+-- ================================================================
+ALTER TABLE usuarios_personal
+  MODIFY COLUMN rol ENUM('administrador','empleado','jefe','disenador')
+  NOT NULL DEFAULT 'empleado';
+
+UPDATE usuarios_personal SET rol = 'jefe' WHERE rol = 'administrador';
+
+ALTER TABLE usuarios_personal
+  MODIFY COLUMN rol ENUM('jefe','administrador','empleado','disenador')
+  NOT NULL DEFAULT 'empleado';
+
+ALTER TABLE invitaciones_personal
+  MODIFY COLUMN rol ENUM('jefe','administrador','empleado','disenador')
+  NOT NULL DEFAULT 'empleado';
+
+-- ================================================================
+-- FASE 2 — Auditoría de acciones de seguridad sobre cuentas de personal
+-- (reset de 2FA / revocación de sesiones ejecutados desde el panel)
+-- ================================================================
+CREATE TABLE IF NOT EXISTS auditoria_seguridad_personal (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  usuario_afectado_id INT NOT NULL,
+  ejecutado_por_id INT NOT NULL,
+  accion ENUM('reset_2fa','revocar_sesiones','activar_cuenta','desactivar_cuenta') NOT NULL,
+  detalle VARCHAR(255) NULL,
+  fecha_creacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT fk_auditoria_afectado
+    FOREIGN KEY (usuario_afectado_id) REFERENCES usuarios_personal(id) ON DELETE CASCADE,
+  CONSTRAINT fk_auditoria_ejecutor
+    FOREIGN KEY (ejecutado_por_id) REFERENCES usuarios_personal(id) ON DELETE CASCADE,
+
+  INDEX idx_afectado (usuario_afectado_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ================================================================
+-- FASE 3 — Nuevo flujo de estados de pedido + rol diseñador
+-- (ejecutar en instalaciones existentes, en este orden)
+-- ================================================================
+
+-- 1) Ampliar el ENUM manteniendo los valores viejos
+ALTER TABLE pedidos MODIFY COLUMN estado
+  ENUM('pendiente','anticipo_pagado','pagado','en_produccion','listo','listo_para_entrega','entregado','cancelado',
+       'listo_para_produccion','alistando_pedido','en_camino_instalacion','finalizado')
+  NOT NULL DEFAULT 'pendiente';
+
+-- 2) Migrar los pedidos existentes a los nombres nuevos
+UPDATE pedidos SET estado = 'alistando_pedido'      WHERE estado = 'listo';
+UPDATE pedidos SET estado = 'en_camino_instalacion' WHERE estado = 'listo_para_entrega';
+UPDATE pedidos SET estado = 'finalizado'            WHERE estado = 'entregado';
+-- 'en_produccion' se reutiliza tal cual, ahora es un estado oficial del nuevo flujo.
+
+-- 3) Estrechar el ENUM al set final
+ALTER TABLE pedidos MODIFY COLUMN estado
+  ENUM('pendiente','anticipo_pagado','pagado',
+       'listo_para_produccion','en_produccion','alistando_pedido','en_camino_instalacion','finalizado',
+       'cancelado')
+  NOT NULL DEFAULT 'pendiente';
+
+-- 4) Columnas para el trabajo del diseñador
+ALTER TABLE pedidos ADD COLUMN disenador_id INT NULL AFTER cliente_id;
+ALTER TABLE pedidos ADD COLUMN mensaje_disenador TEXT NULL AFTER notas;
+ALTER TABLE pedidos ADD CONSTRAINT fk_pedidos_disenador
+  FOREIGN KEY (disenador_id) REFERENCES usuarios_personal(id) ON DELETE SET NULL;
+
+CREATE TABLE IF NOT EXISTS pedido_imagenes_diseno (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  pedido_id INT NOT NULL,
+  url_imagen VARCHAR(350) NOT NULL,
+  tipo ENUM('sketchup','vcarve','otro') NOT NULL DEFAULT 'otro',
+  subido_por INT NOT NULL,
+  fecha_creacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT fk_pedido_img_pedido FOREIGN KEY (pedido_id) REFERENCES pedidos(id) ON DELETE CASCADE,
+  CONSTRAINT fk_pedido_img_subido_por FOREIGN KEY (subido_por) REFERENCES usuarios_personal(id),
+  INDEX idx_pedido (pedido_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ================================================================
+-- FASE 4 — Tokens de dispositivo para notificaciones push (FCM)
+-- ================================================================
+CREATE TABLE IF NOT EXISTS dispositivos_push (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  usuario_personal_id INT NOT NULL,
+  fcm_token VARCHAR(255) NOT NULL UNIQUE,
+  user_agent VARCHAR(255) NULL,
+  activo TINYINT(1) NOT NULL DEFAULT 1,
+  fecha_creacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ultima_actividad TIMESTAMP NULL DEFAULT NULL,
+
+  CONSTRAINT fk_dispositivo_push_usuario
+    FOREIGN KEY (usuario_personal_id) REFERENCES usuarios_personal(id) ON DELETE CASCADE,
+  INDEX idx_usuario (usuario_personal_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ================================================================
+-- FASE 6 — Cotizador estructurado del jefe/administrador (partidas + PDF)
+-- ================================================================
+
+-- Catálogo de partidas reutilizable y extensible (el jefe puede agregar
+-- renglones nuevos desde el propio panel, sin tocar código).
+CREATE TABLE IF NOT EXISTS cotizador_items_catalogo (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  clave VARCHAR(60) NOT NULL UNIQUE,
+  nombre VARCHAR(120) NOT NULL,
+  unidad VARCHAR(30) NOT NULL DEFAULT 'pza',
+  precio_unitario_default DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  activo TINYINT(1) NOT NULL DEFAULT 1,
+  orden INT NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO cotizador_items_catalogo (clave, nombre, unidad, precio_unitario_default, orden) VALUES
+ ('hoja', 'Hoja de material', 'pza', 0, 1),
+ ('bisagra_oculta', 'Bisagra oculta', 'pza', 0, 2),
+ ('bisagra_normal', 'Bisagra normal', 'pza', 0, 3),
+ ('corredera', 'Corredera', 'pza', 0, 4),
+ ('brazo', 'Brazo', 'pza', 0, 5),
+ ('enchape_m2', 'Enchape', 'm2', 0, 6),
+ ('piedra_ml', 'Piedra (metro lineal)', 'ml', 0, 7);
+
+-- Partidas específicas de cada respuesta de cotización (snapshot: si luego
+-- cambia el precio en el catálogo, las cotizaciones ya respondidas no se alteran).
+CREATE TABLE IF NOT EXISTS cotizacion_respuesta_items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  cotizacion_id INT NOT NULL,
+  clave_item VARCHAR(60) NOT NULL,
+  nombre_item VARCHAR(120) NOT NULL,
+  cantidad DECIMAL(10,3) NOT NULL DEFAULT 0,
+  unidad VARCHAR(30) NOT NULL DEFAULT 'pza',
+  precio_unitario DECIMAL(10,2) NOT NULL DEFAULT 0,
+  subtotal DECIMAL(12,2) GENERATED ALWAYS AS (ROUND(cantidad * precio_unitario, 2)) STORED,
+  orden INT NOT NULL DEFAULT 0,
+  fecha_creacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT fk_cotizacion_item FOREIGN KEY (cotizacion_id) REFERENCES cotizaciones(id) ON DELETE CASCADE,
+  INDEX idx_cotizacion (cotizacion_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Imágenes tanto del cliente (espacio/boceto, Fase 8) como del jefe (referencia
+-- en la propuesta, Fase 6).
+CREATE TABLE IF NOT EXISTS cotizacion_imagenes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  cotizacion_id INT NOT NULL,
+  tipo ENUM('cliente_espacio','cliente_boceto','jefe_propuesta') NOT NULL,
+  url_imagen VARCHAR(350) NOT NULL,
+  orden INT NOT NULL DEFAULT 0,
+  fecha_creacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT fk_cotizacion_imagen FOREIGN KEY (cotizacion_id) REFERENCES cotizaciones(id) ON DELETE CASCADE,
+  INDEX idx_cotizacion (cotizacion_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE cotizaciones ADD COLUMN tipo_mueble VARCHAR(40) NULL AFTER modelo_mueble;
+ALTER TABLE cotizaciones ADD COLUMN ancho_espacio DECIMAL(6,2) NULL AFTER medidas;
+ALTER TABLE cotizaciones ADD COLUMN alto_espacio  DECIMAL(6,2) NULL AFTER ancho_espacio;
+ALTER TABLE cotizaciones ADD COLUMN fondo_espacio DECIMAL(6,2) NULL AFTER alto_espacio;
+ALTER TABLE cotizaciones ADD COLUMN fecha_visita DATE NULL AFTER fecha_entrega_estimada;
+ALTER TABLE cotizaciones ADD COLUMN hora_visita  VARCHAR(20) NULL AFTER fecha_visita;
+ALTER TABLE cotizaciones ADD COLUMN confirmada_por_cliente TINYINT(1) NOT NULL DEFAULT 0 AFTER estado;
+ALTER TABLE cotizaciones ADD COLUMN fecha_confirmacion TIMESTAMP NULL AFTER confirmada_por_cliente;
+ALTER TABLE cotizaciones ADD COLUMN pdf_url VARCHAR(350) NULL AFTER descripcion_respuesta;
+ALTER TABLE cotizaciones ADD COLUMN pedido_id INT NULL AFTER cliente_id;
+ALTER TABLE cotizaciones ADD CONSTRAINT fk_cotizaciones_pedido
+  FOREIGN KEY (pedido_id) REFERENCES pedidos(id) ON DELETE SET NULL;
+
+ALTER TABLE cotizaciones MODIFY COLUMN estado
+  ENUM('nueva','en_revision','respondida','aceptada','en_produccion','lista','entregada','cancelada','convertida_a_pedido')
+  NOT NULL DEFAULT 'nueva';
+
+-- Cotización generada por el jefe DESPUÉS de visitar una cita confirmada
+-- (flujo alterno: cita agendada directo, sin pasar por el cotizador rápido).
+ALTER TABLE cotizaciones ADD COLUMN cita_id INT NULL AFTER numero_cotizacion;
+ALTER TABLE cotizaciones ADD CONSTRAINT fk_cotizaciones_cita
+  FOREIGN KEY (cita_id) REFERENCES citas(id) ON DELETE SET NULL;
+
+-- Fase 9: coordenadas guardadas del cliente (dirección con mapa bloqueado/lápiz
+-- en mi-cuenta.php; también consumidas por precargarMapaCotizacion() en
+-- solicitudes.js para no re-pedir la ubicación en cotizaciones/citas).
+ALTER TABLE clientes ADD COLUMN lat DECIMAL(10,7) NULL AFTER cp;
+ALTER TABLE clientes ADD COLUMN lng DECIMAL(10,7) NULL AFTER lat;

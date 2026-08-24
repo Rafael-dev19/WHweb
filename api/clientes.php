@@ -32,7 +32,7 @@ if ($method === 'GET' && $action === 'mis-pedidos') {
 
 // ── GET lista de clientes (admin) ─────────────────────────────────
 if ($method === 'GET' && !$id && !$action) {
-    requerirAdmin();
+    requerirGestion();
     $busqueda = sanitize($_GET['q'] ?? '');
     $limit    = min((int)($_GET['limit'] ?? 50), 200);
     $offset   = max((int)($_GET['offset'] ?? 0), 0);
@@ -86,9 +86,9 @@ if ($method === 'GET' && !$id && !$action) {
 
 // ── GET cliente individual con historial (admin) ──────────────────
 if ($method === 'GET' && $id) {
-    requerirAdmin();
+    requerirGestion();
     $cliente = dbRow(
-        "SELECT id, nombre, correo, telefono, direccion, colonia, municipio, ciudad, cp, activo, fecha_registro
+        "SELECT id, nombre, correo, telefono, direccion, colonia, municipio, ciudad, cp, lat, lng, activo, fecha_registro
          FROM clientes WHERE id = ? LIMIT 1",
         [$id]
     );
@@ -109,28 +109,57 @@ if ($method === 'GET' && $id) {
 }
 
 // ── PUT actualizar perfil del cliente ─────────────────────────────
+// Actualización parcial: solo se tocan las columnas presentes en el body,
+// para permitir que el formulario de datos (nombre/teléfono) y el picker
+// de dirección (mapa, en su propio LockedField) guarden por separado
+// sin pisarse el uno al otro.
 if ($method === 'PUT' && $id) {
     $cliente = requerirCliente();
     requerirCsrf();
     if ((int)$cliente['id'] !== $id) jsonError('No autorizado', 403);
 
-    $body      = getJsonBody();
-    $nombre    = sanitize($body['nombre'] ?? '');
-    $telefono  = sanitize($body['telefono'] ?? '');
-    $direccion = sanitize($body['direccion'] ?? '');
-    $colonia   = sanitize($body['colonia'] ?? '');
-    $municipio = sanitize($body['municipio'] ?? '');
-    $ciudad    = sanitize($body['ciudad'] ?? '');
-    $cp        = sanitize($body['cp'] ?? '');
+    $body   = getJsonBody();
+    $campos = [];
+    $valores = [];
 
-    if (empty($nombre) || strlen($nombre) < 2) jsonError('Nombre requerido', 422);
+    if (array_key_exists('nombre', $body)) {
+        $nombre = sanitize($body['nombre'] ?? '');
+        if (empty($nombre) || strlen($nombre) < 2) jsonError('Nombre requerido', 422);
+        $campos[] = 'nombre=?'; $valores[] = $nombre;
+    }
+    if (array_key_exists('telefono', $body)) {
+        $campos[] = 'telefono=?'; $valores[] = sanitize($body['telefono'] ?? '') ?: null;
+    }
+    if (array_key_exists('direccion', $body)) {
+        $campos[] = 'direccion=?'; $valores[] = sanitize($body['direccion'] ?? '') ?: null;
+    }
+    if (array_key_exists('colonia', $body)) {
+        $campos[] = 'colonia=?'; $valores[] = sanitize($body['colonia'] ?? '') ?: null;
+    }
+    if (array_key_exists('municipio', $body)) {
+        $campos[] = 'municipio=?'; $valores[] = sanitize($body['municipio'] ?? '') ?: null;
+    }
+    if (array_key_exists('ciudad', $body)) {
+        $campos[] = 'ciudad=?'; $valores[] = sanitize($body['ciudad'] ?? '') ?: null;
+    }
+    if (array_key_exists('cp', $body)) {
+        $campos[] = 'cp=?'; $valores[] = sanitize($body['cp'] ?? '') ?: null;
+    }
+    if (array_key_exists('lat', $body)) {
+        $lat = filter_var($body['lat'], FILTER_VALIDATE_FLOAT);
+        $campos[] = 'lat=?'; $valores[] = $lat !== false ? $lat : null;
+    }
+    if (array_key_exists('lng', $body)) {
+        $lng = filter_var($body['lng'], FILTER_VALIDATE_FLOAT);
+        $campos[] = 'lng=?'; $valores[] = $lng !== false ? $lng : null;
+    }
 
-    dbQuery(
-        "UPDATE clientes SET nombre=?, telefono=?, direccion=?, colonia=?, municipio=?, ciudad=?, cp=? WHERE id=?",
-        [$nombre, $telefono ?: null, $direccion ?: null, $colonia ?: null, $municipio ?: null, $ciudad ?: null, $cp ?: null, $id]
-    );
+    if (empty($campos)) jsonError('Nada que actualizar', 422);
 
-    $actualizado = dbRow("SELECT id, nombre, correo, telefono, direccion, colonia, municipio, ciudad, cp FROM clientes WHERE id=?", [$id]);
+    $valores[] = $id;
+    dbQuery("UPDATE clientes SET " . implode(', ', $campos) . " WHERE id=?", $valores);
+
+    $actualizado = dbRow("SELECT id, nombre, correo, telefono, direccion, colonia, municipio, ciudad, cp, lat, lng FROM clientes WHERE id=?", [$id]);
     jsonSuccess(['cliente' => $actualizado, 'mensaje' => 'Perfil actualizado correctamente']);
 }
 

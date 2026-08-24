@@ -112,6 +112,9 @@ function marcarNotificacionLeida(string $docId): bool {
 // ================================================================
 
 // Devuelve los correos de todos los empleados activos para notificarles por email.
+// NOTA: el personal interno (jefe/administrador/empleado/disenador) ya NO recibe
+// email de estos eventos — solo push (ver crearNotificacionPush abajo). Esta
+// función queda por si algún flujo futuro todavía necesita el correo de soporte.
 function _obtenerCorreosEmpleados(): string {
     try {
         $rows = dbRows(
@@ -124,13 +127,50 @@ function _obtenerCorreosEmpleados(): string {
     }
 }
 
-function notificarNuevoPedido(array $pedido): void {
+// ── Push (FCM) al personal interno ─────────────────────────────────
+
+// Tokens de dispositivo activos de todo el personal con alguno de los roles dados.
+function _obtenerTokensPushPorRol(array $roles): array {
+    if (empty($roles)) return [];
+    try {
+        $placeholders = implode(',', array_fill(0, count($roles), '?'));
+        $rows = dbRows(
+            "SELECT dp.fcm_token
+             FROM dispositivos_push dp
+             INNER JOIN usuarios_personal up ON up.id = dp.usuario_personal_id
+             WHERE dp.activo = 1 AND up.activo = 1 AND up.rol IN ($placeholders)",
+            $roles
+        );
+        return array_column($rows, 'fcm_token');
+    } catch (\Throwable $e) {
+        return [];
+    }
+}
+
+// Notificación push genérica: reutiliza el mismo documento de Firestore que ya
+// dispara la Cloud Function, agregando los campos push_* que ésta lee para
+// mandar el Web Push. El contenido del push es SIEMPRE genérico (nunca datos
+// del cliente/pedido) — el detalle real solo se ve entrando al panel.
+function crearNotificacionPush(string $tipo, array $roles, string $titulo, string $mensaje, string $clickUrl = '/'): bool {
+    $tokens = _obtenerTokensPushPorRol($roles);
+    if (empty($tokens)) return false;
+    return crearNotificacionFirestore($tipo, $titulo, $mensaje, [
+        'push_tokens_json' => json_encode($tokens),
+        'push_titulo'      => $titulo,
+        'push_mensaje'     => $mensaje,
+        'push_url'         => $clickUrl,
+    ]);
+}
+
+// $desdeConversionCotizacion=true cuando el pedido nace de convertir una
+// cotización ya confirmada (Fase 7) — en ese caso el push ya lo recibió el
+// jefe al confirmarse la cotización, así que aquí solo se avisa al diseñador.
+function notificarNuevoPedido(array $pedido, bool $desdeConversionCotizacion = false): void {
     crearNotificacionFirestore(
         'nuevo_pedido',
         '🛒 Nuevo pedido recibido',
         "Pedido {$pedido['numero_pedido']} de {$pedido['nombre_cliente']} por $" . number_format((float)($pedido['total'] ?? 0), 2),
         [
-            'correos_empleados' => _obtenerCorreosEmpleados(),
             'numero_pedido' => $pedido['numero_pedido'],
             'datos_pedido'  => json_encode([
                 'id'                => (int)($pedido['id'] ?? 0),
@@ -161,6 +201,18 @@ function notificarNuevoPedido(array $pedido): void {
                 'fecha_pago'        => $pedido['fecha_pago'] ?? '',
             ]),
         ]
+    );
+
+    // Push: al diseñador siempre (tiene que diseñarlo); al jefe solo si el
+    // pedido vino directo del carrito (si vino de una cotización, el jefe ya
+    // recibió el push de confirmación — evita avisarle dos veces).
+    $roles = $desdeConversionCotizacion ? ['disenador'] : ['jefe', 'disenador'];
+    crearNotificacionPush(
+        'push_nuevo_pedido',
+        $roles,
+        'Nuevo pedido',
+        'Hay un nuevo pedido, ingresa al sitio para revisarlo.',
+        '/empleado#pedidos'
     );
 }
 
@@ -204,6 +256,38 @@ function notificarNuevaCotizacion(array $cot): void {
             ]),
         ]
     );
+
+    crearNotificacionPush(
+        'push_nueva_cotizacion',
+        ['jefe'],
+        'Nueva cotización',
+        'Hay una nueva cotización, ingresa al sitio para revisarla.',
+        '/admin#cotizaciones'
+    );
+}
+
+// Push al jefe cuando el cliente confirma una cotización respondida desde el
+// portal de seguimiento (Fase 7). No genera email adicional al cliente.
+function notificarConfirmacionCotizacion(array $cot): void {
+    crearNotificacionPush(
+        'push_confirmacion_cotizacion',
+        ['jefe'],
+        'Cotización confirmada',
+        'Un cliente confirmó su cotización, ingresa al sitio para continuar.',
+        '/admin#cotizaciones'
+    );
+}
+
+// Push a empleados cuando el diseñador libera un pedido a producción — es el
+// momento en que se vuelve visible/accionable para ellos.
+function notificarPedidoListoParaProduccion(array $pedido): void {
+    crearNotificacionPush(
+        'push_pedido_listo_produccion',
+        ['empleado'],
+        'Pedido listo para producción',
+        'Hay un pedido listo para producción, ingresa al sitio para revisarlo.',
+        '/empleado#pedidos'
+    );
 }
 
 function notificarCotizacionRespondida(array $cot): void {
@@ -223,6 +307,10 @@ function notificarCotizacionRespondida(array $cot): void {
                 'precio_cotizado'       => (float)($cot['precio_cotizado'] ?? 0),
                 'fecha_entrega_estimada'=> $cot['fecha_entrega_estimada'] ?? '',
                 'notas_admin'           => $cot['notas_admin'] ?? '',
+                'pdf_url'               => $cot['pdf_url'] ?? '',
+                'fecha_visita'          => $cot['fecha_visita'] ?? '',
+                'hora_visita'           => $cot['hora_visita'] ?? '',
+                'token_seguimiento'     => $cot['token_seguimiento'] ?? '',
             ]),
         ]
     );
@@ -234,7 +322,6 @@ function notificarCotizacionEnProduccion(array $cot): void {
         '🔨 Cotización en producción',
         "Cotización {$cot['numero_cotizacion']} de {$cot['nombre_cliente']} iniciada en producción",
         [
-            'correos_empleados'  => _obtenerCorreosEmpleados(),
             'numero_cotizacion'  => $cot['numero_cotizacion'],
             'token_seguimiento'  => $cot['token_seguimiento'] ?? '',
             'datos_cotizacion'   => json_encode([
@@ -294,7 +381,6 @@ function notificarNuevaCita(array $cita): void {
         '📅 Nueva cita agendada',
         "Cita {$cita['numero_cita']} de {$cita['nombre_cliente']} para el {$cita['fecha_cita']}",
         [
-            'correos_empleados' => _obtenerCorreosEmpleados(),
             'numero_cita' => $cita['numero_cita'],
             'datos_cita'  => json_encode([
                 'id'               => (int)($cita['id'] ?? 0),
@@ -307,6 +393,14 @@ function notificarNuevaCita(array $cita): void {
                 'tipo'             => $cita['tipo'] ?? 'medicion',
             ]),
         ]
+    );
+
+    crearNotificacionPush(
+        'push_nueva_cita',
+        ['jefe'],
+        'Nueva cita',
+        'Hay una nueva cita agendada, ingresa al sitio para revisarla.',
+        '/admin#citas'
     );
 }
 

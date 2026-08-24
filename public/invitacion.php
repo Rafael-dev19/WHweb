@@ -9,7 +9,7 @@ $token = htmlspecialchars(trim($_GET['token'] ?? ''), ENT_QUOTES, 'UTF-8');
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Activar cuenta — Wooden House</title>
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -154,7 +154,7 @@ async function _getCsrf() {
 async function validarToken() {
   if (!INV_TOKEN) {
     document.getElementById('loadingView').style.display  = 'none';
-    document.getElementById('tokenInvalidView').style.display = '';
+    document.getElementById('tokenInvalidView').style.display = 'block';
     return;
   }
   try {
@@ -163,7 +163,7 @@ async function validarToken() {
     if (!data.success) {
       document.getElementById('tokenInvalidMsg').textContent = data.error || 'Invitación inválida.';
       document.getElementById('loadingView').style.display  = 'none';
-      document.getElementById('tokenInvalidView').style.display = '';
+      document.getElementById('tokenInvalidView').style.display = 'block';
       return;
     }
     document.getElementById('invNombre').value  = data.nombre_completo;
@@ -171,11 +171,11 @@ async function validarToken() {
     document.getElementById('welcomeMsg').innerHTML =
       `Hola <strong>${data.nombre_completo}</strong> — crea tu contraseña para acceder como <span class="badge-rol">${data.rol}</span>`;
     document.getElementById('loadingView').style.display = 'none';
-    document.getElementById('formView').style.display    = '';
+    document.getElementById('formView').style.display    = 'block';
   } catch (e) {
     document.getElementById('tokenInvalidMsg').textContent = 'Error de red. Intenta recargar la página.';
     document.getElementById('loadingView').style.display  = 'none';
-    document.getElementById('tokenInvalidView').style.display = '';
+    document.getElementById('tokenInvalidView').style.display = 'block';
   }
 }
 

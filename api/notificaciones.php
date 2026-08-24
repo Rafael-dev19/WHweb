@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/_helpers.php';
 
-requerirEmpleado();
+requerirPersonal();
 $method = requestMethod();
 $id     = trim($_GET['id'] ?? '');
 

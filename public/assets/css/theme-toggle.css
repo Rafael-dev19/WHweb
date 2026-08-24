@@ -1,0 +1,27 @@
+/* theme-toggle.css — Botón sol/luna inyectado por theme-toggle.js.
+   El variante de panel reutiliza .icon-btn (ver panel_administrador.css/panel_empleado.css);
+   esta hoja solo cubre el variante de páginas públicas (dentro de .nav-links). */
+
+.theme-toggle-btn--nav {
+  background: none;
+  border: 1px solid var(--color-border, #3d3d3d);
+  color: var(--color-text-main, #e0e0e0);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  transition: background var(--transition-fast, 0.15s ease), color var(--transition-fast, 0.15s ease);
+  flex-shrink: 0;
+}
+.theme-toggle-btn--nav:hover {
+  background: var(--color-primary-light, rgba(139, 115, 85, 0.15));
+  color: var(--color-accent, #c9a96e);
+}
+
+@media (max-width: 968px) {
+  .theme-toggle-btn--nav { display: none; }
+}

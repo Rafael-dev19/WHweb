@@ -368,14 +368,15 @@
     // Bug corregido: los botones usaban "pending"/"progress"/"completed" pero
     // el estado real es "pendiente"/"en_produccion"/etc. — nunca coincidían.
     const ESTADO_PEDIDO_CATEGORIA = {
-      pendiente:       'pending',
-      anticipo_pagado:    'pending',
-      pagado:             'progress',
-      en_produccion:      'progress',
-      listo:              'progress',
-      listo_para_entrega: 'progress',
-      entregado:          'completed',
-      cancelado:          null, // solo visible en "Todos"
+      pendiente:              'pending',
+      anticipo_pagado:        'pending',
+      pagado:                 'pending',
+      listo_para_produccion:  'progress',
+      en_produccion:          'progress',
+      alistando_pedido:       'progress',
+      en_camino_instalacion:  'progress',
+      finalizado:             'completed',
+      cancelado:              null, // solo visible en "Todos"
     };
     function filterTable(filter, ev){
       $$('#pedidos-section .filter-btn').forEach(btn => btn.classList.remove('active'));
@@ -555,11 +556,11 @@
 
       if(headLabel) headLabel.textContent = `Agenda del ${fmtDMY(iso)}`;
 
-      // Mostrar botón Ruta cuando hay pedidos listo_para_entrega o citas activas
+      // Mostrar botón Ruta cuando hay pedidos en_camino_instalacion o citas activas
       const rutaBtn = $('#admRutaDiaBtn');
       if (rutaBtn) {
         const tieneParadas = eventos.some(e =>
-          (e.eventoTipo === 'pedido' && e.datos?.tipo_entrega === 'envio' && e.datos?.estado === 'listo_para_entrega') ||
+          (e.eventoTipo === 'pedido' && e.datos?.tipo_entrega === 'envio' && e.datos?.estado === 'en_camino_instalacion') ||
           (e.eventoTipo === 'cita'   && !['cancelada'].includes(e.datos?.estado || ''))
         );
         rutaBtn.style.display = tieneParadas ? '' : 'none';
@@ -582,7 +583,7 @@
         el.className = 'cal-item';
 
         if (e.eventoTipo === 'pedido') {
-          const estadoLabels = {pendiente:'Pendiente',anticipo_pagado:'Anticipo pagado',pagado:'Pagado',en_produccion:'En Producción',listo:'Listo',listo_para_entrega:'Listo para entrega',entregado:'Entregado',cancelado:'Cancelado'};
+          const estadoLabels = ESTADO_PEDIDO_LABELS;
           const dbId = e.datos?.id || '';
           el.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
@@ -1919,9 +1920,9 @@
           const ep = resResult.value.estados_pedidos || [];
           ep.forEach(e => {
             const n = parseInt(e.total) || 0;
-            if (['pendiente','anticipo_pagado','pagado'].includes(e.estado))                       pendiente += n;
-            else if (['en_produccion','listo','listo_para_entrega'].includes(e.estado))        proceso   += n;
-            else if (e.estado === 'entregado')                                                 completo  += n;
+            if (['pendiente','anticipo_pagado','pagado'].includes(e.estado))                                                                        pendiente += n;
+            else if (['listo_para_produccion','en_produccion','alistando_pedido','en_camino_instalacion'].includes(e.estado))                       proceso   += n;
+            else if (e.estado === 'finalizado')                                                                                                     completo  += n;
           });
         }
         drawDonut('chartEstados', [pendiente, proceso, completo], ['Pendiente','En Proceso','Completado']);
@@ -2052,6 +2053,20 @@ async function apiFetch(url, options = {}) {
   }
   const data = await res.json();
   if ((res.status === 401 || res.status === 403) && !data.success) {
+    // 2FA obligatorio (jefe/administrador) sin configurar todavía: no es una sesión
+    // expirada, hay que mandarlo a configurar su 2FA en vez de cerrarle la sesión.
+    if (data['2fa_setup_required']) {
+      showNotification('Debes configurar la verificación en dos pasos antes de continuar.', 'error');
+      if (!location.search.includes('setup_2fa')) {
+        const sep = location.pathname.includes('?') ? '&' : '?';
+        window.location.href = location.pathname + sep + 'setup_2fa=1';
+      }
+      throw new Error(data.error || 'Configuración de 2FA requerida');
+    }
+    if (data['2fa_required']) {
+      showNotification('Verificación de dos factores requerida. Vuelve a iniciar sesión.', 'error');
+      throw new Error(data.error || 'Verificación de dos factores requerida');
+    }
     showNotification('Sesión expirada. Recarga la página.', 'error');
     throw new Error(data.error || 'No autenticado');
   }
@@ -2178,39 +2193,42 @@ async function cargarProductosAPI() {
 // ── PEDIDOS - Cargar y gestionar desde API ────────────
 // ── Máquina de estados estricta (espejo de la validación en api/pedidos.php) ──
 const ESTADO_PEDIDO_LABELS = {
-  pendiente:          'Pendiente',
-  anticipo_pagado:    'Anticipo pagado',
-  pagado:             'Pagado',
-  en_produccion:      'En Producción',
-  listo:              'Listo',
-  listo_para_entrega: 'Listo para entrega',
-  entregado:          'Entregado',
-  cancelado:          'Cancelado',
+  pendiente:              'Pendiente',
+  anticipo_pagado:        'Anticipo pagado',
+  pagado:                 'Pagado',
+  listo_para_produccion:  'Listo para producción',
+  en_produccion:          'En producción',
+  alistando_pedido:       'Alistando pedido',
+  en_camino_instalacion:  'En camino a instalación',
+  finalizado:             'Finalizado',
+  cancelado:              'Cancelado',
 };
 const ESTADO_PEDIDO_CLASS = {
-  pendiente:          'status-pending',
-  anticipo_pagado:    'status-pending',
-  pagado:             'status-progress',
-  en_produccion:      'status-producing',
-  listo:              'status-info',
-  listo_para_entrega: 'status-ready',
-  entregado:          'status-completed',
-  cancelado:          'status-cancelled',
+  pendiente:              'status-pending',
+  anticipo_pagado:        'status-pending',
+  pagado:                 'status-progress',
+  listo_para_produccion:  'status-info',
+  en_produccion:          'status-producing',
+  alistando_pedido:       'status-info',
+  en_camino_instalacion:  'status-ready',
+  finalizado:             'status-completed',
+  cancelado:              'status-cancelled',
 };
 function estadosSiguientesPedido(estadoActual, montoPagado) {
   const transiciones = {
-    pendiente:          ['listo', 'cancelado'],
-    anticipo_pagado:    ['pendiente', 'cancelado'],
-    pagado:             ['pendiente', 'cancelado'],
-    en_produccion:      ['listo', 'cancelado'],      // compatibilidad pedidos anteriores
-    listo:              ['listo_para_entrega', 'cancelado'],
-    listo_para_entrega: ['entregado'],
-    entregado:          [],
-    cancelado:          [],
+    pendiente:              ['cancelado'],
+    anticipo_pagado:        ['listo_para_produccion', 'cancelado'],
+    pagado:                 ['listo_para_produccion', 'cancelado'],
+    listo_para_produccion:  ['en_produccion', 'cancelado'],
+    en_produccion:          ['alistando_pedido', 'cancelado'],
+    alistando_pedido:       ['en_camino_instalacion', 'finalizado', 'cancelado'],
+    en_camino_instalacion:  ['finalizado'],
+    finalizado:             [],
+    cancelado:              [],
   };
   let opciones = transiciones[estadoActual] || [];
-  // Requiere al menos anticipo o pago registrado para avanzar a listo
-  if (!((montoPagado || 0) > 0)) opciones = opciones.filter(s => s !== 'listo');
+  // Requiere al menos anticipo o pago registrado para avanzar a listo_para_produccion
+  if (!((montoPagado || 0) > 0)) opciones = opciones.filter(s => s !== 'listo_para_produccion');
   return opciones;
 }
 
@@ -2256,17 +2274,17 @@ async function cargarPedidosAPI() {
 
 async function actualizarEstadoPedido(id, estado) {
   try {
-    if (estado === 'entregado' || estado === 'cancelado') {
+    if (estado === 'finalizado' || estado === 'cancelado') {
       const detalle = await apiFetch(`${API_BASE}/pedidos.php?id=${id}`);
       const p = detalle?.pedido;
 
-      // Al entregar un pedido con anticipo y saldo pendiente, resolver el cobro
-      // del saldo en el mismo paso — evita tener que presionar "entregado" y
+      // Al finalizar un pedido con anticipo y saldo pendiente, resolver el cobro
+      // del saldo en el mismo paso — evita tener que presionar "finalizado" y
       // luego acordarse de marcar el saldo por separado.
-      if (estado === 'entregado' && p && p.tipo_pago === 'anticipo') {
+      if (estado === 'finalizado' && p && p.tipo_pago === 'anticipo') {
         const saldo = Math.max(0, (p.total || 0) - (p.monto_pagado || 0));
         if (saldo > 0.009) {
-          const cobrado = confirm(`Este pedido tiene un saldo pendiente de ${money(saldo)} (anticipo). ¿Se cobró el saldo en efectivo/en persona al momento de la entrega?`);
+          const cobrado = confirm(`Este pedido tiene un saldo pendiente de ${money(saldo)} (anticipo). ¿Se cobró el saldo en efectivo/en persona al momento de la instalación/entrega?`);
           if (cobrado) {
             const r = await apiFetch(`${API_BASE}/pagos.php?action=marcar_saldo_manual`, {
               method: 'POST', body: JSON.stringify({ pedido_id: id }),
@@ -2277,8 +2295,8 @@ async function actualizarEstadoPedido(id, estado) {
               return;
             }
           } else {
-            // No permitir entregado si el saldo no está liquidado
-            showNotification('<i class="fa-solid fa-triangle-exclamation"></i> El pedido no puede marcarse como entregado con saldo pendiente. Registra el pago primero.', 'warning');
+            // No permitir finalizado si el saldo no está liquidado
+            showNotification('<i class="fa-solid fa-triangle-exclamation"></i> El pedido no puede marcarse como finalizado con saldo pendiente. Registra el pago primero.', 'warning');
             cargarPedidosAPI();
             return;
           }
@@ -2312,6 +2330,8 @@ async function actualizarEstadoPedido(id, estado) {
 }
 
 // ── EMPLEADOS - API real ──────────────────────────────
+const ROL_LABELS = { jefe: 'Jefe', administrador: 'Administrador', empleado: 'Empleado', disenador: 'Diseñador' };
+
 async function cargarEmpleadosAPI() {
   const tbody = document.getElementById('empleadosTable');
   if (!tbody) return;
@@ -2333,7 +2353,7 @@ async function cargarEmpleadosAPI() {
         <td>${e.id}</td>
         <td>${escapeHtml(e.nombre_completo)}</td>
         <td>${escapeHtml(e.correo)}</td>
-        <td>${e.rol === 'administrador' ? 'Administrador' : 'Empleado'}</td>
+        <td>${ROL_LABELS[e.rol] || e.rol}</td>
         <td><span class="status-badge ${e.activo ? 'status-completed' : 'status-disabled'}">${e.activo ? 'Activo' : 'Inactivo'}</span></td>
         <td>
           <button class="btn btn-secondary btn-small btn-editar-emp"
@@ -2345,6 +2365,14 @@ async function cargarEmpleadosAPI() {
           </button>
           <button class="btn btn-danger btn-small" data-call="desactivarEmpleado" data-args="[${e.id}]">
             ${e.activo ? '<i class="fa-solid fa-lock"></i>' : '<i class="fa-solid fa-lock-open"></i>'}
+          </button>
+          <button class="btn btn-secondary btn-small" title="Resetear verificación en dos pasos"
+            data-call="resetear2FAEmpleado" data-args="[${e.id}]">
+            <i class="fa-solid fa-shield-halved"></i>
+          </button>
+          <button class="btn btn-secondary btn-small" title="Revocar sesiones activas"
+            data-call="revocarSesionesEmpleado" data-args="[${e.id}]">
+            <i class="fa-solid fa-right-from-bracket"></i>
           </button>
         </td>
       </tr>
@@ -2376,6 +2404,42 @@ async function desactivarEmpleado(id) {
   }
 }
 
+// ── Reset de 2FA / revocación de sesiones sobre otra cuenta de personal ──
+// Reproduce desde el sitio lo que antes solo se podía hacer con un UPDATE
+// directo en la base de datos. Exige un token de Firebase recién emitido
+// (reautenticación) igual que el resto del flujo de 2FA.
+async function _accionSeguridadPersonal(id, accion, mensajeExito) {
+  try {
+    const firebaseToken = await firebase.auth().currentUser?.getIdToken(true);
+    if (!firebaseToken) throw new Error('No hay sesión activa en Firebase.');
+    const csrf = document.cookie.split(';').find(c => c.trim().startsWith('XSRF-TOKEN='));
+    const csrfToken = csrf ? decodeURIComponent(csrf.split('=')[1]) : '';
+
+    const res = await fetch(`${API_BASE}/empleados.php?action=${accion}&id=${id}`, {
+      method: 'POST',
+      headers: {
+        'X-CSRF-Token': csrfToken,
+        'Authorization': 'Bearer ' + firebaseToken,
+      },
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'No se pudo completar la acción.');
+    showNotification('<i class="fa-solid fa-circle-check"></i> ' + (data.mensaje || mensajeExito), 'success');
+  } catch (e) {
+    showNotification('<i class="fa-solid fa-xmark"></i> ' + (e.message || 'Error de conexión'), 'error');
+  }
+}
+
+async function resetear2FAEmpleado(id) {
+  if (!confirm('¿Resetear la verificación en dos pasos de este empleado? Deberá configurarla de nuevo en su próximo inicio de sesión.')) return;
+  await _accionSeguridadPersonal(id, 'reset_2fa', 'Verificación en dos pasos reseteada.');
+}
+
+async function revocarSesionesEmpleado(id) {
+  if (!confirm('¿Revocar todas las sesiones activas de este empleado? Deberá iniciar sesión de nuevo.')) return;
+  await _accionSeguridadPersonal(id, 'revocar_sesiones', 'Sesiones revocadas.');
+}
+
 // ── REPORTES - API real ───────────────────────────────
 // ════════════════════════════════════════════════════════════════
 // MODALES DE DETALLE — Pedido, Cita, Cotización (admin)
@@ -2396,8 +2460,8 @@ async function verDetallePedidoAdmin(id) {
     folio.textContent = p.numero_pedido;
     window._admPedId  = id;
 
-    const estadoLabels = { pendiente:'Pendiente',anticipo_pagado:'Anticipo pagado',pagado:'Pagado ✓',en_produccion:'En Producción',listo:'Listo',listo_para_entrega:'Listo para entrega',entregado:'Entregado',cancelado:'Cancelado' };
-    const estadoClass  = { pendiente:'status-pending',anticipo_pagado:'status-pending',pagado:'status-progress',en_produccion:'status-producing',listo:'status-info',listo_para_entrega:'status-ready',entregado:'status-completed',cancelado:'status-cancelled' };
+    const estadoLabels = ESTADO_PEDIDO_LABELS;
+    const estadoClass  = ESTADO_PEDIDO_CLASS;
     const est   = p.estado || 'pendiente';
     const label = estadoLabels[est] || est;
     const cls   = estadoClass[est]  || 'status-pending';
@@ -2504,6 +2568,26 @@ async function verDetallePedidoAdmin(id) {
 
       ${saldoHtml}
 
+      ${(p.imagenes_diseno?.length || p.mensaje_disenador) ? `
+      <div style="background:var(--bg);border-left:3px solid #8b7355;border-radius:6px;padding:12px;margin-bottom:14px;">
+        <div style="font-weight:700;color:#8b7355;margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i class="fa-solid fa-pen-ruler"></i> Diseño (SketchUp / VCarve)</div>
+        ${p.imagenes_diseno?.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:${p.mensaje_disenador ? '10px' : '0'};">
+          ${p.imagenes_diseno.map(img => `<a href="${img.url_imagen}" target="_blank" rel="noopener"><img src="${img.url_imagen}" alt="Diseño" style="width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}
+        </div>` : ''}
+        ${p.mensaje_disenador ? `<div style="font-size:12px;color:var(--muted2);"><strong>Mensaje del diseñador:</strong> ${escapeHtml(p.mensaje_disenador)}</div>` : ''}
+      </div>` : ''}
+
+      ${p.cotizacion_origen ? `
+      <div style="background:var(--bg);border-left:3px solid #c9a96e;border-radius:6px;padding:12px;margin-bottom:14px;">
+        <div style="font-weight:700;color:#c9a96e;margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i class="fa-solid fa-file-invoice-dollar"></i> Partidas cotizadas (${escapeHtml(p.cotizacion_origen.numero_cotizacion)})</div>
+        ${p.cotizacion_origen.items?.length ? `<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">
+          <tbody>${p.cotizacion_origen.items.map(it => `<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 4px;color:var(--muted2);">${escapeHtml(it.nombre_item)}</td><td style="padding:5px 4px;text-align:center;color:var(--muted2);">${it.cantidad} ${escapeHtml(it.unidad)}</td><td style="padding:5px 4px;text-align:right;color:var(--accent);font-weight:700;">${money(it.subtotal)}</td></tr>`).join('')}</tbody>
+        </table>` : ''}
+        ${p.cotizacion_origen.descripcion_respuesta ? `<div style="font-size:12px;color:var(--muted2);margin-bottom:8px;">${escapeHtml(p.cotizacion_origen.descripcion_respuesta)}</div>` : ''}
+        ${p.cotizacion_origen.imagenes?.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;">${p.cotizacion_origen.imagenes.map(im => `<a href="${im.url_imagen}" target="_blank" rel="noopener"><img src="${im.url_imagen}" alt="Referencia" style="width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}</div>` : ''}
+        ${p.cotizacion_origen.pdf_url ? `<p style="margin-top:8px;"><a href="${p.cotizacion_origen.pdf_url}" target="_blank" rel="noopener" style="color:#c9a96e;font-size:12px;"><i class="fa-solid fa-file-pdf"></i> Ver PDF de la propuesta</a></p>` : ''}
+      </div>` : ''}
+
       <div style="margin-bottom:14px;">
         <div style="font-weight:700;color:var(--accent);margin-bottom:6px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Productos del Pedido</div>
         ${itemsHtml}
@@ -2606,6 +2690,28 @@ async function verDetalleCitaAdmin(id) {
 }
 
 
+// Flujo alterno: cita agendada directo (sin cotizador rápido) → el jefe la
+// confirma, va a la visita con medidas/fotos, y desde aquí genera la
+// cotización — abre el mismo cotizador de dos columnas para llenarla.
+async function generarCotizacionDesdeCita() {
+  const id = window._admCitaId;
+  if (!id) return;
+  if (!confirm('¿Generar una cotización nueva a partir de esta cita? Se abrirá el cotizador para llenarla.')) return;
+
+  try {
+    const data = await apiFetch(`${API_BASE}/citas.php?action=generar_cotizacion&id=${id}`, { method: 'POST' });
+    if (!data.success) {
+      showNotification('<i class="fa-solid fa-xmark"></i> ' + (data.error || 'Error al generar la cotización'), 'error');
+      return;
+    }
+    showNotification('<i class="fa-solid fa-circle-check"></i> Cotización creada, complétala en el cotizador', 'success');
+    closeModal('adminCitaDetalleModal');
+    verDetalleCotAdmin(data.cotizacion_id);
+  } catch (e) {
+    showNotification('<i class="fa-solid fa-xmark"></i> Error de conexión', 'error');
+  }
+}
+
 async function cambiarEstadoCitaAdmin(id, estado) {
   if (!id) return;
   try {
@@ -2621,6 +2727,84 @@ async function cambiarEstadoCitaAdmin(id, estado) {
 }
 
 // ── Ver detalle de COTIZACIÓN ──────────────────────────────────
+const COTIZADOR_TIPO_LABELS = { cocina:'Cocina', closet:'Closet', lavamanos:'Lavamanos', otro:'Otro' };
+
+async function cargarCatalogoCotizador(forzar) {
+  if (window._cotizadorCatalogo && !forzar) return window._cotizadorCatalogo;
+  try {
+    const data = await apiFetch(`${API_BASE}/cotizador_catalogo.php`);
+    window._cotizadorCatalogo = (data.success ? data.items : []) || [];
+  } catch (e) {
+    window._cotizadorCatalogo = [];
+  }
+  return window._cotizadorCatalogo;
+}
+
+// ── Catálogo de precios del cotizador — configurar una sola vez ──
+async function abrirCatalogoCotizador() {
+  openModal('catalogoCotizadorModal');
+  await cargarCatalogoCotizador(true);
+  renderCatalogoCotizadorBody();
+}
+
+function renderCatalogoCotizadorBody() {
+  const wrap = document.getElementById('catalogoCotizadorBody');
+  if (!wrap) return;
+  const items = window._cotizadorCatalogo || [];
+  wrap.innerHTML = items.length ? items.map(it => `
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+      <span style="flex:1 1 140px;font-size:13px;color:var(--muted2);">${escapeHtml(it.nombre)} <span style="color:var(--muted);font-size:11px;">(${escapeHtml(it.unidad)})</span></span>
+      <input type="number" min="0" step="0.01" value="${it.precio_unitario_default}" id="catPrecio_${it.id}"
+        style="width:110px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:6px;color:var(--text);font-size:13px;">
+      <button class="btn btn-secondary btn-small" onclick="guardarPrecioCatalogo(${it.id})"><i class="fa-solid fa-floppy-disk"></i></button>
+      <button class="btn btn-danger btn-small" onclick="desactivarPartidaCatalogo(${it.id})"><i class="fa-solid fa-trash"></i></button>
+    </div>
+  `).join('') : '<p style="color:var(--muted);font-size:12px;">Sin partidas en el catálogo todavía.</p>';
+}
+
+async function guardarPrecioCatalogo(itemId) {
+  const precio = parseFloat(document.getElementById(`catPrecio_${itemId}`)?.value || 0);
+  const data = await apiFetch(`${API_BASE}/cotizador_catalogo.php?id=${itemId}`, {
+    method: 'PUT', body: JSON.stringify({ precio_unitario_default: precio }),
+  });
+  if (data.success) {
+    showNotification('<i class="fa-solid fa-circle-check"></i> Precio actualizado', 'success');
+    await cargarCatalogoCotizador(true);
+  } else {
+    showNotification('<i class="fa-solid fa-xmark"></i> ' + (data.error || 'Error'), 'error');
+  }
+}
+
+async function desactivarPartidaCatalogo(itemId) {
+  if (!confirm('¿Quitar esta partida del catálogo? Las cotizaciones que ya la usaron no se ven afectadas.')) return;
+  const data = await apiFetch(`${API_BASE}/cotizador_catalogo.php?id=${itemId}`, { method: 'DELETE' });
+  if (data.success) {
+    await cargarCatalogoCotizador(true);
+    renderCatalogoCotizadorBody();
+  }
+}
+
+async function agregarPartidaCatalogoNueva() {
+  const nombre = document.getElementById('catNombreNuevo')?.value?.trim();
+  const unidad = document.getElementById('catUnidadNuevo')?.value?.trim() || 'pza';
+  const precio = parseFloat(document.getElementById('catPrecioNuevo')?.value || 0);
+  if (!nombre) { showNotification('<i class="fa-solid fa-triangle-exclamation"></i> Escribe el nombre de la partida', 'error'); return; }
+
+  const data = await apiFetch(`${API_BASE}/cotizador_catalogo.php`, {
+    method: 'POST',
+    body: JSON.stringify({ clave: nombre, nombre, unidad, precio_unitario_default: precio }),
+  });
+  if (data.success) {
+    document.getElementById('catNombreNuevo').value = '';
+    document.getElementById('catPrecioNuevo').value = '';
+    showNotification('<i class="fa-solid fa-circle-check"></i> Partida agregada', 'success');
+    await cargarCatalogoCotizador(true);
+    renderCatalogoCotizadorBody();
+  } else {
+    showNotification('<i class="fa-solid fa-xmark"></i> ' + (data.error || 'Error'), 'error');
+  }
+}
+
 async function verDetalleCotAdmin(id) {
   const body  = document.getElementById('adm_cot_body');
   const folio = document.getElementById('adm_cot_folio');
@@ -2629,116 +2813,435 @@ async function verDetalleCotAdmin(id) {
   window._admCotId = id;
 
   try {
-    const data = await apiFetch(`${API_BASE}/cotizaciones.php?id=${id}`);
+    const [data] = await Promise.all([
+      apiFetch(`${API_BASE}/cotizaciones.php?id=${id}`),
+      cargarCatalogoCotizador(),
+    ]);
     if (!data.success || !data.cotizacion) throw new Error(data.error || 'No encontrada');
     const cot = data.cotizacion;
     folio.textContent = cot.numero_cotizacion;
 
     const estLabels = {
       nueva:'Nueva', en_revision:'En Revisión', respondida:'Propuesta enviada',
-      aceptada:'Aceptada', en_produccion:'En Producción',
-      lista:'Lista para entrega', entregada:'Entregada', cancelada:'Cancelada'
+      aceptada:'Aceptada — esperando enviar a producción', en_produccion:'En Producción (legado)',
+      lista:'Lista (legado)', entregada:'Entregada (legado)', cancelada:'Cancelada',
+      convertida_a_pedido:'Convertida a pedido',
     };
     const estClass = {
       nueva:'status-new', en_revision:'status-pending', respondida:'status-replied',
       aceptada:'status-info', en_produccion:'status-producing',
-      lista:'status-ready', entregada:'status-completed', cancelada:'status-cancelled'
+      lista:'status-ready', entregada:'status-completed', cancelada:'status-cancelled',
+      convertida_a_pedido:'status-completed',
     };
     const est = cot.estado || 'nueva';
-    const fmt = (n) => n > 0 ? `$${Number(n).toLocaleString('es-MX',{minimumFractionDigits:2})} MXN` : '—';
 
-    // Botones de acción según el estado actual
+    // Botones de estado simples (la propuesta se envía con el botón del cotizador)
     const acciones = {
-      nueva:        [['en_revision','📋 Marcar en revisión','btn-secondary']],
-      en_revision:  [['respondida','📨 Enviar propuesta al cliente','btn-primary'], ['cancelada','✕ Cancelar','btn-danger']],
-      respondida:   [['aceptada','✅ Cliente aceptó','btn-primary'], ['cancelada','✕ Cancelar','btn-danger']],
-      aceptada:     [['en_produccion','🔨 Mandar a producción','btn-primary'], ['cancelada','✕ Cancelar','btn-danger']],
-      en_produccion:[['lista','✅ Marcar como lista','btn-primary']],
-      lista:        [['entregada','🎉 Marcar como entregada','btn-primary']],
-      entregada:    [],
-      cancelada:    [],
+      nueva:       [['en_revision','📋 Marcar en revisión','btn-secondary'], ['cancelada','✕ Cancelar','btn-danger']],
+      en_revision: [['cancelada','✕ Cancelar','btn-danger']],
+      respondida:  [['cancelada','✕ Cancelar','btn-danger']],
+      aceptada: [], en_produccion: [], lista: [], entregada: [], cancelada: [], convertida_a_pedido: [],
     };
-
     const botonesHtml = (acciones[est] || []).map(([estado, label, cls]) =>
       `<button class="btn ${cls} btn-small" onclick="cambiarEstadoCotAdmin(${cot.id},'${estado}')">${label}</button>`
-    ).join(' ');
+    ).join(' ') + (est === 'aceptada'
+      ? ` <button class="btn btn-primary btn-small" onclick="convertirCotizacionAPedido(${cot.id})"><i class="fa-solid fa-industry"></i> Enviar a producción</button>`
+      : '') + (est === 'convertida_a_pedido' && cot.numero_pedido
+      ? ` <span class="status-badge status-completed"><i class="fa-solid fa-check"></i> Pedido ${escapeHtml(cot.numero_pedido)}</span>`
+      : '');
 
-    // Formulario de propuesta (visible solo cuando está en revisión)
-    const showProposal = ['en_revision','respondida','aceptada','en_produccion','lista','entregada'].includes(est);
-    const proposalFields = showProposal ? `
-      <div style="background:var(--bg);border-left:3px solid #c9a96e;border-radius:6px;padding:14px;margin-top:14px;">
-        <div style="font-weight:700;color:#c9a96e;margin-bottom:10px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">
-          Propuesta del admin ${est === 'en_revision' ? '— rellena antes de enviar al cliente' : ''}
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-          <div>
-            <label style="color:var(--muted);font-size:10px;display:block;margin-bottom:4px;">PRECIO COTIZADO (MXN) *</label>
-            <input id="cot_precio" type="number" min="0" step="0.01"
-              value="${cot.precio_cotizado || ''}"
-              style="width:100%;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px;"
-              placeholder="Ej: 15000">
-          </div>
-          <div>
-            <label style="color:var(--muted);font-size:10px;display:block;margin-bottom:4px;">ENTREGA ESTIMADA</label>
-            <input id="cot_fecha_entrega" type="date"
-              value="${cot.fecha_entrega_estimada || ''}"
-              style="width:100%;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px;">
-          </div>
-        </div>
-        <div style="margin-bottom:10px;">
-          <label style="color:var(--muted);font-size:10px;display:block;margin-bottom:4px;">DESCRIPCIÓN DE LA PROPUESTA * (qué se va a fabricar, materiales, acabados)</label>
-          <textarea id="cot_desc_respuesta" rows="4"
-            style="width:100%;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px;resize:vertical;"
-            placeholder="Ej: Closet de 2.5m x 2m en melamina nogal, 4 cajones, 6 repisas, puertas corredizas con espejo...">${escapeHtml(cot.descripcion_respuesta || '')}</textarea>
-        </div>
-        <div style="margin-bottom:10px;">
-          <label style="color:var(--muted);font-size:10px;display:block;margin-bottom:4px;">NOTAS INTERNAS (solo visibles aquí)</label>
-          <textarea id="cot_notas" rows="2"
-            style="width:100%;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:12px;resize:vertical;"
-            placeholder="Notas de taller, proveedores, condiciones...">${escapeHtml(cot.notas_admin || '')}</textarea>
-        </div>
-        <button class="btn btn-secondary btn-small" onclick="guardarCamposCotizacion(${cot.id})">
-          <i class="fa-solid fa-floppy-disk"></i> Guardar cambios
-        </button>
-      </div>` : '';
+    // ── Estado inicial del cotizador (partidas ya guardadas, o vacío) ──
+    window._cotizadorItems = (cot.items && cot.items.length)
+      ? cot.items.map(it => ({ clave: it.clave_item, nombre: it.nombre_item, unidad: it.unidad, cantidad: parseFloat(it.cantidad), precio_unitario: parseFloat(it.precio_unitario) }))
+      : [];
+    window._cotizadorImagenesJefe = (cot.imagenes || []).filter(im => im.tipo === 'jefe_propuesta');
+    window._cotizadorCotId = id;
+    window._cotizadorCot   = cot;
+
+    const imagenesCliente = (cot.imagenes || []).filter(im => im.tipo === 'cliente_espacio' || im.tipo === 'cliente_boceto');
+
+    let mapsBtn = '';
+    const partesDireccion = [cot.direccion, cot.colonia ? `Col. ${cot.colonia}` : '', cot.ciudad, cot.municipio ? `Mpio. ${cot.municipio}` : '', cot.cp ? `CP ${cot.cp}` : ''].filter(Boolean).join(', ');
+    if (cot.lat && cot.lng) {
+      mapsBtn = `<a href="https://www.google.com/maps/search/?api=1&query=${cot.lat},${cot.lng}" target="_blank" rel="noopener" style="color:#4285F4;">📍 Ver ubicación en el mapa</a>`;
+    } else if (partesDireccion) {
+      mapsBtn = `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(partesDireccion)}" target="_blank" rel="noopener" style="color:#4285F4;">📍 Ver dirección en el mapa</a>`;
+    }
+
+    const medidasHtml = (cot.ancho_espacio || cot.alto_espacio || cot.fondo_espacio)
+      ? `<div><span style="color:var(--muted);display:block;font-size:10px;">Medidas del espacio (ancho × alto × fondo)</span><strong>${cot.ancho_espacio||'—'} × ${cot.alto_espacio||'—'} × ${cot.fondo_espacio||'—'} m</strong></div>`
+      : (cot.medidas ? `<div style="grid-column:1/-1;"><span style="color:var(--muted);display:block;font-size:10px;">Medidas</span><strong>${escapeHtml(cot.medidas)}</strong></div>` : '');
 
     body.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
         <span class="status-badge ${estClass[est]||'status-new'}">${estLabels[est]||est}</span>
         <span style="font-size:11px;color:var(--muted);">Creada: ${(cot.fecha_creacion||'').substring(0,10)}</span>
       </div>
-
       ${botonesHtml ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;">${botonesHtml}</div>` : ''}
 
-      <div style="background:var(--bg);border-left:3px solid var(--accent);border-radius:6px;padding:12px;margin-bottom:12px;">
-        <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Cliente</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;color:var(--muted2);">
-          <div><span style="color:var(--muted);display:block;font-size:10px;">Nombre</span><strong>${escapeHtml(cot.nombre_cliente)}</strong></div>
-          <div><span style="color:var(--muted);display:block;font-size:10px;">Teléfono</span><strong>${escapeHtml(cot.telefono_cliente||'—')}</strong></div>
-          <div style="grid-column:1/-1;"><span style="color:var(--muted);display:block;font-size:10px;">Correo</span><strong>${escapeHtml(cot.correo_cliente)}</strong></div>
-          ${cot.cliente_id?`<div style="grid-column:1/-1;margin-top:4px;"><span style="background:#2d6a3f20;color:#2d6a3f;border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700;"><i class="fa-solid fa-user-check"></i> Cliente registrado #${cot.cliente_id}</span></div>`:''}
-        </div>
-      </div>
+      <div class="row g-3" style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start;">
+        <!-- ── Columna izquierda: información del proyecto (solo lectura) ── -->
+        <div style="flex:1 1 380px;min-width:320px;">
+          <div style="background:var(--bg);border-left:3px solid var(--accent);border-radius:6px;padding:12px;margin-bottom:12px;">
+            <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Cliente</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;color:var(--muted2);">
+              <div><span style="color:var(--muted);display:block;font-size:10px;">Nombre</span><strong>${escapeHtml(cot.nombre_cliente)}</strong></div>
+              <div><span style="color:var(--muted);display:block;font-size:10px;">Teléfono</span><strong>${escapeHtml(cot.telefono_cliente||'—')}</strong></div>
+              <div style="grid-column:1/-1;"><span style="color:var(--muted);display:block;font-size:10px;">Correo</span><strong>${escapeHtml(cot.correo_cliente)}</strong></div>
+              ${mapsBtn ? `<div style="grid-column:1/-1;font-size:12px;">${mapsBtn}</div>` : ''}
+              ${cot.cliente_id?`<div style="grid-column:1/-1;"><span style="background:#2d6a3f20;color:#2d6a3f;border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700;"><i class="fa-solid fa-user-check"></i> Cliente registrado #${cot.cliente_id}</span></div>`:''}
+              ${cot.cita_id?`<div style="grid-column:1/-1;"><span style="background:#4a7c8b20;color:#5b9aad;border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700;"><i class="fa-solid fa-calendar-check"></i> Generada tras visita (cita #${cot.cita_id})</span></div>`:''}
+            </div>
+          </div>
 
-      <div style="background:var(--bg);border-left:3px solid var(--ok);border-radius:6px;padding:12px;margin-bottom:2px;">
-        <div style="font-weight:700;color:var(--ok);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Solicitud del cliente</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;color:var(--muted2);">
-          <div><span style="color:var(--muted);display:block;font-size:10px;">Modelo</span><strong>${escapeHtml(cot.modelo_mueble||'No especificado')}</strong></div>
-          <div><span style="color:var(--muted);display:block;font-size:10px;">Presupuesto cliente</span><strong>${escapeHtml(cot.rango_presupuesto||'—')}</strong></div>
-          <div><span style="color:var(--muted);display:block;font-size:10px;">Tiene medidas</span><strong>${parseInt(cot.tiene_medidas)?'✅ Sí':'❌ No'}</strong></div>
-          <div><span style="color:var(--muted);display:block;font-size:10px;">Requiere instalación</span><strong>${parseInt(cot.requiere_instalacion)?'✅ Sí':'❌ No'}</strong></div>
-          ${cot.medidas?`<div style="grid-column:1/-1;"><span style="color:var(--muted);display:block;font-size:10px;">Medidas</span><strong>${escapeHtml(cot.medidas)}</strong></div>`:''}
-          <div style="grid-column:1/-1;">
-            <span style="color:var(--muted);display:block;font-size:10px;margin-bottom:4px;">Descripción</span>
-            <div style="background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:10px;line-height:1.6;color:var(--muted2);">${escapeHtml(cot.descripcion_solicitud||'—')}</div>
+          <div style="background:var(--bg);border-left:3px solid var(--ok);border-radius:6px;padding:12px;margin-bottom:12px;">
+            <div style="font-weight:700;color:var(--ok);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Proyecto solicitado</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;color:var(--muted2);">
+              <div><span style="color:var(--muted);display:block;font-size:10px;">Tipo</span><strong>${escapeHtml(COTIZADOR_TIPO_LABELS[cot.tipo_mueble] || cot.modelo_mueble || 'No especificado')}</strong></div>
+              <div><span style="color:var(--muted);display:block;font-size:10px;">Instalación (la define el jefe tras la visita)</span><strong>${parseInt(cot.requiere_instalacion)?'✅ Sí':'—'}</strong></div>
+              ${medidasHtml}
+              <div style="grid-column:1/-1;">
+                <span style="color:var(--muted);display:block;font-size:10px;margin-bottom:4px;">Cómo visualiza el cliente el proyecto</span>
+                <div style="background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:10px;line-height:1.6;color:var(--muted2);">${escapeHtml(cot.descripcion_solicitud||'—')}</div>
+              </div>
+              ${imagenesCliente.length ? `<div style="grid-column:1/-1;">
+                <span style="color:var(--muted);display:block;font-size:10px;margin-bottom:4px;">Fotos del espacio / boceto</span>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                  ${imagenesCliente.map(im => `<a href="${im.url_imagen}" target="_blank" rel="noopener"><img src="${im.url_imagen}" alt="Foto del cliente" style="width:70px;height:70px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}
+                </div>
+              </div>` : ''}
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Columna derecha: cotizador estructurado ── -->
+        <div style="flex:1 1 420px;min-width:340px;">
+          <div style="background:var(--bg);border-left:3px solid #c9a96e;border-radius:6px;padding:14px;">
+            <div style="font-weight:700;color:#c9a96e;margin-bottom:10px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">
+              Cotizador — partidas del proyecto
+            </div>
+
+            <div id="cotizadorPartidasWrap"></div>
+            <button class="btn btn-secondary btn-small" onclick="agregarPartidaCotizador()" style="margin:8px 0 14px;">
+              <i class="fa-solid fa-plus"></i> Agregar partida
+            </button>
+
+            <div style="display:flex;justify-content:space-between;align-items:center;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:10px 14px;margin-bottom:14px;">
+              <strong style="color:var(--muted2);">Total</strong>
+              <strong id="cotizadorTotal" style="font-size:18px;color:#c9a96e;">$0.00 MXN</strong>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+              <div>
+                <label style="color:var(--muted);font-size:10px;display:block;margin-bottom:4px;">FECHA DE VISITA</label>
+                <input id="cot_fecha_visita" type="date" value="${cot.fecha_visita || ''}"
+                  style="width:100%;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px;">
+              </div>
+              <div>
+                <label style="color:var(--muted);font-size:10px;display:block;margin-bottom:4px;">HORA</label>
+                <input id="cot_hora_visita" type="text" value="${escapeHtml(cot.hora_visita || '')}" placeholder="Ej: 10:00 - 12:00"
+                  style="width:100%;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px;">
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+              <div>
+                <label style="color:var(--muted);font-size:10px;display:block;margin-bottom:4px;">¿INCLUYE INSTALACIÓN?</label>
+                <select id="cot_requiere_instalacion" style="width:100%;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px;">
+                  <option value="0" ${!parseInt(cot.requiere_instalacion)?'selected':''}>No</option>
+                  <option value="1" ${parseInt(cot.requiere_instalacion)?'selected':''}>Sí</option>
+                </select>
+              </div>
+              <div>
+                <label style="color:var(--muted);font-size:10px;display:block;margin-bottom:4px;">ENTREGA ESTIMADA</label>
+                <input id="cot_fecha_entrega" type="date" value="${cot.fecha_entrega_estimada || ''}"
+                  style="width:100%;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px;">
+              </div>
+            </div>
+            <div style="margin-bottom:10px;">
+              <label style="color:var(--muted);font-size:10px;display:block;margin-bottom:4px;">MENSAJE / PROPUESTA AL CLIENTE * (qué se va a fabricar, materiales, acabados)</label>
+              <textarea id="cot_desc_respuesta" rows="4"
+                style="width:100%;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px;resize:vertical;"
+                placeholder="Ej: Closet de 2.5m x 2m en melamina nogal, 4 cajones, 6 repisas, puertas corredizas con espejo...">${escapeHtml(cot.descripcion_respuesta || '')}</textarea>
+            </div>
+            <div style="margin-bottom:10px;">
+              <label style="color:var(--muted);font-size:10px;display:block;margin-bottom:4px;">NOTAS INTERNAS (solo visibles aquí)</label>
+              <textarea id="cot_notas" rows="2"
+                style="width:100%;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:12px;resize:vertical;"
+                placeholder="Notas de taller, proveedores, condiciones...">${escapeHtml(cot.notas_admin || '')}</textarea>
+            </div>
+            <div style="margin-bottom:14px;">
+              <label style="color:var(--muted);font-size:10px;display:block;margin-bottom:4px;">IMÁGENES DE REFERENCIA PARA EL CLIENTE</label>
+              <input type="file" id="cotizadorImgInput" accept="image/jpeg,image/jpg,image/png,image/webp" multiple class="form-input" style="margin-bottom:8px;">
+              <div id="cotizadorImagenesJefeWrap" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+            </div>
+
+            ${cot.pdf_url ? `<p style="font-size:12px;margin-bottom:10px;"><a href="${cot.pdf_url}" target="_blank" rel="noopener" style="color:#c9a96e;"><i class="fa-solid fa-file-pdf"></i> Ver el PDF ya enviado</a></p>` : ''}
+
+            <button class="btn btn-secondary btn-small" onclick="guardarCamposCotizacion(${cot.id})">
+              <i class="fa-solid fa-floppy-disk"></i> Guardar borrador
+            </button>
+            <button class="btn btn-primary" id="btnResponderCliente" onclick="generarPDFCotizacion(${cot.id})">
+              <i class="fa-solid fa-paper-plane"></i> Responder al cliente (genera PDF)
+            </button>
           </div>
         </div>
       </div>
-
-      ${proposalFields}
     `;
+
+    renderCotizadorPartidas();
+    renderCotizadorImagenesJefe();
   } catch(e) {
     body.innerHTML = `<div style="color:var(--danger);padding:20px;text-align:center;"><i class="fa-solid fa-circle-exclamation"></i> Error: ${e.message}</div>`;
+  }
+}
+
+// ── Cotizador: partidas dinámicas ─────────────────────────────
+function renderCotizadorPartidas() {
+  const wrap = document.getElementById('cotizadorPartidasWrap');
+  if (!wrap) return;
+  const catalogo = window._cotizadorCatalogo || [];
+  const items = window._cotizadorItems || [];
+
+  wrap.innerHTML = items.map((it, idx) => `
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap;">
+      <select onchange="seleccionarPartidaCatalogo(${idx}, this.value)" style="flex:1 1 130px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:6px;color:var(--text);font-size:12px;">
+        <option value="">Personalizada…</option>
+        ${catalogo.map(c => `<option value="${c.clave}" ${c.clave === it.clave ? 'selected' : ''}>${escapeHtml(c.nombre)}</option>`).join('')}
+      </select>
+      <input type="text" value="${escapeHtml(it.nombre)}" placeholder="Nombre" oninput="actualizarPartidaCotizador(${idx},'nombre',this.value)"
+        style="flex:1 1 110px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:6px;color:var(--text);font-size:12px;">
+      <input type="number" min="0" step="0.01" value="${it.cantidad}" placeholder="Cant." oninput="actualizarPartidaCotizador(${idx},'cantidad',this.value)"
+        style="width:64px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:6px;color:var(--text);font-size:12px;">
+      <input type="text" value="${escapeHtml(it.unidad)}" placeholder="Unidad" oninput="actualizarPartidaCotizador(${idx},'unidad',this.value)"
+        style="width:56px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:6px;color:var(--text);font-size:12px;">
+      <input type="number" min="0" step="0.01" value="${it.precio_unitario}" placeholder="P. unit." oninput="actualizarPartidaCotizador(${idx},'precio_unitario',this.value)"
+        style="width:82px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:6px;color:var(--text);font-size:12px;">
+      <span style="width:82px;text-align:right;font-size:12px;color:var(--muted2);font-weight:700;">${money((it.cantidad||0) * (it.precio_unitario||0))}</span>
+      <button type="button" onclick="quitarPartidaCotizador(${idx})" style="background:none;border:none;color:var(--danger);cursor:pointer;padding:4px;"><i class="fa-solid fa-trash"></i></button>
+    </div>
+  `).join('') || '<p style="color:var(--muted);font-size:12px;">Sin partidas — agrega al menos una.</p>';
+
+  calcularTotalCotizador();
+}
+
+function seleccionarPartidaCatalogo(idx, clave) {
+  const catalogo = window._cotizadorCatalogo || [];
+  const item = catalogo.find(c => c.clave === clave);
+  if (item) {
+    window._cotizadorItems[idx] = {
+      clave: item.clave, nombre: item.nombre, unidad: item.unidad,
+      cantidad: window._cotizadorItems[idx].cantidad || 1,
+      precio_unitario: parseFloat(item.precio_unitario_default) || 0,
+    };
+  } else {
+    window._cotizadorItems[idx].clave = '';
+  }
+  renderCotizadorPartidas();
+}
+
+function actualizarPartidaCotizador(idx, campo, valor) {
+  if (!window._cotizadorItems[idx]) return;
+  if (campo === 'cantidad' || campo === 'precio_unitario') valor = parseFloat(valor) || 0;
+  window._cotizadorItems[idx][campo] = valor;
+  if (campo === 'nombre') window._cotizadorItems[idx].clave = window._cotizadorItems[idx].clave || valor.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+  calcularTotalCotizador();
+  // Solo refrescamos el subtotal visible, no todo el DOM (evita perder el foco del input)
+  const subtotalEls = document.querySelectorAll('#cotizadorPartidasWrap > div');
+  const el = subtotalEls[idx]?.querySelector('span');
+  if (el) el.textContent = money((window._cotizadorItems[idx].cantidad||0) * (window._cotizadorItems[idx].precio_unitario||0));
+}
+
+function agregarPartidaCotizador() {
+  window._cotizadorItems = window._cotizadorItems || [];
+  window._cotizadorItems.push({ clave: '', nombre: '', unidad: 'pza', cantidad: 1, precio_unitario: 0 });
+  renderCotizadorPartidas();
+}
+
+function quitarPartidaCotizador(idx) {
+  window._cotizadorItems.splice(idx, 1);
+  renderCotizadorPartidas();
+}
+
+function calcularTotalCotizador() {
+  const total = (window._cotizadorItems || []).reduce((sum, it) => sum + (parseFloat(it.cantidad)||0) * (parseFloat(it.precio_unitario)||0), 0);
+  const el = document.getElementById('cotizadorTotal');
+  if (el) el.textContent = money(total);
+  return total;
+}
+
+// ── Cotizador: imágenes de referencia del jefe ────────────────
+function renderCotizadorImagenesJefe() {
+  const wrap = document.getElementById('cotizadorImagenesJefeWrap');
+  if (!wrap) return;
+  wrap.innerHTML = (window._cotizadorImagenesJefe || []).map(im =>
+    `<a href="${im.url_imagen}" target="_blank" rel="noopener"><img src="${im.url_imagen}" alt="Referencia" style="width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`
+  ).join('');
+}
+
+async function subirImagenesCotizador(files, cotId, carpeta) {
+  if (!firebaseStorage && typeof initFirebase === 'function') initFirebase();
+  if (!firebaseStorage) throw new Error('Firebase Storage no disponible.');
+  const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp'];
+  const ts = Date.now();
+  const urls = [];
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    if (!ALLOWED_MIME.includes(file.type)) throw new Error(`Archivo "${file.name}" no es una imagen válida (jpg/png/webp).`);
+    const ext  = file.name.split('.').pop().toLowerCase() || 'jpg';
+    const path = `cotizaciones/${cotId}/${carpeta}/${ts}-${i}.${ext}`;
+    const snap = await firebaseStorage.ref(path).put(file);
+    urls.push(await snap.ref.getDownloadURL());
+  }
+  return urls;
+}
+
+// ── Guardar borrador (sin cambiar de estado) ──────────────────
+async function guardarCamposCotizacion(id) {
+  const fechaEnt = document.getElementById('cot_fecha_entrega')?.value || '';
+  const notas    = document.getElementById('cot_notas')?.value?.trim() || '';
+  const desc     = document.getElementById('cot_desc_respuesta')?.value?.trim() || '';
+
+  const inputImg = document.getElementById('cotizadorImgInput');
+  if (inputImg?.files?.length) {
+    try {
+      const urls = await subirImagenesCotizador(inputImg.files, id, 'jefe');
+      for (const url of urls) {
+        const r = await apiFetch(`${API_BASE}/cotizaciones.php?action=agregar_imagen&id=${id}`, {
+          method: 'POST', body: JSON.stringify({ url_imagen: url, tipo: 'jefe_propuesta' }),
+        });
+        if (r.success) window._cotizadorImagenesJefe.push({ url_imagen: url, tipo: 'jefe_propuesta' });
+      }
+      renderCotizadorImagenesJefe();
+      inputImg.value = '';
+    } catch (e) {
+      showNotification('<i class="fa-solid fa-xmark"></i> ' + e.message, 'error');
+    }
+  }
+
+  // Incluir las partidas actuales del cotizador — así este mismo botón sirve
+  // para "perfeccionar" una cotización ya aceptada por el cliente (ajustar
+  // partidas/precio) sin cambiar el estado ni volver a notificarlo.
+  const items = (window._cotizadorItems || []).filter(it => it.nombre && it.cantidad > 0);
+
+  const data = await apiFetch(`${API_BASE}/cotizaciones.php?id=${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      descripcion_respuesta: desc || null,
+      notas_admin: notas || null,
+      fecha_entrega_estimada: fechaEnt || null,
+      items: items.length ? items.map(it => ({ clave: it.clave || it.nombre, nombre: it.nombre, cantidad: it.cantidad, unidad: it.unidad, precio_unitario: it.precio_unitario })) : undefined,
+    }),
+  });
+  if (data.success) showNotification('<i class="fa-solid fa-floppy-disk"></i> Borrador guardado', 'success');
+  else showNotification(data.error || 'Error al guardar', 'error');
+}
+
+// ── Generar PDF y responder al cliente ─────────────────────────
+async function generarPDFCotizacion(id) {
+  const total   = calcularTotalCotizador();
+  const items   = (window._cotizadorItems || []).filter(it => it.nombre && it.cantidad > 0);
+  const desc    = document.getElementById('cot_desc_respuesta')?.value?.trim() || '';
+  const notas   = document.getElementById('cot_notas')?.value?.trim() || '';
+  const fechaVisita = document.getElementById('cot_fecha_visita')?.value || '';
+  const horaVisita  = document.getElementById('cot_hora_visita')?.value?.trim() || '';
+  const instalacion = document.getElementById('cot_requiere_instalacion')?.value === '1';
+  const fechaEnt    = document.getElementById('cot_fecha_entrega')?.value || '';
+  const cot = window._cotizadorCot || {};
+
+  if (items.length < 1) { showNotification('<i class="fa-solid fa-triangle-exclamation"></i> Agrega al menos una partida.', 'error'); return; }
+  if (desc.length < 10)  { showNotification('<i class="fa-solid fa-triangle-exclamation"></i> Escribe el mensaje/propuesta para el cliente.', 'error'); return; }
+  if (total <= 0)         { showNotification('<i class="fa-solid fa-triangle-exclamation"></i> El total debe ser mayor a cero.', 'error'); return; }
+
+  const btn = document.getElementById('btnResponderCliente');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generando PDF...'; }
+
+  try {
+    // Subir imágenes pendientes (si el jefe eligió archivos pero no dio "Guardar borrador")
+    const inputImg = document.getElementById('cotizadorImgInput');
+    if (inputImg?.files?.length) {
+      const urls = await subirImagenesCotizador(inputImg.files, id, 'jefe');
+      for (const url of urls) {
+        await apiFetch(`${API_BASE}/cotizaciones.php?action=agregar_imagen&id=${id}`, {
+          method: 'POST', body: JSON.stringify({ url_imagen: url, tipo: 'jefe_propuesta' }),
+        });
+      }
+    }
+
+    // ── Armar PDF con jsPDF ──
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.setFontSize(18); doc.setTextColor(139, 105, 20);
+    doc.text('Wooden House — Propuesta de Cotización', 14, 18);
+    doc.setFontSize(11); doc.setTextColor(60, 60, 60);
+    doc.text(`Folio: ${cot.numero_cotizacion || ''}`, 14, 28);
+    doc.text(`Cliente: ${cot.nombre_cliente || ''}`, 14, 34);
+    doc.text(`Correo: ${cot.correo_cliente || ''}   Tel: ${cot.telefono_cliente || ''}`, 14, 40);
+    doc.text(`Fecha: ${new Date().toLocaleDateString('es-MX')}`, 14, 46);
+
+    let y = 58;
+    doc.setFontSize(12); doc.setTextColor(139, 105, 20);
+    doc.text('Partidas cotizadas', 14, y); y += 6;
+    doc.setFontSize(9); doc.setTextColor(60, 60, 60);
+    doc.text('Concepto', 14, y); doc.text('Cant.', 110, y); doc.text('Unidad', 130, y); doc.text('P. Unit.', 152, y); doc.text('Subtotal', 178, y);
+    y += 4; doc.setDrawColor(200); doc.line(14, y, 196, y); y += 6;
+    items.forEach(it => {
+      const sub = (it.cantidad||0) * (it.precio_unitario||0);
+      doc.text(String(it.nombre).substring(0, 42), 14, y);
+      doc.text(String(it.cantidad), 110, y);
+      doc.text(String(it.unidad), 130, y);
+      doc.text(`$${Number(it.precio_unitario).toFixed(2)}`, 152, y);
+      doc.text(`$${sub.toFixed(2)}`, 178, y);
+      y += 6;
+      if (y > 270) { doc.addPage(); y = 20; }
+    });
+    y += 4; doc.setDrawColor(200); doc.line(14, y, 196, y); y += 8;
+    doc.setFontSize(13); doc.setTextColor(139, 105, 20);
+    doc.text(`TOTAL: $${total.toLocaleString('es-MX', {minimumFractionDigits:2})} MXN`, 14, y); y += 12;
+
+    doc.setFontSize(11); doc.setTextColor(60, 60, 60);
+    doc.text('Descripción de la propuesta:', 14, y); y += 6;
+    doc.setFontSize(10);
+    const descLines = doc.splitTextToSize(desc, 180);
+    doc.text(descLines, 14, y); y += descLines.length * 5 + 6;
+
+    if (fechaVisita) { doc.text(`Visita programada: ${fechaVisita}${horaVisita ? ' — ' + horaVisita : ''}`, 14, y); y += 6; }
+    doc.text(`Instalación: ${instalacion ? 'Incluida' : 'No incluida'}`, 14, y); y += 6;
+    if (fechaEnt) { doc.text(`Entrega estimada: ${fechaEnt}`, 14, y); y += 6; }
+
+    const pdfBlob = doc.output('blob');
+
+    // ── Subir PDF a Storage ──
+    if (!firebaseStorage && typeof initFirebase === 'function') initFirebase();
+    const path = `cotizaciones/${id}/propuesta_${cot.numero_cotizacion || id}.pdf`;
+    const snap = await firebaseStorage.ref(path).put(pdfBlob, { contentType: 'application/pdf' });
+    const pdfUrl = await snap.ref.getDownloadURL();
+
+    // ── Guardar todo y disparar el email al cliente ──
+    const data = await apiFetch(`${API_BASE}/cotizaciones.php?id=${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        estado: 'respondida',
+        items: items.map(it => ({ clave: it.clave || it.nombre, nombre: it.nombre, cantidad: it.cantidad, unidad: it.unidad, precio_unitario: it.precio_unitario })),
+        descripcion_respuesta: desc,
+        notas_admin: notas || null,
+        fecha_visita: fechaVisita || null,
+        hora_visita: horaVisita || null,
+        requiere_instalacion: instalacion,
+        fecha_entrega_estimada: fechaEnt || null,
+        pdf_url: pdfUrl,
+      }),
+    });
+    if (data.success) {
+      showNotification('<i class="fa-solid fa-circle-check"></i> Propuesta enviada al cliente', 'success');
+      closeModal('adminCotDetalleModal');
+      cargarCotizacionesAPI();
+    } else {
+      showNotification('<i class="fa-solid fa-circle-xmark"></i> ' + (data.error || 'Error al enviar'), 'error');
+    }
+  } catch (e) {
+    showNotification('<i class="fa-solid fa-circle-xmark"></i> ' + (e.message || 'Error al generar el PDF'), 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Responder al cliente (genera PDF)'; }
   }
 }
 
@@ -2808,45 +3311,32 @@ async function cargarCotizacionesAPI() {
   }
 }
 
-async function guardarCamposCotizacion(id) {
-  const precio     = parseFloat(document.getElementById('cot_precio')?.value || 0);
-  const desc       = document.getElementById('cot_desc_respuesta')?.value?.trim() || '';
-  const notas      = document.getElementById('cot_notas')?.value?.trim() || '';
-  const fechaEnt   = document.getElementById('cot_fecha_entrega')?.value || '';
-
-  const data = await apiFetch(`${API_BASE}/cotizaciones.php?id=${id}`, {
-    method: 'PUT',
-    body: JSON.stringify({
-      precio_cotizado:       precio || null,
-      descripcion_respuesta: desc   || null,
-      notas_admin:           notas  || null,
-      fecha_entrega_estimada:fechaEnt || null,
-    }),
-  });
-  if (data.success) showNotification('<i class="fa-solid fa-floppy-disk"></i> Guardado', 'success');
-  else showNotification(data.error || 'Error al guardar', 'error');
+// El cliente ya confirmó (estado 'aceptada') y el jefe ya perfeccionó lo que
+// hiciera falta (guardarCamposCotizacion) — esto crea el pedido real.
+async function convertirCotizacionAPedido(id) {
+  if (!confirm('¿Enviar esta cotización a producción? Se creará un pedido nuevo como "pendiente".')) return;
+  const data = await apiFetch(`${API_BASE}/cotizaciones.php?action=convertir_pedido&id=${id}`, { method: 'POST' });
+  if (data.success) {
+    showNotification(`<i class="fa-solid fa-circle-check"></i> Pedido ${data.numero_pedido} creado`, 'success');
+    closeModal('adminCotDetalleModal');
+    cargarCotizacionesAPI();
+  } else {
+    showNotification('<i class="fa-solid fa-xmark"></i> ' + (data.error || 'Error al convertir'), 'error');
+  }
 }
 
+// Transiciones simples (en_revision, cancelada) — enviar la propuesta al
+// cliente (estado 'respondida') se hace desde generarPDFCotizacion(), que
+// arma el cotizador completo y no cabe en un cambio de estado suelto.
 async function cambiarEstadoCotAdmin(id, estado) {
-  // Al enviar propuesta, incluir precio y descripción en el mismo request
-  const body = { estado };
-  if (estado === 'respondida') {
-    body.precio_cotizado        = parseFloat(document.getElementById('cot_precio')?.value || 0);
-    body.descripcion_respuesta  = document.getElementById('cot_desc_respuesta')?.value?.trim() || '';
-    body.notas_admin            = document.getElementById('cot_notas')?.value?.trim() || '';
-    body.fecha_entrega_estimada = document.getElementById('cot_fecha_entrega')?.value || '';
-  }
-
   const data = await apiFetch(`${API_BASE}/cotizaciones.php?id=${id}`, {
     method: 'PUT',
-    body: JSON.stringify(body),
+    body: JSON.stringify({ estado }),
   });
 
   if (data.success) {
     const lbl = {
-      nueva:'Nueva', en_revision:'En Revisión', respondida:'Propuesta enviada al cliente',
-      aceptada:'Aceptada', en_produccion:'Enviada a producción',
-      lista:'Lista para entrega', entregada:'Entregada', cancelada:'Cancelada',
+      nueva:'Nueva', en_revision:'En Revisión', cancelada:'Cancelada',
     }[estado] || estado;
     showNotification(`✅ ${lbl}`, 'success');
     closeModal('adminCotDetalleModal');
@@ -3398,12 +3888,10 @@ async function verDetalleCliente(id) {
     const pedidos = data.pedidos || [];
     const cots    = data.cotizaciones || [];
 
-    const estLabels = { pendiente:'Pendiente', anticipo_pagado:'Anticipo pagado', pagado:'Pagado',
-                        en_produccion:'En producción', listo:'Listo',
-                        listo_para_entrega:'Listo para entrega', entregado:'Entregado', cancelado:'Cancelado' };
+    const estLabels = ESTADO_PEDIDO_LABELS;
     const estColors = { pendiente:'var(--warn)', anticipo_pagado:'var(--warn)', pagado:'var(--accent)',
-                        en_produccion:'#4a7c8b', listo:'#2a8e6e',
-                        listo_para_entrega:'#1e7c5a', entregado:'var(--muted)', cancelado:'var(--danger)' };
+                        listo_para_produccion:'#4a7c8b', en_produccion:'#4a7c8b', alistando_pedido:'#2a8e6e',
+                        en_camino_instalacion:'#1e7c5a', finalizado:'var(--muted)', cancelado:'var(--danger)' };
 
     body.innerHTML = `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
@@ -3980,8 +4468,8 @@ async function generarRutaDiaAdmin(fecha) {
       });
     });
 
-    // Pedidos listo_para_entrega con envío — datos ya en caché
-    _pedidosCalCache.filter(e => e.date === fecha && e.datos?.estado === 'listo_para_entrega' && e.datos?.tipo_entrega === 'envio').forEach(e => {
+    // Pedidos en_camino_instalacion con envío — datos ya en caché
+    _pedidosCalCache.filter(e => e.date === fecha && e.datos?.estado === 'en_camino_instalacion' && e.datos?.tipo_entrega === 'envio').forEach(e => {
       const p = e.datos || {};
       const dir = [p.direccion_envio, p.colonia_envio ? `Col. ${p.colonia_envio}` : '', p.ciudad_envio, p.cp_envio ? `CP ${p.cp_envio}` : ''].filter(Boolean).join(', ');
       if (!dir && !p.lat) return;

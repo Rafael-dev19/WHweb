@@ -4,8 +4,8 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #1a1a1a;
-            color: #e0e0e0;
+            background: var(--color-bg-main);
+            color: var(--color-text-main);
             line-height: 1.6;
             overflow-x: hidden;
             width: 100%;
@@ -18,7 +18,7 @@
 
         /* ========== HEADER NAVIGATION ========== */
         .header-nav {
-            background: #2d2d2d;
+            background: var(--color-bg-card);
             padding: 20px 40px;
             display: flex;
             justify-content: space-between;
@@ -33,7 +33,7 @@
         .logo {
             font-size: 28px;
             font-weight: bold;
-            color: #8b7355;
+            color: var(--color-primary);
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
 
@@ -45,16 +45,16 @@
         }
 
         .nav-links a {
-            color: #e0e0e0;
+            color: var(--color-text-main);
             text-decoration: none;
             transition: all 0.3s;
             font-weight: 500;
         }
 
-        .nav-links a:hover { color: #8b7355; }
+        .nav-links a:hover { color: var(--color-primary); }
 
         .login-btn {
-            background: #8b7355;
+            background: var(--color-primary);
             color: white;
             padding: 10px 25px;
             border-radius: 8px;
@@ -65,7 +65,7 @@
             font-weight: 600;
             display: inline-block;
         }
-        .login-btn:hover { background: #a0865f; transform: scale(1.05); }
+        .login-btn:hover { background: var(--color-primary-hover); transform: scale(1.05); }
 
         .cart-icon {
             position: relative;
@@ -92,19 +92,19 @@
         .menu-toggle {
             display: none;
             background: transparent;
-            border: 2px solid #3d3d3d;
-            color: #e0e0e0;
+            border: 2px solid var(--color-border);
+            color: var(--color-text-main);
             font-size: 22px;
             padding: 8px 12px;
             border-radius: 10px;
             cursor: pointer;
             transition: .3s;
         }
-        .menu-toggle:hover { border-color:#8b7355; color:#8b7355; }
+        .menu-toggle:hover { border-color:var(--color-primary); color:var(--color-primary); }
 
         /* ========== PROGRESS STEPS ========== */
         .steps-indicator {
-            background: linear-gradient(135deg, #2d2d2d, #252525);
+            background: linear-gradient(135deg, var(--color-bg-card), var(--color-bg-card));
             padding: 30px 40px;
             display: flex;
             justify-content: center;
@@ -129,18 +129,18 @@
             position: absolute;
             right: -40px;
             font-size: 20px;
-            color: #4a4a4a;
+            color: var(--color-border-light);
         }
 
         .step:last-child::after { display: none; }
 
-        .step.active { color: #8b7355; transform: scale(1.05); }
+        .step.active { color: var(--color-primary); transform: scale(1.05); }
 
         .step-number {
             width: 38px;
             height: 38px;
             border-radius: 50%;
-            background: #3d3d3d;
+            background: var(--color-bg-input);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -151,9 +151,9 @@
         }
 
         .step.active .step-number {
-            background: #8b7355;
+            background: var(--color-primary);
             color: white;
-            border-color: #a0865f;
+            border-color: var(--color-primary-hover);
             box-shadow: 0 0 20px rgba(139, 115, 85, 0.5);
         }
 
@@ -176,7 +176,7 @@
         }
 
         .page-title {
-            color: #8b7355;
+            color: var(--color-primary);
             font-size: 36px;
             margin-bottom: 10px;
             font-weight: bold;
@@ -185,7 +185,7 @@
         }
 
         .page-subtitle {
-            color: #a0a0a0;
+            color: var(--color-text-muted);
             font-size: 15px;
             text-align: center;
             position: relative;
@@ -197,9 +197,9 @@
             gap: 8px;
             margin-top: 14px;
             padding: 10px 22px;
-            background: #3d3d3d;
-            border: 2px solid #4a4a4a;
-            color: #e0e0e0;
+            background: var(--color-bg-input);
+            border: 2px solid var(--color-border-light);
+            color: var(--color-text-main);
             border-radius: 8px;
             font-size: 14px;
             font-weight: 600;
@@ -207,8 +207,8 @@
             transition: all 0.3s;
         }
         .btn-volver-catalogo:hover {
-            background: #4a4a4a;
-            border-color: #8b7355;
+            background: var(--color-border-light);
+            border-color: var(--color-primary);
             color: #fff;
         }
 
@@ -223,10 +223,10 @@
 
         /* ========== SECTION CARDS ========== */
         .section-card {
-            background: linear-gradient(135deg, #2d2d2d, #282828);
+            background: linear-gradient(135deg, var(--color-bg-card), var(--color-border));
             padding: 30px;
             border-radius: 12px;
-            border: 2px solid #3d3d3d;
+            border: 2px solid var(--color-border);
             box-shadow: 0 4px 20px rgba(0,0,0,0.3);
             transition: all 0.3s;
         }
@@ -237,7 +237,7 @@
         }
 
         .section-title {
-            color: #8b7355;
+            color: var(--color-primary);
             font-size: 22px;
             margin-bottom: 25px;
             display: flex;
@@ -245,7 +245,7 @@
             gap: 12px;
             font-weight: 700;
             padding-bottom: 15px;
-            border-bottom: 2px solid #3d3d3d;
+            border-bottom: 2px solid var(--color-border);
         }
 
         .section-icon { font-size: 24px; }
@@ -255,21 +255,21 @@
             display: flex;
             gap: 25px;
             padding: 25px;
-            background: #3d3d3d;
+            background: var(--color-bg-input);
             border-radius: 12px;
             border: 2px solid transparent;
             transition: all 0.3s;
         }
 
         .cart-item:hover {
-            border-color: #8b7355;
+            border-color: var(--color-primary);
             box-shadow: 0 4px 15px rgba(139, 115, 85, 0.2);
         }
 
         .cart-item-image {
             width: 100px;
             height: 125px;           /* taller para mostrar mueble completo (ratio 4/5) */
-            background: linear-gradient(135deg, #4a4a4a, #2d2d2d);
+            background: linear-gradient(135deg, var(--color-border-light), var(--color-bg-card));
             border-radius: 12px;
             display: flex;
             align-items: center;
@@ -277,7 +277,7 @@
             color: #666;
             font-size: 40px;
             flex-shrink: 0;
-            border: 2px solid #4a4a4a;
+            border: 2px solid var(--color-border-light);
             overflow: hidden;
         }
 
@@ -297,14 +297,14 @@
         }
 
         .cart-item-name {
-            color: #8b7355;
+            color: var(--color-primary);
             font-size: 22px;
             font-weight: bold;
             margin-bottom: 12px;
         }
 
         .cart-item-specs {
-            color: #a0a0a0;
+            color: var(--color-text-muted);
             font-size: 14px;
             line-height: 1.8;
             margin-bottom: 15px;
@@ -317,13 +317,13 @@
             justify-content: space-between;
             align-items: center;
             padding-top: 12px;
-            border-top: 1px solid #4a4a4a;
+            border-top: 1px solid var(--color-border-light);
             gap: 12px;
             flex-wrap: wrap;
         }
 
         .cart-item-price {
-            color: #8b7355;
+            color: var(--color-primary);
             font-size: 28px;
             font-weight: 900;
         }
@@ -352,7 +352,7 @@
         .delivery-options { display: grid; gap: 18px; }
 
         .option-card {
-            background: #3d3d3d;
+            background: var(--color-bg-input);
             padding: 22px;
             border-radius: 12px;
             border: 3px solid transparent;
@@ -364,14 +364,14 @@
         }
 
         .option-card:hover {
-            border-color: #8b7355;
+            border-color: var(--color-primary);
             transform: translateX(4px);
             box-shadow: 0 4px 15px rgba(139, 115, 85, 0.2);
         }
 
         .option-card.selected {
-            border-color: #8b7355;
-            background: linear-gradient(135deg, #4a4a4a, #3d3d3d);
+            border-color: var(--color-primary);
+            background: linear-gradient(135deg, var(--color-border-light), var(--color-bg-input));
             box-shadow: 0 4px 20px rgba(139, 115, 85, 0.3);
         }
 
@@ -380,7 +380,7 @@
             height: 22px;
             cursor: pointer;
             margin-top: 2px;
-            accent-color: #8b7355;
+            accent-color: var(--color-primary);
         }
 
         .option-content { flex: 1; }
@@ -394,23 +394,23 @@
         }
 
         .option-title {
-            color: #e0e0e0;
+            color: var(--color-text-main);
             font-size: 18px;
             font-weight: 700;
         }
 
         .option-price {
-            color: #8b7355;
+            color: var(--color-primary);
             font-size: 20px;
             font-weight: 900;
             white-space: nowrap;
         }
 
-        .option-description { color: #a0a0a0; font-size: 14px; line-height: 1.6; }
+        .option-description { color: var(--color-text-muted); font-size: 14px; line-height: 1.6; }
 
         /* ========== INSTALLATION TOGGLE ========== */
         .installation-toggle {
-            background: #3d3d3d;
+            background: var(--color-bg-input);
             padding: 22px;
             border-radius: 12px;
             border: 3px solid transparent;
@@ -418,11 +418,11 @@
             cursor: pointer;
         }
 
-        .installation-toggle:hover { border-color: #8b7355; transform: translateX(4px); }
+        .installation-toggle:hover { border-color: var(--color-primary); transform: translateX(4px); }
 
         .installation-toggle.selected {
-            border-color: #8b7355;
-            background: linear-gradient(135deg, #4a4a4a, #3d3d3d);
+            border-color: var(--color-primary);
+            background: linear-gradient(135deg, var(--color-border-light), var(--color-bg-input));
             box-shadow: 0 4px 20px rgba(139, 115, 85, 0.3);
         }
 
@@ -438,26 +438,26 @@
             height: 24px;
             cursor: pointer;
             margin-top: 2px;
-            accent-color: #8b7355;
+            accent-color: var(--color-primary);
         }
 
         /* ========== DATE SELECTOR ========== */
         .date-info {
-            background: linear-gradient(135deg, #3d3d3d, #383838);
+            background: linear-gradient(135deg, var(--color-bg-input), var(--color-border));
             padding: 20px;
             border-radius: 12px;
             margin-bottom: 20px;
-            border-left: 4px solid #8b7355;
+            border-left: 4px solid var(--color-primary);
         }
 
         .date-info strong {
-            color: #8b7355;
+            color: var(--color-primary);
             display: block;
             margin-bottom: 10px;
             font-size: 16px;
         }
 
-        .date-info p { color: #a0a0a0; font-size: 14px; line-height: 1.6; }
+        .date-info p { color: var(--color-text-muted); font-size: 14px; line-height: 1.6; }
 
         .available-dates {
             display: grid;
@@ -467,31 +467,31 @@
         }
 
         .date-option {
-            background: #3d3d3d;
+            background: var(--color-bg-input);
             padding: 16px;
             border-radius: 10px;
-            border: 2px solid #4a4a4a;
+            border: 2px solid var(--color-border-light);
             cursor: pointer;
             text-align: center;
             transition: all 0.3s;
         }
 
         .date-option:hover {
-            border-color: #8b7355;
+            border-color: var(--color-primary);
             transform: translateY(-3px);
             box-shadow: 0 4px 12px rgba(139, 115, 85, 0.2);
         }
 
         .date-option.selected {
-            background: #8b7355;
-            border-color: #a0865f;
+            background: var(--color-primary);
+            border-color: var(--color-primary-hover);
             color: white;
             box-shadow: 0 6px 20px rgba(139, 115, 85, 0.4);
         }
 
         .date-day { font-size: 16px; font-weight: bold; margin-bottom: 6px; }
 
-        .date-full { font-size: 13px; color: #a0a0a0; }
+        .date-full { font-size: 13px; color: var(--color-text-muted); }
 
         .date-option.selected .date-full { color: rgba(255,255,255,0.9); }
 
@@ -500,7 +500,7 @@
 
         .form-group label {
             display: block;
-            color: #8b7355;
+            color: var(--color-primary);
             margin-bottom: 10px;
             font-weight: 600;
             font-size: 14px;
@@ -513,10 +513,10 @@
         .form-group select {
             width: 100%;
             padding: 15px;
-            background: #3d3d3d;
-            border: 2px solid #4a4a4a;
+            background: var(--color-bg-input);
+            border: 2px solid var(--color-border-light);
             border-radius: 10px;
-            color: #e0e0e0;
+            color: var(--color-text-main);
             font-size: 15px;
             font-family: inherit;
             transition: all 0.3s;
@@ -526,8 +526,8 @@
         .form-group textarea:focus,
         .form-group select:focus {
             outline: none;
-            border-color: #8b7355;
-            background: #4a4a4a;
+            border-color: var(--color-primary);
+            background: var(--color-border-light);
             box-shadow: 0 0 0 3px rgba(139, 115, 85, 0.1);
         }
 
@@ -535,7 +535,7 @@
         .form-group textarea::placeholder { color: #666; }
 
         .form-group select option[value=""] { color: #666; }
-        .form-group select option { color: #e0e0e0; background: #3d3d3d; }
+        .form-group select option { color: var(--color-text-main); background: var(--color-bg-input); }
 
         /* .form-row layout handled by Bootstrap row g-3 / col-md-6 */
 
@@ -547,53 +547,53 @@
         }
 
         .info-box {
-            background: linear-gradient(135deg, #3d3d3d, #383838);
+            background: linear-gradient(135deg, var(--color-bg-input), var(--color-border));
             padding: 18px;
             border-radius: 10px;
-            border-left: 4px solid #8b7355;
+            border-left: 4px solid var(--color-primary);
         }
 
-        .info-box p { color: #a0a0a0; font-size: 14px; line-height: 1.6; }
-        .info-box strong { color: #8b7355; }
+        .info-box p { color: var(--color-text-muted); font-size: 14px; line-height: 1.6; }
+        .info-box strong { color: var(--color-primary); }
 
         /* ========== CART SUMMARY ========== */
         .cart-summary {
-            background: linear-gradient(135deg, #2d2d2d, #282828);
+            background: linear-gradient(135deg, var(--color-bg-card), var(--color-border));
             padding: 30px;
             border-radius: 16px;
             height: fit-content;
             position: sticky;
             top: 110px;
-            border: 2px solid #3d3d3d;
+            border: 2px solid var(--color-border);
             box-shadow: 0 8px 30px rgba(0,0,0,0.4);
         }
 
         .summary-title {
-            color: #8b7355;
+            color: var(--color-primary);
             font-size: 26px;
             font-weight: bold;
             margin-bottom: 25px;
             padding-bottom: 18px;
-            border-bottom: 2px solid #3d3d3d;
+            border-bottom: 2px solid var(--color-border);
         }
 
         .summary-item {
             display: flex;
             justify-content: space-between;
             padding: 14px 0;
-            border-bottom: 1px solid #3d3d3d;
+            border-bottom: 1px solid var(--color-border);
             align-items: center;
             gap: 10px;
         }
 
         .summary-item:last-child { border-bottom: none; }
 
-        .summary-item span:first-child { color: #a0a0a0; font-size: 15px; }
+        .summary-item span:first-child { color: var(--color-text-muted); font-size: 15px; }
 
-        .summary-item span:last-child { color: #e0e0e0; font-weight: 700; font-size: 16px; }
+        .summary-item span:last-child { color: var(--color-text-main); font-weight: 700; font-size: 16px; }
 
         .summary-total {
-            border-top: 3px solid #8b7355;
+            border-top: 3px solid var(--color-primary);
             padding-top: 22px;
             margin-top: 22px;
             display: flex;
@@ -604,13 +604,13 @@
 
         .summary-total span:first-child {
             font-size: 22px;
-            color: #8b7355;
+            color: var(--color-primary);
             font-weight: bold;
         }
 
         .summary-total span:last-child {
             font-size: 32px;
-            color: #8b7355;
+            color: var(--color-primary);
             font-weight: 900;
             white-space: nowrap;
         }
@@ -618,7 +618,7 @@
         .btn-checkout {
             width: 100%;
             padding: 20px;
-            background: linear-gradient(135deg, #8b7355, #a0865f);
+            background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
             color: white;
             border: none;
             border-radius: 10px;
@@ -632,13 +632,13 @@
         }
 
         .btn-checkout:hover {
-            background: linear-gradient(135deg, #a0865f, #b89570);
+            background: linear-gradient(135deg, var(--color-primary-hover), #b89570);
             transform: translateY(-3px);
             box-shadow: 0 8px 25px rgba(139, 115, 85, 0.5);
         }
 
         .btn-checkout:disabled {
-            background: #4a4a4a;
+            background: var(--color-border-light);
             cursor: not-allowed;
             transform: none;
             opacity: 0.6;
@@ -650,7 +650,7 @@
             margin-top: 10px;
             background: transparent;
             color: #888;
-            border: 1.5px solid #3d3d3d;
+            border: 1.5px solid var(--color-border);
             border-radius: 12px;
             font-size: 13px;
             font-weight: 600;
@@ -669,7 +669,7 @@
 
         .secure-note {
             text-align: center;
-            color: #a0a0a0;
+            color: var(--color-text-muted);
             font-size: 13px;
             margin-top: 18px;
             line-height: 1.6;
@@ -677,10 +677,10 @@
 
         /* Footer */
         .footer {
-            background: #2d2d2d;
+            background: var(--color-bg-card);
             padding: 40px;
             text-align: center;
-            border-top: 3px solid #8b7355;
+            border-top: 3px solid var(--color-primary);
             margin-top: 60px;
         }
 
@@ -729,8 +729,8 @@
         }
 
         .semana-card {
-            background: #3d3d3d;
-            border: 2px solid #4a4a4a;
+            background: var(--color-bg-input);
+            border: 2px solid var(--color-border-light);
             border-radius: 12px;
             padding: 16px 14px;
             cursor: pointer;
@@ -739,20 +739,20 @@
             position: relative;
         }
         .semana-card:hover:not(.agotada) {
-            border-color: #8b7355;
+            border-color: var(--color-primary);
             transform: translateY(-3px);
             box-shadow: 0 6px 18px rgba(139,115,85,0.25);
         }
         .semana-card.seleccionada {
-            background: #8b7355;
-            border-color: #a0865f;
+            background: var(--color-primary);
+            border-color: var(--color-primary-hover);
             color: #fff;
             box-shadow: 0 6px 22px rgba(139,115,85,0.45);
         }
         .semana-card.agotada {
             opacity: 0.45;
             cursor: not-allowed;
-            border-color: #3a3a3a;
+            border-color: var(--color-border);
         }
 
         .semana-etiqueta {
@@ -772,7 +772,7 @@
             border-radius: 20px;
             margin-top: 4px;
             background: rgba(139,115,85,0.15);
-            color: #8b7355;
+            color: var(--color-primary);
         }
         .semana-card.seleccionada .semana-badge {
             background: rgba(255,255,255,0.25);
@@ -800,8 +800,8 @@
             content: '';
             display: inline-block;
             width: 22px; height: 22px;
-            border: 3px solid #4a4a4a;
-            border-top-color: #8b7355;
+            border: 3px solid var(--color-border-light);
+            border-top-color: var(--color-primary);
             border-radius: 50%;
             animation: spin .7s linear infinite;
             margin-left: 10px;
@@ -820,8 +820,8 @@
 
         /* Semana seleccionada – resumen en el sidebar */
         .fecha-resumen-box {
-            background: linear-gradient(135deg, #3a3a3a, #353535);
-            border-left: 4px solid #8b7355;
+            background: linear-gradient(135deg, var(--color-border), #353535);
+            border-left: 4px solid var(--color-primary);
             border-radius: 10px;
             padding: 14px 16px;
             margin-top: 14px;
@@ -848,7 +848,7 @@
 
         /* Tarjeta fecha sugerida */
         .semana-card.recomendada {
-            border-color: #8b7355;
+            border-color: var(--color-primary);
             background: rgba(139,115,85,0.08);
             position: relative;
         }
@@ -857,7 +857,7 @@
             top: -10px;
             left: 50%;
             transform: translateX(-50%);
-            background: #8b7355;
+            background: var(--color-primary);
             color: #fff;
             font-size: 10px;
             font-weight: 700;
@@ -879,16 +879,16 @@
     margin-bottom: 20px;
     flex-wrap: wrap;
 }
-.login-suggest-icon { font-size: 20px; color: #c9a96e; flex-shrink: 0; }
+.login-suggest-icon { font-size: 20px; color: var(--color-accent); flex-shrink: 0; }
 .login-suggest-text { flex: 1; min-width: 180px; font-size: 14px; color: #ccc; line-height: 1.5; }
-.login-suggest-text strong { color: #e0e0e0; }
+.login-suggest-text strong { color: var(--color-text-main); }
 .login-suggest-btn {
-    background: #8b7355; color: #fff; border: none;
+    background: var(--color-primary); color: #fff; border: none;
     border-radius: 8px; padding: 8px 18px;
     font-size: 13px; font-weight: 600; cursor: pointer;
     white-space: nowrap; transition: background 0.2s; font-family: inherit;
 }
-.login-suggest-btn:hover { background: #a0865f; }
+.login-suggest-btn:hover { background: var(--color-primary-hover); }
 .login-suggest-close {
     background: none; border: none; color: #666;
     font-size: 16px; cursor: pointer; padding: 4px;
@@ -972,7 +972,7 @@
 
 /* Estado seleccionado: fondo dorado translúcido + borde brillante */
 .option-card.selected {
-    border-color: #c9a96e;
+    border-color: var(--color-accent);
     background: linear-gradient(135deg, rgba(139,115,85,0.22) 0%, rgba(139,115,85,0.06) 100%);
     box-shadow: 0 6px 24px rgba(139,115,85,0.45);
     animation: option-select-in 0.3s ease;
@@ -990,7 +990,7 @@
     position: absolute;
     top: -1px;
     right: -1px;
-    background: #8b7355;
+    background: var(--color-primary);
     color: #fff;
     font-size: 11px;
     font-weight: 800;
@@ -1011,7 +1011,7 @@
 /* El radio nativo sigue ahí para accesibilidad,
    pero lo reducimos visualmente — el badge ya comunica la selección */
 .option-card.selected input[type="radio"] {
-    accent-color: #c9a96e;
+    accent-color: var(--color-accent);
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -1020,7 +1020,7 @@
 @media (hover: none) {
     .section-card:hover        { transform: none !important; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
     .option-card:hover         { transform: none !important; border-color: transparent; box-shadow: none; }
-    .option-card.selected:hover{ border-color: #c9a96e !important; box-shadow: 0 6px 24px rgba(139,115,85,0.45) !important; }
+    .option-card.selected:hover{ border-color: var(--color-accent) !important; box-shadow: 0 6px 24px rgba(139,115,85,0.45) !important; }
     .semana-card:hover:not(.agotada) { transform: none !important; }
 }
 

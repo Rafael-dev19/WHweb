@@ -4,10 +4,32 @@ const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { onSchedule }        = require('firebase-functions/v2/scheduler');
 const { initializeApp }     = require('firebase-admin/app');
 const { getFirestore }      = require('firebase-admin/firestore');
+const { getMessaging }      = require('firebase-admin/messaging');
 const https                 = require('https');
 
 initializeApp();
 const db = getFirestore();
+
+// ── Web Push (FCM) — notificaciones al personal interno ────────────
+// El contenido siempre es genérico (título/mensaje cortos): el detalle real
+// se ve entrando al panel, nunca viaja en el push. Ver includes/notifications.php
+// (PHP) para quién dispara cada evento y a qué roles.
+async function enviarPush(tokens, titulo, cuerpo, clickUrl) {
+  if (!Array.isArray(tokens) || tokens.length === 0) return;
+  try {
+    const resp = await getMessaging().sendEachForMulticast({
+      tokens,
+      notification: { title: titulo, body: cuerpo },
+      webpush: {
+        fcmOptions: { link: clickUrl || '/' },
+        notification: { icon: '/favicon.ico' },
+      },
+    });
+    console.log(`[CF] push enviado: ${resp.successCount}/${tokens.length} ok`);
+  } catch (e) {
+    console.error('[CF] Error enviando push:', e.message);
+  }
+}
 
 const SECRETS = [
   'BREVO_API_KEY',
@@ -28,13 +50,26 @@ function getEmails() {
   };
 }
 
-function getPanelUrl() {
-  const base = (process.env.APP_URL || 'https://muebleswh.com').replace(/\/$/, '');
-  return base + '/admin';
+// Descarga un archivo por HTTPS y lo devuelve en base64 (para adjuntar en Brevo).
+function descargarBase64(url) {
+  return new Promise((resolve, reject) => {
+    https.get(url, (res) => {
+      if (res.statusCode !== 200) {
+        res.resume();
+        reject(new Error(`descargarBase64: HTTP ${res.statusCode} para ${url}`));
+        return;
+      }
+      const chunks = [];
+      res.on('data', (c) => chunks.push(c));
+      res.on('end', () => resolve(Buffer.concat(chunks).toString('base64')));
+      res.on('error', reject);
+    }).on('error', reject);
+  });
 }
 
 // ── Brevo HTTP API ────────────────────────────────────────────────
-function sendEmail({ from, fromName, to, subject, html, text, replyTo, bcc }) {
+// attachment (opcional): [{ content: base64String, name: 'archivo.pdf' }]
+function sendEmail({ from, fromName, to, subject, html, text, replyTo, bcc, attachment }) {
   return new Promise((resolve, reject) => {
     const apiKey = process.env.BREVO_API_KEY;
     if (!apiKey) { reject(new Error('BREVO_API_KEY no configurado')); return; }
@@ -52,6 +87,11 @@ function sendEmail({ from, fromName, to, subject, html, text, replyTo, bcc }) {
 
     // Reply-To: el cliente puede responder directamente al remitente correcto
     if (replyTo) payload.replyTo = { email: replyTo };
+
+    // Adjunto (ej. PDF de propuesta de cotización, ya en base64)
+    if (attachment && Array.isArray(attachment) && attachment.length) {
+      payload.attachment = attachment;
+    }
 
     const body = JSON.stringify(payload);
 
@@ -396,6 +436,10 @@ function emailCotizacionRespondida(cot) {
   const precioFmt = `$${precio.toLocaleString('es-MX', { minimumFractionDigits: 2 })} MXN`;
   const desc     = cot.descripcion_respuesta || cot.notas_admin || '';
   const fechaEnt = cot.fecha_entrega_estimada || '';
+  const fechaVisita = cot.fecha_visita || '';
+  const horaVisita  = cot.hora_visita  || '';
+  const token    = cot.token_seguimiento || '';
+  const trackUrl = token ? `https://muebleswh.com/seguimiento?token=${token}&cotizacion=${folio}` : '';
 
   const contenido = `
 <h2 style="color:#8B6914;margin-top:0;">Tu propuesta de cotización está lista 📋</h2>
@@ -413,24 +457,37 @@ function emailCotizacionRespondida(cot) {
   ${fechaEnt ? `<div style="color:#888;font-size:13px;margin-top:6px;">📅 Entrega estimada: <strong>${fechaEnt}</strong></div>` : ''}
 </div>
 
+${fechaVisita ? `
+<div style="background:#eef5fb;border-left:4px solid #4a7c8b;padding:16px 20px;margin:20px 0;border-radius:4px;">
+  <p style="margin:0;color:#2a4a55;font-size:14px;line-height:1.7;">
+    <strong>📍 Visita para confirmar medidas y detalles</strong><br>
+    ${fechaVisita}${horaVisita ? ` — ${horaVisita}` : ''}
+  </p>
+</div>` : ''}
+
 ${desc ? `
 <h3 style="color:#5C3D11;font-size:15px;margin:24px 0 8px;">📐 Descripción de tu proyecto</h3>
 <div style="background:#fff;border:1px solid #e5ddd4;border-radius:6px;padding:20px;line-height:1.8;color:#3a3a3a;">
   ${desc.replace(/\n/g, '<br>')}
 </div>` : ''}
 
+<p style="color:#888;font-size:13px;margin:16px 0;">📎 Adjuntamos el PDF con el detalle completo de tu propuesta.</p>
+
 <div style="background:#f0f7f0;border-left:4px solid #4a8b5a;padding:16px 20px;margin:24px 0;border-radius:4px;">
   <p style="margin:0;color:#2a5a2a;font-size:14px;line-height:1.7;">
     <strong>¿Te convence esta propuesta?</strong><br>
-    Contáctanos para confirmar y comenzamos la fabricación de tu mueble.
+    Confírmala desde tu página de seguimiento para continuar con tu proyecto.
   </p>
 </div>
 
 <div style="text-align:center;margin:30px 0;">
-  <a href="tel:3317054017" style="background:#8B6914;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:6px;font-size:15px;font-weight:bold;display:inline-block;font-family:Georgia,serif;margin-right:12px;">
+  ${trackUrl ? `<a href="${trackUrl}" style="background:#4a8b5a;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:6px;font-size:15px;font-weight:bold;display:inline-block;font-family:Georgia,serif;margin-right:12px;margin-bottom:10px;">
+    ✅ Confirmar cotización
+  </a>` : ''}
+  <a href="tel:3317054017" style="background:#8B6914;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:6px;font-size:15px;font-weight:bold;display:inline-block;font-family:Georgia,serif;margin-right:12px;margin-bottom:10px;">
     📞 Llamar ahora
   </a>
-  <a href="https://wa.me/523317054017?text=Hola%2C%20acepto%20la%20cotizaci%C3%B3n%20${folio}" style="background:#25D366;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:6px;font-size:15px;font-weight:bold;display:inline-block;font-family:Georgia,serif;">
+  <a href="https://wa.me/523317054017?text=Hola%2C%20acepto%20la%20cotizaci%C3%B3n%20${folio}" style="background:#25D366;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:6px;font-size:15px;font-weight:bold;display:inline-block;font-family:Georgia,serif;margin-bottom:10px;">
     💬 WhatsApp
   </a>
 </div>`;
@@ -551,141 +608,6 @@ function emailCitaConfirmada(cita) {
   return emailWrapper('Cita Confirmada', contenido);
 }
 
-// ── emailAdminNuevoEvento ─────────────────────────────────────────
-function emailAdminNuevoEvento(tipo, datos) {
-  let subject, body;
-
-  if (tipo === 'pedido') {
-    const folio   = datos.numero_pedido  || '';
-    const cliente = datos.nombre_cliente || '';
-    const fmt     = (n) => `$${Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
-    const total   = fmt(datos.total);
-
-    const tipoEntrega       = datos.tipo_entrega || 'envio';
-    const etiquetaEntrega   = tipoEntrega === 'recoger' ? '🏠 Recoger en tienda' : '🚚 Envío a domicilio';
-    const costoEnvio        = Number(datos.costo_envio || 0);
-    const direccion         = datos.direccion_envio || '';
-    const incluyeInstalacion = datos.incluye_instalacion;
-    const costoInstalacion  = Number(datos.costo_instalacion || 0);
-    const subtotal          = Number(datos.subtotal  || 0);
-    const descuento         = Number(datos.descuento || 0);
-
-    const itemsRows = (datos.items || []).map(item =>
-      `<tr>
-        <td style="padding:6px 10px;border-bottom:1px solid #e5ddd4;">${item.nombre_producto || item.nombre || ''}</td>
-        <td style="padding:6px 10px;border-bottom:1px solid #e5ddd4;text-align:center;">${item.cantidad || 1}</td>
-        <td style="padding:6px 10px;border-bottom:1px solid #e5ddd4;text-align:right;">${fmt(item.precio_unitario || item.precio || 0)}</td>
-        <td style="padding:6px 10px;border-bottom:1px solid #e5ddd4;text-align:right;">${fmt((item.precio_unitario || item.precio || 0) * (item.cantidad || 1))}</td>
-       </tr>`
-    ).join('');
-
-    const esAnticipoAdmin = datos.tipo_pago === 'anticipo';
-    const montoPagadoAdmin = Number(datos.monto_pagado || 0);
-    const saldoAdmin        = Math.max(0, Number(datos.total || 0) - montoPagadoAdmin);
-
-    subject = esAnticipoAdmin
-      ? `🛒 Nuevo pedido ${folio} — Anticipo ${fmt(montoPagadoAdmin)} de ${total}`
-      : `🛒 Nuevo pedido ${folio} — ${total}`;
-    body = `
-<h2 style="color:#8B6914;margin-top:0;">Nuevo pedido recibido</h2>
-<p style="color:#555;">Se acaba de confirmar un pedido en tu tienda.</p>
-
-<div style="background:#faf6f0;border-left:4px solid #8B6914;padding:16px 20px;margin:20px 0;border-radius:4px;">
-  <p style="margin:4px 0;"><strong>Folio:</strong> ${folio}</p>
-  <p style="margin:4px 0;"><strong>Cliente:</strong> ${cliente}</p>
-  <p style="margin:4px 0;"><strong>Correo:</strong> ${datos.correo_cliente || ''}</p>
-  <p style="margin:4px 0;"><strong>Teléfono:</strong> ${datos.telefono_cliente || 'No proporcionado'}</p>
-</div>
-
-<!-- Productos -->
-<h3 style="color:#5C3D11;font-size:14px;margin:20px 0 8px;">📦 Productos del pedido</h3>
-<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:13px;margin-bottom:16px;">
-  <tr style="background:#f0e8d8;">
-    <th style="padding:8px 10px;text-align:left;color:#5C3D11;">Producto</th>
-    <th style="padding:8px 10px;text-align:center;color:#5C3D11;">Cant.</th>
-    <th style="padding:8px 10px;text-align:right;color:#5C3D11;">P. Unit.</th>
-    <th style="padding:8px 10px;text-align:right;color:#5C3D11;">Subtotal</th>
-  </tr>
-  ${itemsRows}
-</table>
-
-<!-- Entrega -->
-<h3 style="color:#5C3D11;font-size:14px;margin:20px 0 8px;">🚚 Tipo de entrega</h3>
-<div style="background:#faf6f0;border-left:4px solid #8B6914;padding:12px 16px;margin-bottom:16px;border-radius:4px;font-size:13px;">
-  <p style="margin:3px 0;"><strong>${etiquetaEntrega}</strong></p>
-  ${direccion ? `<p style="margin:3px 0;color:#666;">📍 Dirección: ${direccion}</p>` : ''}
-  <p style="margin:3px 0;">Costo de envío: <strong>${tipoEntrega === 'recoger' ? 'Sin costo' : fmt(costoEnvio)}</strong></p>
-</div>
-
-<!-- Instalación -->
-<h3 style="color:#5C3D11;font-size:14px;margin:20px 0 8px;">🔧 Instalación</h3>
-<div style="background:#faf6f0;border-left:4px solid ${incluyeInstalacion ? '#8B6914' : '#aaa'};padding:12px 16px;margin-bottom:16px;border-radius:4px;font-size:13px;">
-  ${incluyeInstalacion
-    ? `<p style="margin:3px 0;"><strong>✅ Incluye instalación profesional</strong></p><p style="margin:3px 0;">Costo: <strong>${fmt(costoInstalacion)}</strong></p>`
-    : `<p style="margin:3px 0;color:#888;">❌ No incluye instalación</p>`
-  }
-</div>
-
-<!-- Resumen -->
-<h3 style="color:#5C3D11;font-size:14px;margin:20px 0 8px;">💰 Resumen de costos</h3>
-<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:13px;">
-  <tr><td style="padding:5px 10px;color:#666;">Subtotal productos:</td><td style="padding:5px 10px;text-align:right;">${fmt(subtotal)}</td></tr>
-  <tr><td style="padding:5px 10px;color:#666;">Envío (${etiquetaEntrega}):</td><td style="padding:5px 10px;text-align:right;">${tipoEntrega === 'recoger' ? 'Sin costo' : fmt(costoEnvio)}</td></tr>
-  <tr><td style="padding:5px 10px;color:#666;">Instalación:</td><td style="padding:5px 10px;text-align:right;">${incluyeInstalacion ? fmt(costoInstalacion) : 'No incluida'}</td></tr>
-  ${descuento > 0 ? `<tr><td style="padding:5px 10px;color:#3d8b3d;">Descuento:</td><td style="padding:5px 10px;text-align:right;color:#3d8b3d;">-${fmt(descuento)}</td></tr>` : ''}
-  <tr style="background:#f0e8d8;"><td style="padding:10px;font-weight:bold;color:#5C3D11;">TOTAL:</td><td style="padding:10px;text-align:right;font-weight:bold;font-size:18px;color:#8B6914;">${total}</td></tr>
-</table>
-
-${esAnticipoAdmin ? `
-<div style="background:#fdf3e0;border-left:4px solid #c9a96e;padding:12px 16px;margin-bottom:16px;border-radius:4px;font-size:13px;">
-  <p style="margin:3px 0;"><strong>⚠️ Pago parcial — anticipo del 50%</strong></p>
-  <p style="margin:3px 0;color:#666;">Recibido: <strong>${fmt(montoPagadoAdmin)}</strong> · Saldo pendiente: <strong style="color:#c9a96e;">${fmt(saldoAdmin)}</strong></p>
-</div>` : ''}
-
-<p style="margin:20px 0 8px;color:#555;">📅 <strong>Fecha estimada de entrega:</strong> ${datos.fecha_estimada || 'Por confirmar'}</p>
-${datos.notas ? `<p style="color:#555;">📝 <strong>Notas del cliente:</strong> ${datos.notas}</p>` : ''}
-
-<p style="margin-top:24px;"><a href="${getPanelUrl()}" style="background:#8B6914;color:#fff;text-decoration:none;padding:12px 24px;border-radius:6px;display:inline-block;">Ver en el panel →</a></p>`;
-
-  } else if (tipo === 'cotizacion') {
-    const folio   = datos.numero_cotizacion || '';
-    const cliente = datos.nombre_cliente    || '';
-    subject = `📋 Nueva cotización ${folio} de ${cliente}`;
-    body = `
-<h2 style="color:#8B6914;margin-top:0;">Nueva cotización recibida</h2>
-<p style="color:#555;">Un cliente ha enviado una solicitud de cotización.</p>
-<div style="background:#faf6f0;border-left:4px solid #8B6914;padding:16px 20px;margin:20px 0;border-radius:4px;">
-  <p style="margin:4px 0;"><strong>Folio:</strong> ${folio}</p>
-  <p style="margin:4px 0;"><strong>Cliente:</strong> ${cliente}</p>
-  <p style="margin:4px 0;"><strong>Email:</strong> ${datos.correo_cliente || ''}</p>
-  <p style="margin:4px 0;"><strong>Teléfono:</strong> ${datos.telefono_cliente || ''}</p>
-</div>
-<p><a href="${getPanelUrl()}" style="background:#8B6914;color:#fff;text-decoration:none;padding:12px 24px;border-radius:6px;display:inline-block;">Ver en el panel →</a></p>`;
-
-  } else if (tipo === 'cita') {
-    const folio   = datos.numero_cita    || '';
-    const cliente = datos.nombre_cliente || '';
-    const fecha   = datos.fecha_cita     || '';
-    const hora    = datos.rango_horario  || '';
-    subject = `📅 Nueva cita ${folio} — ${fecha}`;
-    body = `
-<h2 style="color:#8B6914;margin-top:0;">Nueva cita agendada</h2>
-<p style="color:#555;">Un cliente ha agendado una cita.</p>
-<div style="background:#faf6f0;border-left:4px solid #8B6914;padding:16px 20px;margin:20px 0;border-radius:4px;">
-  <p style="margin:4px 0;"><strong>Folio:</strong> ${folio}</p>
-  <p style="margin:4px 0;"><strong>Cliente:</strong> ${cliente}</p>
-  <p style="margin:4px 0;"><strong>Fecha:</strong> ${fecha}</p>
-  <p style="margin:4px 0;"><strong>Horario:</strong> ${hora}</p>
-</div>
-<p><a href="${getPanelUrl()}" style="background:#8B6914;color:#fff;text-decoration:none;padding:12px 24px;border-radius:6px;display:inline-block;">Ver en el panel →</a></p>`;
-
-  } else {
-    return null;
-  }
-
-  return { subject, html: emailWrapper('Notificación Interna', body) };
-}
-
 // ================================================================
 // TRIGGER PRINCIPAL
 // ================================================================
@@ -698,50 +620,37 @@ exports.onNuevaNotificacion = onDocumentCreated(
     const emails = getEmails();
     const tipo   = data.tipo;
 
-    // ── nuevo_pedido → emailPedidoConfirmado (cliente) + emailAdminNuevoEvento (admin + empleados) ──
+    // ── Push al personal interno (jefe/administrador/empleado/disenador) ──
+    // Independiente del tipo: cualquier notificación puede traer push_tokens_json
+    // (ver includes/notifications.php → crearNotificacionPush). El personal NUNCA
+    // recibe email de contenido de estos eventos, solo push — el cliente sigue
+    // recibiendo su email normal más abajo.
+    if (data.push_tokens_json) {
+      try {
+        const tokens = JSON.parse(data.push_tokens_json);
+        if (Array.isArray(tokens) && tokens.length) {
+          await enviarPush(tokens, data.push_titulo || 'Wooden House', data.push_mensaje || '', data.push_url || '/');
+        }
+      } catch (e) {
+        console.error('[CF] Error procesando push_tokens_json:', e.message);
+      }
+    }
+
+    // ── nuevo_pedido → emailPedidoConfirmado (cliente) ──────────────
     if (tipo === 'nuevo_pedido') {
       let pedido = {};
       try { pedido = JSON.parse(data.datos_pedido || '{}'); } catch (e) {}
       if (!pedido.correo_cliente) return;
 
-      const adminEmail   = emailAdminNuevoEvento('pedido', pedido);
-      const empleadosList = (data.correos_empleados || '').split(',').map(s => s.trim()).filter(Boolean);
-
-      const tasks = [
-        sendEmail({
-          from: emails.pedidos, fromName: 'WOODEN HOUSE PEDIDOS',
-          to:      pedido.correo_cliente,
-          replyTo: emails.replyTo,
-          subject: `Pedido confirmado – ${pedido.numero_pedido} | Wooden House`,
-          html:    emailPedidoConfirmado(pedido),
-          text:    `Pedido ${pedido.numero_pedido} confirmado. Total: $${pedido.total} MXN. Entrega: ${pedido.fecha_estimada || 'Por confirmar'}.`,
-        }).then(() => console.log(`[CF] emailPedidoConfirmado → ${pedido.correo_cliente}`))
-          .catch(e => console.error('[CF] Error emailPedidoConfirmado:', e.message)),
-
-        sendEmail({
-          from: emails.pedidos, fromName: 'WOODEN HOUSE SISTEMA',
-          to:      emails.admin,
-          replyTo: pedido.correo_cliente || emails.pedidos,
-          subject: adminEmail.subject,
-          html:    adminEmail.html,
-          text:    `Nuevo pedido ${pedido.numero_pedido} de ${pedido.nombre_cliente}.`,
-        }).then(() => console.log(`[CF] emailAdminNuevoEvento(pedido) → ${emails.admin}`))
-          .catch(e => console.error('[CF] Error admin pedido:', e.message)),
-
-        // CC a cada empleado activo
-        ...empleadosList.map(empCorreo =>
-          sendEmail({
-            from: emails.pedidos, fromName: 'WOODEN HOUSE SISTEMA',
-            to:      empCorreo,
-            replyTo: emails.replyTo,
-            subject: adminEmail.subject,
-            html:    adminEmail.html,
-            text:    `Nuevo pedido ${pedido.numero_pedido} de ${pedido.nombre_cliente}.`,
-          }).then(() => console.log(`[CF] emailPedido empleado → ${empCorreo}`))
-            .catch(e => console.error(`[CF] Error pedido empleado ${empCorreo}:`, e.message))
-        ),
-      ];
-      await Promise.allSettled(tasks);
+      await sendEmail({
+        from: emails.pedidos, fromName: 'WOODEN HOUSE PEDIDOS',
+        to:      pedido.correo_cliente,
+        replyTo: emails.replyTo,
+        subject: `Pedido confirmado – ${pedido.numero_pedido} | Wooden House`,
+        html:    emailPedidoConfirmado(pedido),
+        text:    `Pedido ${pedido.numero_pedido} confirmado. Total: $${pedido.total} MXN. Entrega: ${pedido.fecha_estimada || 'Por confirmar'}.`,
+      }).then(() => console.log(`[CF] emailPedidoConfirmado → ${pedido.correo_cliente}`))
+        .catch(e => console.error('[CF] Error emailPedidoConfirmado:', e.message));
       return;
     }
 
@@ -763,35 +672,21 @@ exports.onNuevaNotificacion = onDocumentCreated(
       return;
     }
 
-    // ── nueva_cotizacion → emailCotizacionRecibida (cliente) + emailAdminNuevoEvento('cotizacion') (admin) ──
+    // ── nueva_cotizacion → emailCotizacionRecibida (cliente) ────────
     if (tipo === 'nueva_cotizacion') {
       let cot = {};
       try { cot = JSON.parse(data.datos_cotizacion || '{}'); } catch (e) {}
       if (!cot.correo_cliente) return;
 
-      const adminEmail = emailAdminNuevoEvento('cotizacion', cot);
-
-      await Promise.allSettled([
-        sendEmail({
-          from: emails.cotizaciones, fromName: 'WOODEN HOUSE COTIZACIONES',
-          to:      cot.correo_cliente,
-          replyTo: emails.replyTo,
-          subject: `Cotización ${cot.numero_cotizacion} recibida | Wooden House`,
-          html:    emailCotizacionRecibida(cot),
-          text:    `Cotización ${cot.numero_cotizacion} recibida. Te contactaremos en 2-3 días hábiles.`,
-        }).then(() => console.log(`[CF] emailCotizacionRecibida → ${cot.correo_cliente}`))
-          .catch(e => console.error('[CF] Error emailCotizacionRecibida:', e.message)),
-
-        sendEmail({
-          from: emails.cotizaciones, fromName: 'WOODEN HOUSE SISTEMA',
-          to:      emails.admin,
-          replyTo: cot.correo_cliente || emails.cotizaciones,
-          subject: adminEmail.subject,
-          html:    adminEmail.html,
-          text:    `Nueva cotización ${cot.numero_cotizacion} de ${cot.nombre_cliente}.`,
-        }).then(() => console.log(`[CF] emailAdminNuevoEvento(cotizacion) → ${emails.admin}`))
-          .catch(e => console.error('[CF] Error admin cotizacion:', e.message)),
-      ]);
+      await sendEmail({
+        from: emails.cotizaciones, fromName: 'WOODEN HOUSE COTIZACIONES',
+        to:      cot.correo_cliente,
+        replyTo: emails.replyTo,
+        subject: `Cotización ${cot.numero_cotizacion} recibida | Wooden House`,
+        html:    emailCotizacionRecibida(cot),
+        text:    `Cotización ${cot.numero_cotizacion} recibida. Te contactaremos en 2-3 días hábiles.`,
+      }).then(() => console.log(`[CF] emailCotizacionRecibida → ${cot.correo_cliente}`))
+        .catch(e => console.error('[CF] Error emailCotizacionRecibida:', e.message));
       return;
     }
 
@@ -801,6 +696,16 @@ exports.onNuevaNotificacion = onDocumentCreated(
       try { cot = JSON.parse(data.datos_cotizacion || '{}'); } catch (e) {}
       if (!cot.correo_cliente) return;
 
+      let attachment;
+      if (cot.pdf_url) {
+        try {
+          const base64Pdf = await descargarBase64(cot.pdf_url);
+          attachment = [{ content: base64Pdf, name: `Cotizacion-${cot.numero_cotizacion}.pdf` }];
+        } catch (e) {
+          console.error('[CF] No se pudo adjuntar el PDF de la cotización:', e.message);
+        }
+      }
+
       await sendEmail({
         from: emails.cotizaciones, fromName: 'WOODEN HOUSE COTIZACIONES',
         to:      cot.correo_cliente,
@@ -808,6 +713,7 @@ exports.onNuevaNotificacion = onDocumentCreated(
         subject: `Tu propuesta está lista — ${cot.numero_cotizacion} | Wooden House`,
         html:    emailCotizacionRespondida(cot),
         text:    `Tu cotización ${cot.numero_cotizacion} ha sido respondida. Precio: $${Number(cot.precio_cotizado||0).toFixed(2)} MXN.`,
+        attachment,
       }).then(() => console.log(`[CF] emailCotizacionRespondida → ${cot.correo_cliente}`))
         .catch(e => console.error('[CF] Error emailCotizacionRespondida:', e.message));
       return;
@@ -894,50 +800,21 @@ exports.onNuevaNotificacion = onDocumentCreated(
       return;
     }
 
-    // ── nueva_cita → emailCitaConfirmada (cliente) + emailAdminNuevoEvento (admin + empleados) ──
+    // ── nueva_cita → emailCitaConfirmada (cliente) ──────────────────
     if (tipo === 'nueva_cita') {
       let cita = {};
       try { cita = JSON.parse(data.datos_cita || '{}'); } catch (e) {}
       if (!cita.correo_cliente) return;
 
-      const adminEmail   = emailAdminNuevoEvento('cita', cita);
-      const empleadosList = (data.correos_empleados || '').split(',').map(s => s.trim()).filter(Boolean);
-
-      const tasks = [
-        sendEmail({
-          from: emails.citas, fromName: 'WOODEN HOUSE CITAS',
-          to:      cita.correo_cliente,
-          replyTo: emails.replyTo,
-          subject: `Cita confirmada – ${cita.numero_cita} | Wooden House`,
-          html:    emailCitaConfirmada(cita),
-          text:    `Cita ${cita.numero_cita} confirmada para el ${cita.fecha_cita}.`,
-        }).then(() => console.log(`[CF] emailCitaConfirmada → ${cita.correo_cliente}`))
-          .catch(e => console.error('[CF] Error emailCitaConfirmada:', e.message)),
-
-        sendEmail({
-          from: emails.citas, fromName: 'WOODEN HOUSE SISTEMA',
-          to:      emails.admin,
-          replyTo: cita.correo_cliente || emails.citas,
-          subject: adminEmail.subject,
-          html:    adminEmail.html,
-          text:    `Nueva cita ${cita.numero_cita} de ${cita.nombre_cliente} para ${cita.fecha_cita}.`,
-        }).then(() => console.log(`[CF] emailAdminNuevoEvento(cita) → ${emails.admin}`))
-          .catch(e => console.error('[CF] Error admin cita:', e.message)),
-
-        // CC a cada empleado activo
-        ...empleadosList.map(empCorreo =>
-          sendEmail({
-            from: emails.citas, fromName: 'WOODEN HOUSE SISTEMA',
-            to:      empCorreo,
-            replyTo: emails.replyTo,
-            subject: adminEmail.subject,
-            html:    adminEmail.html,
-            text:    `Nueva cita ${cita.numero_cita} de ${cita.nombre_cliente} para ${cita.fecha_cita}.`,
-          }).then(() => console.log(`[CF] emailCita empleado → ${empCorreo}`))
-            .catch(e => console.error(`[CF] Error cita empleado ${empCorreo}:`, e.message))
-        ),
-      ];
-      await Promise.allSettled(tasks);
+      await sendEmail({
+        from: emails.citas, fromName: 'WOODEN HOUSE CITAS',
+        to:      cita.correo_cliente,
+        replyTo: emails.replyTo,
+        subject: `Cita confirmada – ${cita.numero_cita} | Wooden House`,
+        html:    emailCitaConfirmada(cita),
+        text:    `Cita ${cita.numero_cita} confirmada para el ${cita.fecha_cita}.`,
+      }).then(() => console.log(`[CF] emailCitaConfirmada → ${cita.correo_cliente}`))
+        .catch(e => console.error('[CF] Error emailCitaConfirmada:', e.message));
       return;
     }
 

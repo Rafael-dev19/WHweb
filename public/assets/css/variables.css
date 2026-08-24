@@ -1,9 +1,10 @@
 /**
  * Variables CSS Globales - Wooden House
- * Paleta unificada: café madera sobre gris oscuro
+ * Paleta unificada: café madera sobre gris oscuro (oscuro = default de marca)
+ * Tema claro: mismos nombres de variable, paleta espejo — ver [data-theme="light"] al final.
  */
 
-:root {
+:root, [data-theme="dark"] {
   /* === COLORES PRIMARIOS === */
   --color-primary:       #8b7355;   /* Café madera */
   --color-primary-hover: #a0865f;   /* Café madera claro (hover) */
@@ -97,4 +98,56 @@
   --bs-border-radius-sm:  8px;
   --bs-border-radius-lg:  15px;
   --bs-focus-ring-color:  rgba(139, 115, 85, 0.25);
+}
+
+/* === TEMA CLARO === */
+[data-theme="light"] {
+  /* === COLORES PRIMARIOS === */
+  --color-primary:       #6e5c42;   /* Café madera (más oscuro para contraste sobre blanco) */
+  --color-primary-hover: #8b7355;
+  --color-primary-dark:  #56462f;
+  --color-primary-light: rgba(110, 92, 66, 0.10);
+  --color-accent:        #9a7b3f;   /* Dorado, oscurecido para legibilidad sobre claro */
+
+  /* === FONDOS === */
+  --color-bg-main:  #f7f5f2;   /* Fondo general — crema cálido, no blanco puro */
+  --color-bg-panel: #ffffff;   /* Header, footer, paneles */
+  --color-bg-card:  #ffffff;   /* Tarjetas / superficies */
+  --color-bg-input: #f0ede8;   /* Fondo de inputs */
+  --color-border:   #e0dad2;   /* Borde sutil */
+  --color-border-light: #d3ccc1;
+
+  /* === TEXTO === */
+  --color-text-main:  #2b2620;   /* Texto principal */
+  --color-text-muted: #6b6255;   /* Texto secundario */
+  --color-text-dark:  #a39a8c;   /* Texto deshabilitado / placeholder */
+
+  /* === ESTADOS === */
+  --color-success:    #2f6b3f;
+  --color-success-bg: rgba(47, 107, 63, 0.10);
+  --color-warning:    #9a7b3f;
+  --color-warning-bg: rgba(154, 123, 63, 0.10);
+  --color-error:      #a33a3a;
+  --color-error-bg:   rgba(163, 58, 58, 0.10);
+  --color-info:       #2d5f8a;
+  --color-info-bg:    rgba(45, 95, 138, 0.10);
+
+  /* === SOMBRAS (más suaves sobre fondo claro) === */
+  --shadow-sm:   0 2px 8px  rgba(43, 38, 32, 0.08);
+  --shadow-md:   0 5px 20px rgba(43, 38, 32, 0.12);
+  --shadow-lg:   0 10px 40px rgba(43, 38, 32, 0.16);
+  --shadow-primary: 0 4px 16px rgba(110, 92, 66, 0.25);
+
+  /* === BOOTSTRAP 5 OVERRIDES === */
+  --bs-primary:           #6e5c42;
+  --bs-primary-rgb:       110, 92, 66;
+  --bs-secondary:         #6b6255;
+  --bs-secondary-rgb:     107, 98, 85;
+  --bs-link-color:        #9a7b3f;
+  --bs-link-hover-color:  #6e5c42;
+  --bs-body-color:        #2b2620;
+  --bs-body-color-rgb:    43, 38, 32;
+  --bs-body-bg:           #f7f5f2;
+  --bs-border-color:      #e0dad2;
+  --bs-focus-ring-color:  rgba(110, 92, 66, 0.25);
 }

@@ -55,6 +55,10 @@ define('DB_CHARSET', 'utf8mb4');
 // La verificación real usa las JWKS públicas de Google, no secretos
 define('FIREBASE_PROJECT_ID', env('FIREBASE_PROJECT_ID', ''));
 define('FIREBASE_API_KEY',    env('FIREBASE_API_KEY',    ''));
+// Clave pública VAPID para Web Push (Firebase Console → Project settings →
+// Cloud Messaging → Web configuration → Generate key pair). Ver instrucciones
+// completas en el mensaje de la Fase 4.
+define('FCM_VAPID_KEY',       env('FCM_VAPID_KEY',       ''));
 
 // ── Stripe ────────────────────────────────────────────────────────
 define('STRIPE_SECRET_KEY',     env('STRIPE_SECRET_KEY',     ''));

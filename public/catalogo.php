@@ -8,13 +8,14 @@ require_once dirname(__DIR__) . '/includes/env.php';
 <head>
   <meta charset="UTF-8">
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Catálogo - Wooden House</title>
   <meta name="description" content="Explora el catálogo completo de Wooden House. Muebles de madera artesanales: cocinas, clósets, muebles de baño y más. Encuentra el mueble perfecto para tu hogar.">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
   <link rel="stylesheet" href="./assets/<?= av('css/variables.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/styles.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/catalogo.css') ?>">
+  <link rel="stylesheet" href="./assets/<?= av('css/theme-toggle.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/modal-auth.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/animations.css') ?>">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -177,7 +178,8 @@ require_once dirname(__DIR__) . '/includes/env.php';
     </div>
   </div>
 
-  <script src="./assets/<?= av('js/firebase-config.js') ?>"></script>
+  <script src="./assets/<?= av('js/theme-toggle.js') ?>"></script>
+<script src="./assets/<?= av('js/firebase-config.js') ?>"></script>
   <script src="./assets/<?= av('js/modal-auth.js') ?>"></script>
   <script src="./assets/<?= av('js/catalogo.js') ?>"></script>
   <script src="./assets/<?= av('js/event-delegation.js') ?>"></script>

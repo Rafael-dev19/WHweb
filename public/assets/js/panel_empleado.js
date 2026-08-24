@@ -339,14 +339,15 @@ function refreshKpisFromPedidosTable(){
 // Bug corregido: los botones usaban "pending"/"progress"/"completed" pero
 // el estado real es "pendiente"/"en_produccion"/etc. — nunca coincidían.
 const ESTADO_PEDIDO_CATEGORIA = {
-  pendiente:       'pending',
-  anticipo_pagado:    'pending',
-  pagado:             'progress',
-  en_produccion:      'progress',
-  listo:              'progress',
-  listo_para_entrega: 'progress',
-  entregado:          'completed',
-  cancelado:          null, // solo visible en "Todos"
+  pendiente:              'pending',
+  anticipo_pagado:        'pending',
+  pagado:                 'pending',
+  listo_para_produccion:  'progress',
+  en_produccion:          'progress',
+  alistando_pedido:       'progress',
+  en_camino_instalacion:  'progress',
+  finalizado:             'completed',
+  cancelado:              null, // solo visible en "Todos"
 };
 function filterTable(filter, ev){
   document.querySelectorAll('#pedidos-section .filter-btn').forEach(btn => btn.classList.remove('active'));
@@ -725,9 +726,9 @@ function renderDayEvents(dayISO){
     .filter(e => e.date === dayISO)
     .sort((a,b) => (a.time||'').localeCompare(b.time||''));
 
-  // Mostrar el botón de ruta cuando hay pedidos "listo_para_entrega" o citas activas
+  // Mostrar el botón de ruta cuando hay pedidos "en_camino_instalacion" o citas activas
   const tieneParadas = events.some(e =>
-    (e.eventoTipo === 'pedido' && e.datos?.tipo_entrega === 'envio' && e.datos?.estado === 'listo_para_entrega') ||
+    (e.eventoTipo === 'pedido' && e.datos?.tipo_entrega === 'envio' && e.datos?.estado === 'en_camino_instalacion') ||
     (e.eventoTipo === 'cita'   && !['cancelada'].includes(e.datos?.estado || ''))
   );
   if (rutaBtn) rutaBtn.style.display = tieneParadas ? '' : 'none';
@@ -1039,29 +1040,31 @@ async function logout() {
 // El empleado no puede cancelar pedidos — esa transición es solo para admin.
 const ESTADO_PEDIDO_LABELS = {
   pendiente:'Pendiente', anticipo_pagado:'Anticipo pagado', pagado:'Pagado',
-  en_produccion:'En Producción', listo:'Listo',
-  listo_para_entrega:'Listo para entrega', entregado:'Entregado', cancelado:'Cancelado',
+  listo_para_produccion:'Listo para producción', en_produccion:'En producción',
+  alistando_pedido:'Alistando pedido', en_camino_instalacion:'En camino a instalación',
+  finalizado:'Finalizado', cancelado:'Cancelado',
 };
 const ESTADO_PEDIDO_CLASS  = {
   pendiente:'status-pending', anticipo_pagado:'status-pending', pagado:'status-progress',
-  en_produccion:'status-producing', listo:'status-info',
-  listo_para_entrega:'status-ready', entregado:'status-completed', cancelado:'status-cancelled',
+  listo_para_produccion:'status-info', en_produccion:'status-producing',
+  alistando_pedido:'status-info', en_camino_instalacion:'status-ready',
+  finalizado:'status-completed', cancelado:'status-cancelled',
 };
-function estadosSiguientesPedidoEmp(estadoActual, montoPagado) {
+// El empleado solo puede avanzar pedidos que YA fueron liberados por el diseñador
+// (listo_para_produccion en adelante) — no puede tocar nada antes de eso, ni cancelar.
+function estadosSiguientesPedidoEmp(estadoActual) {
   const transiciones = {
-    pendiente:          ['listo'],
-    anticipo_pagado:    ['pendiente'],
-    pagado:             ['pendiente'],
-    en_produccion:      ['listo'],           // compatibilidad pedidos anteriores
-    listo:              ['listo_para_entrega'],
-    listo_para_entrega: ['entregado'],
-    entregado:          [],
-    cancelado:          [],
+    pendiente:             [],
+    anticipo_pagado:       [],
+    pagado:                [],
+    listo_para_produccion: ['en_produccion'],
+    en_produccion:         ['alistando_pedido'],
+    alistando_pedido:      ['en_camino_instalacion', 'finalizado'],
+    en_camino_instalacion: ['finalizado'],
+    finalizado:            [],
+    cancelado:             [],
   };
-  let opciones = transiciones[estadoActual] || [];
-  // Requiere al menos anticipo o pago registrado para avanzar a listo
-  if (!((montoPagado || 0) > 0)) opciones = opciones.filter(s => s !== 'listo');
-  return opciones;
+  return transiciones[estadoActual] || [];
 }
 
 async function cargarPedidosEmpleadoAPI() {
@@ -1072,7 +1075,7 @@ async function cargarPedidosEmpleadoAPI() {
     if (!data.success) return;
 
     tbody.innerHTML = (data.pedidos || []).map(p => {
-      const siguientes = estadosSiguientesPedidoEmp(p.estado, p.monto_pagado);
+      const siguientes = estadosSiguientesPedidoEmp(p.estado);
       const opciones = [p.estado, ...siguientes];
       return `
       <tr data-status="${p.estado}" data-id="${p.id}" data-entrega="${p.fecha_estimada||''}">
@@ -1104,15 +1107,15 @@ async function cargarPedidosEmpleadoAPI() {
 
 async function actualizarEstadoPedidoEmp(id, estado) {
   try {
-    // Al entregar un pedido con anticipo y saldo pendiente, resolver el cobro
-    // del saldo en el mismo paso — evita el doble clic (entregado + pagado).
-    if (estado === 'entregado') {
+    // Al finalizar un pedido con anticipo y saldo pendiente, resolver el cobro
+    // del saldo en el mismo paso — evita el doble clic (finalizado + pagado).
+    if (estado === 'finalizado') {
       const detalle = await apiFetch(`${API_BASE}/pedidos.php?id=${id}`);
       const p = detalle?.pedido;
       if (p && p.tipo_pago === 'anticipo') {
         const saldo = Math.max(0, (p.total || 0) - (p.monto_pagado || 0));
         if (saldo > 0.009) {
-          const cobrado = confirm(`Este pedido tiene un saldo pendiente de $${saldo.toLocaleString('es-MX')} (anticipo). ¿Se cobró el saldo en efectivo/en persona al momento de la entrega?`);
+          const cobrado = confirm(`Este pedido tiene un saldo pendiente de $${saldo.toLocaleString('es-MX')} (anticipo). ¿Se cobró el saldo en efectivo/en persona al momento de la instalación/entrega?`);
           if (cobrado) {
             const r = await apiFetch(`${API_BASE}/pagos.php?action=marcar_saldo_manual`, {
               method: 'POST', body: JSON.stringify({ pedido_id: id }),
@@ -1123,7 +1126,7 @@ async function actualizarEstadoPedidoEmp(id, estado) {
               return;
             }
           } else {
-            showNotification('<i class="fa-solid fa-triangle-exclamation"></i> El pedido no puede marcarse como entregado con saldo pendiente. Registra el pago primero.', 'warning');
+            showNotification('<i class="fa-solid fa-triangle-exclamation"></i> El pedido no puede marcarse como finalizado con saldo pendiente. Registra el pago primero.', 'warning');
             cargarPedidosEmpleadoAPI();
             return;
           }
@@ -1261,8 +1264,8 @@ async function verDetallePedidoEmp(id) {
       currentPedidoRow.dataset.entrega = p.tipo_entrega || '';
     }
 
-    const estadoLabels = { pendiente:'Pendiente',anticipo_pagado:'Anticipo pagado',pagado:'Pagado ✓',en_produccion:'En Producción',listo:'Listo',listo_para_entrega:'Listo para entrega',entregado:'Entregado',cancelado:'Cancelado' };
-    const estadoClass  = { pendiente:'status-pending',anticipo_pagado:'status-pending',pagado:'status-progress',en_produccion:'status-producing',listo:'status-info',listo_para_entrega:'status-ready',entregado:'status-completed',cancelado:'status-cancelled' };
+    const estadoLabels = ESTADO_PEDIDO_LABELS;
+    const estadoClass  = ESTADO_PEDIDO_CLASS;
     const est   = p.estado || 'pendiente';
     const cls   = estadoClass[est]  || 'status-pending';
     const label = estadoLabels[est] || est;
@@ -1367,6 +1370,26 @@ async function verDetallePedidoEmp(id) {
 
       ${saldoHtml}
 
+      ${(p.imagenes_diseno?.length || p.mensaje_disenador) ? `
+      <div style="background:var(--bg);border-left:3px solid #8b7355;border-radius:6px;padding:12px;margin-bottom:14px;">
+        <div style="font-weight:700;color:#8b7355;margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i class="fa-solid fa-pen-ruler"></i> Diseño (SketchUp / VCarve)</div>
+        ${p.imagenes_diseno?.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:${p.mensaje_disenador ? '10px' : '0'};">
+          ${p.imagenes_diseno.map(img => `<a href="${img.url_imagen}" target="_blank" rel="noopener"><img src="${img.url_imagen}" alt="Diseño" style="width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}
+        </div>` : ''}
+        ${p.mensaje_disenador ? `<div style="font-size:12px;color:var(--muted2);"><strong>Mensaje del diseñador:</strong> ${escapeHtml(p.mensaje_disenador)}</div>` : ''}
+      </div>` : ''}
+
+      ${p.cotizacion_origen ? `
+      <div style="background:var(--bg);border-left:3px solid #c9a96e;border-radius:6px;padding:12px;margin-bottom:14px;">
+        <div style="font-weight:700;color:#c9a96e;margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i class="fa-solid fa-file-invoice-dollar"></i> Partidas cotizadas (${escapeHtml(p.cotizacion_origen.numero_cotizacion)})</div>
+        ${p.cotizacion_origen.items?.length ? `<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">
+          <tbody>${p.cotizacion_origen.items.map(it => `<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 4px;color:var(--muted2);">${escapeHtml(it.nombre_item)}</td><td style="padding:5px 4px;text-align:center;color:var(--muted2);">${it.cantidad} ${escapeHtml(it.unidad)}</td><td style="padding:5px 4px;text-align:right;color:var(--accent);font-weight:700;">${money(it.subtotal)}</td></tr>`).join('')}</tbody>
+        </table>` : ''}
+        ${p.cotizacion_origen.descripcion_respuesta ? `<div style="font-size:12px;color:var(--muted2);margin-bottom:8px;">${escapeHtml(p.cotizacion_origen.descripcion_respuesta)}</div>` : ''}
+        ${p.cotizacion_origen.imagenes?.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;">${p.cotizacion_origen.imagenes.map(im => `<a href="${im.url_imagen}" target="_blank" rel="noopener"><img src="${im.url_imagen}" alt="Referencia" style="width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}</div>` : ''}
+        ${p.cotizacion_origen.pdf_url ? `<p style="margin-top:8px;"><a href="${p.cotizacion_origen.pdf_url}" target="_blank" rel="noopener" style="color:#c9a96e;font-size:12px;"><i class="fa-solid fa-file-pdf"></i> Ver PDF de la propuesta</a></p>` : ''}
+      </div>` : ''}
+
       <div style="margin-bottom:14px;">
         <div style="font-weight:700;color:var(--accent);margin-bottom:6px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Productos del Pedido</div>
         ${itemsHtml}
@@ -1377,22 +1400,103 @@ async function verDetallePedidoEmp(id) {
         ${pagosHtml}
       </div>
 
+      ${window.WH_ROL === 'disenador' && ['anticipo_pagado','pagado'].includes(est) ? `
+      <div style="padding-top:14px;border-top:1px solid var(--border);margin-bottom:14px;">
+        <div style="font-weight:700;color:#8b7355;margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i class="fa-solid fa-pen-ruler"></i> Diseñar — marcar listo para producción</div>
+        <div class="form-group" style="margin-bottom:8px;">
+          <label class="form-label" style="font-size:11px;">Imágenes de diseño (SketchUp / VCarve) *</label>
+          <input type="file" id="disenoImgInput" accept="image/jpeg,image/jpg,image/png,image/webp" multiple class="form-input">
+        </div>
+        <div class="form-group" style="margin-bottom:8px;">
+          <label class="form-label" style="font-size:11px;">Mensaje para instaladores/taller (opcional)</label>
+          <textarea id="disenoMensajeInput" class="form-input" rows="2" placeholder="Ej: cuidado con la veta en el panel frontal..."></textarea>
+        </div>
+        <button class="btn btn-primary btn-small" id="btnMarcarListoProduccion" data-call="marcarListoParaProduccion" data-args="[${id}]">
+          <i class="fa-solid fa-check"></i> Marcar listo para producción
+        </button>
+      </div>` : ''}
+
       <div style="padding-top:14px;border-top:1px solid var(--border);">
         <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Cambiar Estado</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
           <span class="status-badge ${cls}" style="opacity:1;">${label} (actual)</span>
-          ${estadosSiguientesPedidoEmp(est, p.monto_pagado).map(s=>{
+          ${estadosSiguientesPedidoEmp(est).map(s=>{
             const l2=estadoLabels[s]||s;
             const c2=estadoClass[s]||'status-pending';
             return `<button type="button" data-emp-ped-estado="${s}"
               class="status-badge ${c2}" style="cursor:pointer;border:none;opacity:0.85;">→ ${l2}</button>`;
           }).join('') || '<span style="color:var(--muted);font-size:12px;">Estado final — sin más transiciones</span>'}
         </div>
-        ${(p.monto_pagado||0)<=0 ? '<p style="color:var(--muted);font-size:11px;margin-top:8px;"><i class="fa-solid fa-circle-info"></i> No se puede avanzar el estado sin registrar al menos el anticipo o pago.</p>' : ''}
+        ${['pendiente','anticipo_pagado','pagado'].includes(est) ? '<p style="color:var(--muted);font-size:11px;margin-top:8px;"><i class="fa-solid fa-circle-info"></i> Este pedido pasará a producción cuando el diseñador termine el diseño y lo marque como listo.</p>' : ''}
       </div>
     `;
   } catch(e) {
     body.innerHTML = `<div style="color:var(--danger);padding:20px;text-align:center;"><i class="fa-solid fa-circle-exclamation"></i> Error: ${e.message}</div>`;
+  }
+}
+
+// ── Diseñador: subir imágenes de diseño y marcar listo para producción ──
+async function subirImagenesDiseno(files, pedidoId) {
+  if (!window.firebaseStorage && typeof initFirebase === 'function') initFirebase();
+  if (!window.firebaseStorage) throw new Error('Firebase Storage no disponible. Verifica que hayas iniciado sesión correctamente.');
+
+  const urls = [];
+  const ts = Date.now();
+  const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp'];
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    if (!ALLOWED_MIME.includes(file.type)) {
+      throw new Error(`Archivo "${file.name}" no es una imagen válida. Solo se permiten JPEG, PNG o WEBP.`);
+    }
+    const headerBuf = await file.slice(0, 12).arrayBuffer();
+    const hdr = new Uint8Array(headerBuf);
+    const isJpeg = hdr[0]===0xFF && hdr[1]===0xD8 && hdr[2]===0xFF;
+    const isPng  = hdr[0]===0x89 && hdr[1]===0x50 && hdr[2]===0x4E && hdr[3]===0x47;
+    const isWebp = hdr[8]===0x57 && hdr[9]===0x45 && hdr[10]===0x42 && hdr[11]===0x50;
+    if (!isJpeg && !isPng && !isWebp) {
+      throw new Error(`Archivo "${file.name}" no pasó la validación de imagen real.`);
+    }
+    const ext  = file.name.split('.').pop().toLowerCase() || 'jpg';
+    const path = `proyectos/pedidos/${pedidoId}/${ts}-${i}.${ext}`;
+    const ref  = window.firebaseStorage.ref(path);
+    const snap = await ref.put(file);
+    urls.push(await snap.ref.getDownloadURL());
+  }
+  return urls;
+}
+
+async function marcarListoParaProduccion(id) {
+  const filesInput = document.getElementById('disenoImgInput');
+  const files      = filesInput?.files;
+  const mensaje    = document.getElementById('disenoMensajeInput')?.value?.trim() || '';
+  if (!files || files.length === 0) {
+    showNotification('<i class="fa-solid fa-triangle-exclamation"></i> Adjunta al menos una imagen del diseño.', 'error');
+    return;
+  }
+  const btn = document.getElementById('btnMarcarListoProduccion');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Subiendo...'; }
+  try {
+    const urls = await subirImagenesDiseno(files, id);
+    const data = await apiFetch(`${API_BASE}/pedidos.php?id=${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        estado: 'listo_para_produccion',
+        imagenes: urls,
+        mensaje_disenador: mensaje,
+      }),
+    });
+    if (data.success) {
+      showNotification('<i class="fa-solid fa-circle-check"></i> Pedido marcado listo para producción.', 'success');
+      cargarPedidosEmpleadoAPI();
+      verDetallePedidoEmp(id);
+    } else {
+      showNotification('<i class="fa-solid fa-circle-xmark"></i> ' + (data.error || 'Error'), 'error');
+    }
+  } catch (e) {
+    showNotification('<i class="fa-solid fa-circle-xmark"></i> ' + (e.message || 'Error al subir imágenes'), 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-check"></i> Marcar listo para producción'; }
   }
 }
 
@@ -1542,10 +1646,6 @@ async function refreshKpisAPI() {
     if (!data.success) { console.warn('[KPI] API error:', data.error); return; }
     const kpiPend = document.getElementById('kpiPendientes');
     if (kpiPend) kpiPend.textContent = data.pedidos_pendientes ?? 0;
-    const kpiCitas = document.getElementById('kpiCitasHoy');
-    if (kpiCitas) kpiCitas.textContent = data.citas_hoy ?? 0;
-    const kpiCot = document.getElementById('kpiCotNuevas');
-    if (kpiCot) kpiCot.textContent = data.cotizaciones_nuevas ?? 0;
   } catch(e) { console.error('[KPI] refreshKpisAPI falló:', e.message); }
 }
 
@@ -1948,10 +2048,10 @@ async function generarRutaDia(fecha) {
       e.date === fecha && !['cancelada'].includes(e.datos?.estado || '')
     );
 
-    // ── 2. Pedidos del día listos para entrega (domicilio) ─────
-    // Solo se incluyen en la ruta pedidos con estado 'listo_para_entrega'.
+    // ── 2. Pedidos del día en camino a instalación/entrega (domicilio) ─
+    // Solo se incluyen en la ruta pedidos con estado 'en_camino_instalacion'.
     const pedidosEvts = _empPedidosApiCache.filter(e =>
-      e.date === fecha && e.datos?.estado === 'listo_para_entrega'
+      e.date === fecha && e.datos?.estado === 'en_camino_instalacion'
     );
 
     // ── 3. Fetch detalle de cada pedido para obtener dirección/GPS ─

@@ -3,12 +3,15 @@
   'use strict';
 
   const ESTADO_LABELS = {
-    pendiente:     'Pendiente',
-    pagado:        'Pagado',
-    en_produccion: 'En producción',
-    listo:         'Listo para entrega',
-    entregado:     'Entregado',
-    cancelado:     'Cancelado',
+    pendiente:              'Pendiente',
+    anticipo_pagado:        'Anticipo pagado',
+    pagado:                 'Pagado',
+    listo_para_produccion:  'En preparación',
+    en_produccion:          'En producción',
+    alistando_pedido:       'Alistando pedido',
+    en_camino_instalacion:  'En camino / instalación',
+    finalizado:             'Finalizado',
+    cancelado:              'Cancelado',
   };
 
   function fmt(monto) {
@@ -92,15 +95,6 @@
     if (typeof val !== 'string') return '';
     return val.replace(/[^0-9\s+\-().]/g, '').substring(0, 20).trim();
   }
-  function _sanitizeText(val, max) {
-    if (typeof val !== 'string') return '';
-    return val.replace(/<[^>]*>/g, '').replace(/['";`\\]/g, '').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').substring(0, max || 255).trim();
-  }
-  function _sanitizeCP(val) {
-    if (typeof val !== 'string') return '';
-    return val.replace(/\D/g, '').substring(0, 6);
-  }
-
   /* ── Validación en tiempo real del formulario de perfil ─────── */
   function _initValidacionPerfil() {
     const pfNombre = document.getElementById('pfNombre');
@@ -111,52 +105,112 @@
     if (pfTel) pfTel.addEventListener('input', function () {
       this.value = this.value.replace(/[^0-9\s+\-().]/g, '');
     });
-    // Dirección, colonia, municipio y ciudad: bloquear inyección
-    ['pfDireccion','pfColonia','pfMunicipio','pfCiudad'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.addEventListener('input', function () {
-        this.value = this.value.replace(/[<>"'`;\\]/g, '');
+  }
+
+  /* ── Guardado parcial genérico (nombre/teléfono o dirección) ─── */
+  async function _guardarCampos(body) {
+    const alert = document.getElementById('mcPerfilAlert');
+    if (alert) alert.className = 'mc-alert';
+
+    const cliente = AuthModal.getCliente();
+    if (!cliente) {
+      if (alert) { alert.textContent = 'No autenticado.'; alert.className = 'mc-alert error'; }
+      return false;
+    }
+
+    const csrf = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('XSRF-TOKEN='));
+    const csrfToken = csrf ? decodeURIComponent(csrf.split('=')[1]) : '';
+
+    try {
+      const res  = await fetch(`/api/clientes.php?id=${cliente.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}) },
+        credentials: 'same-origin',
+        body: JSON.stringify(body),
       });
-    });
-    const pfCP = document.getElementById('pfCP');
-    if (pfCP) pfCP.addEventListener('input', function () {
-      this.value = this.value.replace(/\D/g, '').substring(0, 6);
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Error al guardar');
+      if (alert) { alert.textContent = '¡Perfil actualizado correctamente!'; alert.className = 'mc-alert success'; }
+      await AuthModal.verificar();
+      const c = AuthModal.getCliente();
+      if (c) _renderHeader(c);
+      return true;
+    } catch (err) {
+      if (alert) { alert.textContent = err.message; alert.className = 'mc-alert error'; }
+      return false;
+    }
+  }
+
+  /* ── Dirección: mapa dentro de un LockedField ────────────────── */
+  let _direccionActual = {};
+
+  function _resumenDireccion(v) {
+    if (!v || !v.direccion) return '<span style="color:var(--muted,#888);">Sin dirección guardada.</span>';
+    const linea2 = [v.colonia ? 'Col. ' + v.colonia : '', v.ciudad || '', v.cp ? 'CP ' + v.cp : ''].filter(Boolean).join(', ');
+    return `<strong>📍 ${v.direccion}</strong>${linea2 ? '<br>' + linea2 : ''}`;
+  }
+
+  function _initDireccionPicker(c) {
+    _direccionActual = {
+      lat: c.lat, lng: c.lng, direccion: c.direccion,
+      colonia: c.colonia, ciudad: c.ciudad, municipio: c.municipio, cp: c.cp,
+    };
+    const wrap = document.getElementById('mcDireccionWrap');
+    if (!wrap) return;
+
+    LockedField.init(wrap, {
+      hasValue: () => !!_direccionActual.direccion,
+      renderLocked(el) {
+        el.innerHTML = `<div class="locked-field-summary">${_resumenDireccion(_direccionActual)}</div>`;
+      },
+      renderUnlocked(el) {
+        el.innerHTML = '<div id="mcMapPicker"></div>';
+        const mapWrap = document.getElementById('mcMapPicker');
+        if (window.MapsPicker && mapWrap) {
+          window.MapsPicker.init(mapWrap, {
+            onConfirm: (vals) => { _direccionActual = { ..._direccionActual, ...vals }; },
+          });
+          if (_direccionActual.lat && _direccionActual.lng) {
+            window.MapsPicker.setValue(_direccionActual);
+          }
+        }
+      },
+      onSave: async () => {
+        const vals = (window.MapsPicker && window.MapsPicker.getValues()) || {};
+        if (!vals.lat || !vals.lng) {
+          alert('Selecciona tu dirección en el buscador o el mapa antes de guardar.');
+          return false;
+        }
+        const ok = await _guardarCampos({
+          direccion: vals.direccion, colonia: vals.colonia, municipio: vals.municipio,
+          ciudad: vals.ciudad, cp: vals.cp, lat: vals.lat, lng: vals.lng,
+        });
+        if (ok) _direccionActual = { ..._direccionActual, ...vals };
+        return ok;
+      },
     });
   }
 
-  /* ── Formulario de perfil ──────────────────────────────────── */
+  /* ── Formulario de perfil (nombre/teléfono) ──────────────────── */
   function _rellenarFormPerfil(c) {
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
-    set('pfNombre',    c.nombre);
-    set('pfTelefono',  c.telefono);
-    set('pfDireccion', c.direccion);
-    set('pfColonia',   c.colonia);
-    set('pfMunicipio', c.municipio);
-    set('pfCiudad',    c.ciudad);
-    set('pfCP',        c.cp);
+    set('pfNombre',   c.nombre);
+    set('pfTelefono', c.telefono);
     _initValidacionPerfil();
+    _initDireccionPicker(c);
   }
 
   window.mcGuardarPerfil = async function (e) {
     e.preventDefault();
     const alert = document.getElementById('mcPerfilAlert');
-    alert.className = 'mc-alert';
 
     const btn    = document.getElementById('btnGuardarPerfil');
     btn._orig    = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<span class="mc-spinner-sm"></span>Guardando…';
 
-    const cliente = AuthModal.getCliente();
-    if (!cliente) { alert.textContent = 'No autenticado.'; alert.className = 'mc-alert error'; btn.innerHTML = btn._orig; btn.disabled = false; return; }
-
-    const nombre    = _sanitizeName(document.getElementById('pfNombre')?.value    || '');
-    const telefono  = _sanitizePhone(document.getElementById('pfTelefono')?.value  || '');
-    const direccion = _sanitizeText(document.getElementById('pfDireccion')?.value  || '', 255);
-    const colonia   = _sanitizeText(document.getElementById('pfColonia')?.value    || '', 120);
-    const municipio = _sanitizeText(document.getElementById('pfMunicipio')?.value  || '', 100);
-    const ciudad    = _sanitizeText(document.getElementById('pfCiudad')?.value     || '', 100);
-    const cp        = _sanitizeCP(document.getElementById('pfCP')?.value            || '');
+    const nombre   = _sanitizeName(document.getElementById('pfNombre')?.value   || '');
+    const telefono = _sanitizePhone(document.getElementById('pfTelefono')?.value || '');
 
     if (!nombre || nombre.length < 2) {
       alert.textContent = 'El nombre debe tener al menos 2 caracteres y solo puede contener letras.';
@@ -169,32 +223,9 @@
       btn.innerHTML = btn._orig; btn.disabled = false; return;
     }
 
-    const csrf = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('XSRF-TOKEN='));
-    const csrfToken = csrf ? decodeURIComponent(csrf.split('=')[1]) : '';
-
-    const body = { nombre, telefono, direccion, colonia, municipio, ciudad, cp };
-
-    try {
-      const res  = await fetch(`/api/clientes.php?id=${cliente.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}) },
-        credentials: 'same-origin',
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error || 'Error al guardar');
-      alert.textContent = '¡Perfil actualizado correctamente!';
-      alert.className = 'mc-alert success';
-      await AuthModal.verificar();
-      const c = AuthModal.getCliente();
-      if (c) _renderHeader(c);
-    } catch (err) {
-      alert.textContent = err.message;
-      alert.className = 'mc-alert error';
-    } finally {
-      btn.innerHTML = btn._orig;
-      btn.disabled  = false;
-    }
+    await _guardarCampos({ nombre, telefono });
+    btn.innerHTML = btn._orig;
+    btn.disabled  = false;
   };
 
   /* ── Tabs ──────────────────────────────────────────────────── */

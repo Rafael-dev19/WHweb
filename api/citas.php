@@ -3,6 +3,46 @@ require_once __DIR__ . '/_helpers.php';
 
 $method = requestMethod();
 $id     = isset($_GET['id']) ? sanitizeInt($_GET['id']) : null;
+$action = $_GET['action'] ?? '';
+
+// ── Generar una cotización a partir de una cita ya visitada ──────
+// Flujo alterno: el cliente agendó una cita directo (sin cotizador rápido);
+// el jefe confirma, va a la visita, toma medidas/fotos, y desde aquí crea la
+// cotización — se abre el mismo cotizador de dos columnas para llenarla y
+// mandarla, con el mismo flujo de confirmación del cliente que cualquier otra.
+if ($method === 'POST' && $action === 'generar_cotizacion') {
+    requerirGestion();
+    requerirCsrf();
+    if (!$id) jsonError('ID requerido', 400);
+    $cita = dbRow("SELECT * FROM citas WHERE id = ?", [$id]);
+    if (!$cita) jsonError('Cita no encontrada', 404);
+    if (!in_array($cita['estado'], ['confirmada', 'completada'], true)) {
+        jsonError('Solo se puede generar una cotización de una cita ya confirmada/visitada.', 422);
+    }
+
+    $numCot = generarNumeroCotizacion();
+    $datosCot = [
+        'numero_cotizacion'     => $numCot,
+        'cita_id'               => $id,
+        'nombre_cliente'        => $cita['nombre_cliente'],
+        'correo_cliente'        => $cita['correo_cliente'],
+        'telefono_cliente'      => $cita['telefono_cliente'],
+        'direccion'             => $cita['direccion'],
+        'colonia'               => $cita['colonia'],
+        'municipio'             => $cita['municipio'],
+        'ciudad'                => $cita['ciudad'],
+        'cp'                    => $cita['cp'],
+        'descripcion_solicitud' => 'Cotización generada tras visita de la cita ' . $cita['numero_cita'] . '.',
+        'fecha_visita'          => $cita['fecha_cita'],
+        'hora_visita'           => $cita['rango_horario'],
+        'estado'                => 'en_revision',
+    ];
+    try { dbRows("SELECT lat FROM citas LIMIT 0"); $datosCot['lat'] = $cita['lat'] ?? null; $datosCot['lng'] = $cita['lng'] ?? null; } catch (\Throwable $e) {}
+    try { dbRows("SELECT cliente_id FROM citas LIMIT 0"); if (!empty($cita['cliente_id'])) $datosCot['cliente_id'] = $cita['cliente_id']; } catch (\Throwable $e) {}
+
+    $cotId = dbInsert('cotizaciones', $datosCot);
+    jsonSuccess(['cotizacion_id' => $cotId, 'numero_cotizacion' => $numCot, 'mensaje' => 'Cotización creada. Complétala en el cotizador.'], 201);
+}
 
 switch ($method) {
     case 'GET':
@@ -19,7 +59,7 @@ switch ($method) {
         }
 
         $consultaPublica = !empty($_GET['fecha']) && !$id && empty($_GET['estado']) && empty($_GET['tipo']);
-        if (!$consultaPublica) requerirEmpleado();
+        if (!$consultaPublica) requerirGestion();
 
         if ($id) {
             $cita = dbRow("SELECT * FROM citas WHERE id = ?", [$id]);
@@ -165,7 +205,7 @@ switch ($method) {
         break;
 
     case 'PUT':
-        requerirEmpleado();
+        requerirGestion();
         requerirCsrf();
         if (!$id) jsonError('ID requerido', 400);
         if (!dbRow("SELECT id FROM citas WHERE id = ?", [$id])) jsonError('Cita no encontrada', 404);
@@ -184,7 +224,7 @@ switch ($method) {
         break;
 
     case 'DELETE':
-        requerirEmpleado();
+        requerirGestion();
         requerirCsrf();
         if (!$id) jsonError('ID requerido', 400);
         dbUpdate('citas', ['estado' => 'cancelada'], 'id = ?', [$id]);

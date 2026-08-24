@@ -16,8 +16,8 @@ html { overflow-x: hidden; width: 100%; }
 
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: #1a1a1a;
-  color: #e0e0e0;
+  background: var(--color-bg-main);
+  color: var(--color-text-main);
   line-height: 1.6;
   overflow-x: hidden;
   width: 100%;
@@ -27,7 +27,7 @@ body {
    HEADER
    ======================================== */
 .header-nav {
-  background: #2d2d2d;
+  background: var(--color-bg-card);
   padding: 16px 40px;
   display: flex;
   justify-content: space-between;
@@ -44,7 +44,7 @@ body {
 .logo {
   font-size: 28px;
   font-weight: bold;
-  color: #8b7355;
+  color: var(--color-primary);
   text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
 }
 
@@ -52,7 +52,7 @@ body {
    INDICADOR DE PASOS
    ======================================== */
 .steps-indicator {
-  background: linear-gradient(135deg, #2d2d2d, #252525);
+  background: linear-gradient(135deg, var(--color-bg-card), var(--color-bg-card));
   padding: 30px 40px;
   display: flex;
   justify-content: center;
@@ -77,7 +77,7 @@ body {
   position: absolute;
   right: -40px;
   font-size: 20px;
-  color: #4a4a4a;
+  color: var(--color-border-light);
 }
 
 .step:last-child::after {
@@ -89,7 +89,7 @@ body {
 }
 
 .step.active {
-  color: #8b7355;
+  color: var(--color-primary);
   transform: scale(1.05);
 }
 
@@ -97,7 +97,7 @@ body {
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  background: #3d3d3d;
+  background: var(--color-bg-input);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -115,9 +115,9 @@ body {
 }
 
 .step.active .step-number {
-  background: #8b7355;
+  background: var(--color-primary);
   color: white;
-  border-color: #a0865f;
+  border-color: var(--color-primary-hover);
   box-shadow: 0 0 20px rgba(139, 115, 85, 0.5);
 }
 
@@ -137,14 +137,14 @@ body {
 }
 
 .page-title {
-  color: #8b7355;
+  color: var(--color-primary);
   font-size: 36px;
   margin-bottom: 10px;
   font-weight: bold;
 }
 
 .page-subtitle {
-  color: #a0a0a0;
+  color: var(--color-text-muted);
   font-size: 15px;
 }
 
@@ -153,19 +153,19 @@ body {
    ======================================== */
 
 .payment-section {
-  background: linear-gradient(135deg, #2d2d2d, #282828);
+  background: linear-gradient(135deg, var(--color-bg-card), var(--color-border));
   padding: 35px;
   border-radius: 16px;
-  border: 2px solid #3d3d3d;
+  border: 2px solid var(--color-border);
   box-shadow: 0 4px 20px rgba(0,0,0,0.3);
 }
 
 .section-title {
-  color: #8b7355;
+  color: var(--color-primary);
   font-size: 24px;
   margin-bottom: 28px;
   padding-bottom: 18px;
-  border-bottom: 2px solid #3d3d3d;
+  border-bottom: 2px solid var(--color-border);
   display: flex;
   align-items: center;
   gap: 12px;
@@ -180,7 +180,7 @@ body {
 }
 
 .payment-option {
-  background: #3d3d3d;
+  background: var(--color-bg-input);
   padding: 28px;
   border-radius: 12px;
   border: 3px solid transparent;
@@ -193,14 +193,14 @@ body {
 }
 
 .payment-option:hover {
-  border-color: #8b7355;
+  border-color: var(--color-primary);
   transform: translateY(-3px);
   box-shadow: 0 6px 20px rgba(139, 115, 85, 0.3);
 }
 
 .payment-option.selected {
-  border-color: #8b7355;
-  background: linear-gradient(135deg, #4a4a4a, #3d3d3d);
+  border-color: var(--color-primary);
+  background: linear-gradient(135deg, var(--color-border-light), var(--color-bg-input));
   box-shadow: 0 6px 25px rgba(139, 115, 85, 0.4);
   animation: option-select-in 0.3s ease;
 }
@@ -210,7 +210,7 @@ body {
   position: absolute;
   top: -1px;
   right: -1px;
-  background: #8b7355;
+  background: var(--color-primary);
   color: #fff;
   font-size: 11px;
   font-weight: 800;
@@ -237,14 +237,14 @@ body {
 }
 
 .payment-option h3 {
-  color: #e0e0e0;
+  color: var(--color-text-main);
   margin-bottom: 10px;
   font-size: 18px;
   font-weight: 700;
 }
 
 .payment-option p {
-  color: #a0a0a0;
+  color: var(--color-text-muted);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -254,12 +254,12 @@ body {
    ======================================== */
 #cardInfo,
 #paypalInfo {
-  background: #3d3d3d;
+  background: var(--color-bg-input);
   padding: 40px;
   border-radius: 12px;
   margin-bottom: 25px;
   text-align: center;
-  border: 2px solid #4a4a4a;
+  border: 2px solid var(--color-border-light);
   display: none;
 }
 
@@ -274,14 +274,14 @@ body {
 }
 
 .payment-info-title {
-  color: #8b7355;
+  color: var(--color-primary);
   font-size: 24px;
   margin-bottom: 15px;
   font-weight: 700;
 }
 
 .payment-info-text {
-  color: #a0a0a0;
+  color: var(--color-text-muted);
   margin-bottom: 25px;
   line-height: 1.6;
   font-size: 15px;
@@ -289,9 +289,9 @@ body {
 
 /* Stripe Card Element */
 .stripe-element {
-  background: #2d2d2d;
+  background: var(--color-bg-card);
   padding: 15px;
-  border: 2px solid #4a4a4a;
+  border: 2px solid var(--color-border-light);
   border-radius: 8px;
   margin-bottom: 15px;
 }
@@ -321,7 +321,7 @@ body {
 }
 
 .payment-action-btn {
-  background: linear-gradient(135deg, #8b7355, #a0865f);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
   color: white;
   padding: 16px 45px;
   border: none;
@@ -335,13 +335,13 @@ body {
 }
 
 .payment-action-btn:hover {
-  background: linear-gradient(135deg, #a0865f, #b89570);
+  background: linear-gradient(135deg, var(--color-primary-hover), #b89570);
   transform: translateY(-3px);
   box-shadow: 0 6px 20px rgba(139, 115, 85, 0.5);
 }
 
 .payment-action-btn:disabled {
-  background: #4a4a4a;
+  background: var(--color-border-light);
   cursor: not-allowed;
   opacity: 0.6;
 }
@@ -350,15 +350,15 @@ body {
    CÓDIGOS PROMOCIONALES
    ======================================== */
 .promo-section {
-  background: linear-gradient(135deg, #3d3d3d, #383838);
+  background: linear-gradient(135deg, var(--color-bg-input), var(--color-border));
   padding: 28px;
   border-radius: 12px;
   margin-top: 25px;
-  border: 2px solid #4a4a4a;
+  border: 2px solid var(--color-border-light);
 }
 
 .promo-section h3 {
-  color: #8b7355;
+  color: var(--color-primary);
   margin-bottom: 18px;
   font-size: 18px;
   font-weight: 700;
@@ -372,16 +372,16 @@ body {
 .promo-input-group input {
   flex: 1;
   padding: 15px;
-  background: #2d2d2d;
-  border: 2px solid #4a4a4a;
+  background: var(--color-bg-card);
+  border: 2px solid var(--color-border-light);
   border-radius: 10px;
-  color: #e0e0e0;
+  color: var(--color-text-main);
   font-size: 16px;
 }
 
 .btn-apply {
   padding: 15px 30px;
-  background: #8b7355;
+  background: var(--color-primary);
   color: white;
   border: none;
   border-radius: 10px;
@@ -393,7 +393,7 @@ body {
 }
 
 .btn-apply:hover {
-  background: #a0865f;
+  background: var(--color-primary-hover);
   transform: translateY(-2px);
 }
 
@@ -408,49 +408,49 @@ body {
    RESUMEN DEL PEDIDO
    ======================================== */
 .order-summary {
-  background: linear-gradient(135deg, #2d2d2d, #282828);
+  background: linear-gradient(135deg, var(--color-bg-card), var(--color-border));
   padding: 35px;
   border-radius: 16px;
   height: fit-content;
   position: sticky;
   top: 110px;
-  border: 2px solid #3d3d3d;
+  border: 2px solid var(--color-border);
   box-shadow: 0 8px 30px rgba(0,0,0,0.4);
 }
 
 .summary-title {
-  color: #8b7355;
+  color: var(--color-primary);
   font-size: 26px;
   font-weight: bold;
   margin-bottom: 28px;
   padding-bottom: 18px;
-  border-bottom: 2px solid #3d3d3d;
+  border-bottom: 2px solid var(--color-border);
 }
 
 .order-details {
-  background: linear-gradient(135deg, #3d3d3d, #383838);
+  background: linear-gradient(135deg, var(--color-bg-input), var(--color-border));
   padding: 22px;
   border-radius: 12px;
   margin-bottom: 28px;
-  border: 2px solid #4a4a4a;
+  border: 2px solid var(--color-border-light);
 }
 
 .order-details h4 {
-  color: #8b7355;
+  color: var(--color-primary);
   margin-bottom: 18px;
   font-size: 17px;
   font-weight: 700;
 }
 
 .detail-item {
-  color: #a0a0a0;
+  color: var(--color-text-muted);
   font-size: 14px;
   margin-bottom: 10px;
   line-height: 1.7;
 }
 
 .detail-item strong {
-  color: #e0e0e0;
+  color: var(--color-text-main);
   font-weight: 600;
 }
 
@@ -458,13 +458,13 @@ body {
   display: flex;
   justify-content: space-between;
   padding: 14px 0;
-  border-bottom: 1px solid #3d3d3d;
+  border-bottom: 1px solid var(--color-border);
   align-items: center;
   gap: 10px;
 }
 
 .summary-total {
-  border-top: 3px solid #8b7355;
+  border-top: 3px solid var(--color-primary);
   padding-top: 22px;
   margin-top: 22px;
   display: flex;
@@ -475,24 +475,24 @@ body {
 
 .summary-total span:first-child {
   font-size: 22px;
-  color: #8b7355;
+  color: var(--color-primary);
   font-weight: bold;
 }
 
 .summary-total span:last-child {
   font-size: 32px;
-  color: #8b7355;
+  color: var(--color-primary);
   font-weight: 900;
   white-space: nowrap;
 }
 
 .secure-badges {
   text-align: center;
-  color: #a0a0a0;
+  color: var(--color-text-muted);
   font-size: 13px;
   margin-top: 22px;
   padding-top: 22px;
-  border-top: 1px solid #3d3d3d;
+  border-top: 1px solid var(--color-border);
   line-height: 1.8;
 }
 
@@ -500,26 +500,26 @@ body {
    AVISOS
    ======================================== */
 .notice {
-  background: #2d2d2d;
-  border: 2px solid #3d3d3d;
+  background: var(--color-bg-card);
+  border: 2px solid var(--color-border);
   padding: 18px;
   border-radius: 14px;
-  color: #a0a0a0;
+  color: var(--color-text-muted);
   margin-bottom: 18px;
 }
 
 .notice strong {
-  color: #8b7355;
+  color: var(--color-primary);
 }
 
 /* ========================================
    FOOTER
    ======================================== */
 .footer {
-  background: #2d2d2d;
+  background: var(--color-bg-card);
   padding: 40px;
   text-align: center;
-  border-top: 3px solid #8b7355;
+  border-top: 3px solid var(--color-primary);
   margin-top: 60px;
 }
 
@@ -529,13 +529,13 @@ body {
 }
 
 .footer a {
-  color: #8b7355;
+  color: var(--color-primary);
   text-decoration: none;
   transition: color 0.3s;
 }
 
 .footer a:hover {
-  color: #a0865f;
+  color: var(--color-primary-hover);
 }
 
 /* ========================================
@@ -544,14 +544,14 @@ body {
 .payment-form-section {
   margin-top: 25px;
   padding: 28px;
-  background: linear-gradient(135deg, #383838, #333333);
+  background: linear-gradient(135deg, var(--color-border), #333333);
   border-radius: 12px;
-  border: 2px solid #4a4a4a;
+  border: 2px solid var(--color-border-light);
   animation: fadeIn 0.25s ease;
 }
 
 .payment-form-section h3 {
-  color: #8b7355;
+  color: var(--color-primary);
   font-size: 18px;
   margin-bottom: 20px;
   font-weight: 700;
@@ -563,7 +563,7 @@ body {
 
 .stripe-label {
   display: block;
-  color: #a0a0a0;
+  color: var(--color-text-muted);
   font-size: 13px;
   margin-bottom: 10px;
   font-weight: 500;
@@ -599,7 +599,7 @@ body {
 }
 
 .btn-stripe:disabled {
-  background: #4a4a4a;
+  background: var(--color-border-light);
   cursor: not-allowed;
   opacity: 0.6;
   transform: none;
@@ -634,7 +634,7 @@ body {
   flex-wrap: wrap;
   margin-top: 22px;
   padding-top: 18px;
-  border-top: 1px solid #3d3d3d;
+  border-top: 1px solid var(--color-border);
 }
 
 .security-badges span {
@@ -656,7 +656,7 @@ body {
    ======================================== */
 .totals {
   margin-top: 20px;
-  border-top: 2px solid #3d3d3d;
+  border-top: 2px solid var(--color-border);
   padding-top: 18px;
 }
 
@@ -665,9 +665,9 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 10px 0;
-  color: #a0a0a0;
+  color: var(--color-text-muted);
   font-size: 15px;
-  border-bottom: 1px solid #2d2d2d;
+  border-bottom: 1px solid var(--color-bg-card);
 }
 
 .total-row:last-child {
@@ -677,15 +677,15 @@ body {
 .total-final {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 3px solid #8b7355 !important;
+  border-top: 3px solid var(--color-primary) !important;
   border-bottom: none !important;
-  color: #8b7355 !important;
+  color: var(--color-primary) !important;
   font-size: 20px !important;
   font-weight: 900;
 }
 
 .total-final strong {
-  color: #8b7355;
+  color: var(--color-primary);
   font-size: 22px;
 }
 
@@ -837,7 +837,7 @@ body {
 
   .payment-option.selected:hover {
     box-shadow: 0 6px 25px rgba(139, 115, 85, 0.4);
-    border-color: #8b7355;
+    border-color: var(--color-primary);
   }
 }
 /* ── Gateway header (nuevo) ─────────────────────────────── */
@@ -851,12 +851,12 @@ body {
 
 .payment-gateway-header > i {
   font-size: 28px;
-  color: #8b7355;
+  color: var(--color-primary);
   flex-shrink: 0;
 }
 
 .payment-gateway-header h3 {
-  color: #e0e0e0;
+  color: var(--color-text-main);
   font-size: 17px;
   font-weight: 700;
   margin: 0 0 2px;
@@ -900,7 +900,7 @@ body {
 .payment-divider::after {
   content: '';
   flex: 1;
-  border-bottom: 1px solid #3d3d3d;
+  border-bottom: 1px solid var(--color-border);
   margin: 0 14px;
 }
 
@@ -910,7 +910,7 @@ body {
 }
 #seccion-cliente input:focus {
   outline: none;
-  border-color: #8b7355 !important;
+  border-color: var(--color-primary) !important;
   box-shadow: 0 0 0 3px rgba(139,115,85,.15);
 }
 #seccion-cliente input::placeholder {
