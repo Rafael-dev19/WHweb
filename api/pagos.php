@@ -18,8 +18,9 @@ function montoPendienteAPagar(array $pedido): float {
 
 // Acumula un pago aprobado en el pedido. Si el pedido todavía está en fase de
 // pago (pendiente/anticipo_pagado/pagado), avanza el estado automáticamente.
-// Si producción ya avanzó (en_produccion/listo/entregado), NO se debe regresar
-// el estado — solo se actualiza monto_pagado, conservando el progreso real.
+// Si producción ya avanzó (listo_para_produccion/en_produccion/alistando_pedido/
+// en_camino_instalacion/finalizado), NO se debe regresar el estado — solo se
+// actualiza monto_pagado, conservando el progreso real.
 function registrarPagoAprobado(int $pedidoId, float $montoPago): void {
     $pedido = dbRow("SELECT total, monto_pagado, estado, tipo_pago FROM pedidos WHERE id = ?", [$pedidoId]);
     if (!$pedido) return;

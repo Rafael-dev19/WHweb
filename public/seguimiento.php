@@ -89,10 +89,10 @@ header('Content-Type: text/html; charset=utf-8');
       </div>
 
       <div class="tracking-hint-box">
-        <i class="fa-solid fa-envelope-open-text" style="color:#8b7355;font-size:20px;flex-shrink:0;"></i>
+        <i class="fa-solid fa-envelope-open-text" style="color:var(--color-primary);font-size:20px;flex-shrink:0;"></i>
         <div>
-          <strong style="color:#e0e0e0;">¿Dónde encuentro mi número?</strong>
-          <p style="color:#a0a0a0;margin:4px 0 0;font-size:13px;">
+          <strong style="color:var(--color-text-main);">¿Dónde encuentro mi número?</strong>
+          <p style="color:var(--color-text-muted);margin:4px 0 0;font-size:13px;">
             Te lo enviamos automáticamente por correo al registrar tu pedido, cita o cotización.
           </p>
         </div>

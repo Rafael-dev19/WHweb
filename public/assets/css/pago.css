@@ -398,7 +398,7 @@ body {
 }
 
 .promo-hint {
-  color: #777;
+  color: var(--color-text-muted, #777);
   font-size: 13px;
   margin-top: 12px;
   font-style: italic;
@@ -641,7 +641,7 @@ body {
   display: flex;
   align-items: center;
   gap: 7px;
-  color: #888;
+  color: var(--color-text-muted, #888);
   font-size: 13px;
   font-weight: 500;
 }
@@ -863,7 +863,7 @@ body {
 }
 
 .gateway-sub {
-  color: #888;
+  color: var(--color-text-muted, #888);
   font-size: 12px;
   margin: 0;
 }

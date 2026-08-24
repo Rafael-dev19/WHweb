@@ -50,7 +50,6 @@
     var autoReveal = [
       { selector: '.service-card',     cls: 'wh-reveal-zoom' },
       { selector: '.reason-card',      cls: 'wh-reveal'      },
-      { selector: '.process-step',     cls: 'wh-reveal'      },
       { selector: '.contact-card',     cls: 'wh-reveal-zoom' },
       { selector: '.faq-item',         cls: 'wh-reveal'      },
       { selector: '.work-card',        cls: 'wh-reveal-zoom' },

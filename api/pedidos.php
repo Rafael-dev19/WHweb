@@ -12,22 +12,17 @@ switch ($method) {
             if (!preg_match('/^WH-\d{4}-\d{6}$/', $numero)) {
                 jsonError('Formato de número inválido', 422);
             }
+            // Búsqueda pública sin autenticar (folio no es secreto — es correlativo).
+            // Solo los campos que /seguimiento realmente muestra: nada de correo,
+            // teléfono, dirección ni el detalle de partidas (mismo criterio que ya
+            // aplican citas.php y cotizaciones.php en su búsqueda por número).
             $pedido = dbRow(
-                "SELECT id, numero_pedido, nombre_cliente, correo_cliente, telefono_cliente,
-                        tipo_entrega, direccion_envio, incluye_instalacion, estado,
-                        subtotal, costo_envio, costo_instalacion, descuento, total,
-                        tipo_pago, monto_pagado,
-                        fecha_estimada, fecha_creacion, notas
+                "SELECT numero_pedido, nombre_cliente, estado, total,
+                        tipo_pago, monto_pagado, fecha_estimada, fecha_creacion
                  FROM pedidos WHERE numero_pedido = ?",
                 [$numero]
             );
             if (!$pedido) jsonError('Pedido no encontrado', 404);
-            $pedido['items'] = dbRows(
-                "SELECT dp.id, dp.producto_id, dp.cantidad, dp.precio_unitario,
-                        dp.total_linea AS subtotal, dp.nombre_producto AS producto_nombre
-                 FROM detalle_pedido dp WHERE dp.pedido_id = ?",
-                [$pedido['id']]
-            );
             jsonSuccess(['pedido' => $pedido]);
         }
 

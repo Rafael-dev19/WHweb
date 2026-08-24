@@ -13,6 +13,20 @@ mb_http_output('UTF-8');
 // Las APIs lo envían ellas mismas en jsonSuccess()/jsonError()
 if (!defined('WH_API_REQUEST')) {
     header('Content-Type: text/html; charset=utf-8');
+
+    // ── Headers de seguridad HTTP para páginas HTML (login, paneles, checkout) ──
+    // api/_helpers.php ya los pone para las respuestas JSON; aquí faltaban para
+    // el HTML servido directo — sin esto, login/paneles eran embebibles en un
+    // <iframe> de otro sitio (clickjacking / UI redressing).
+    header('X-Content-Type-Options: nosniff');
+    header('X-Frame-Options: SAMEORIGIN');
+    header_remove('X-Powered-By');
+    header_remove('Server');
+    $__isHttpsPage = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+                   || (int)($_SERVER['SERVER_PORT'] ?? 80) === 443;
+    if ($__isHttpsPage) {
+        header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+    }
 }
 
 // ── Sesión segura ─────────────────────────────────────────────────

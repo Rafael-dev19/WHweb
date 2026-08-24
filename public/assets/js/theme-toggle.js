@@ -57,6 +57,8 @@
     });
 
     // Paneles de personal: junto al botón de notificaciones, mismo estilo .icon-btn.
+    // El header del panel es siempre visible (no se oculta en móvil), así que
+    // este mismo botón ya funciona en cualquier tamaño de pantalla.
     var notifBtn = document.getElementById('notifBtn');
     if (notifBtn && notifBtn.parentElement) {
       btn.className = 'icon-btn theme-toggle-btn';
@@ -64,12 +66,11 @@
       return;
     }
 
-    // Páginas públicas: dentro del nav, antes del carrito/mi cuenta.
-    var nav = document.getElementById('navLinks') || document.querySelector('.nav-links');
-    if (nav) {
-      btn.className = 'theme-toggle-btn theme-toggle-btn--nav';
-      nav.appendChild(btn);
-    }
+    // Páginas públicas: botón flotante fijo, independiente del menú de nav
+    // (que se oculta por completo en móvil) — así queda visible siempre,
+    // en cualquier dispositivo, no solo en escritorio.
+    btn.className = 'theme-toggle-btn theme-toggle-btn--float';
+    document.body.appendChild(btn);
   }
 
   document.addEventListener('DOMContentLoaded', _mountButton);

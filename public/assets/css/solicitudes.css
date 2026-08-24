@@ -259,7 +259,7 @@ h1, h2, h3, h4, h5, h6 { margin-bottom: 0; }
 
 .form-group textarea { min-height: 120px; resize: vertical; }
 
-.help-text { color: #777; font-size: 13px; margin-top: 6px; }
+.help-text { color: var(--color-text-muted, #777); font-size: 13px; margin-top: 6px; }
 
 /* ===================================================
    SLOTS DE HORARIO
@@ -441,7 +441,7 @@ h1, h2, h3, h4, h5, h6 { margin-bottom: 0; }
   transition: color 0.2s;
   flex-shrink: 0;
 }
-.login-suggest-close:hover { color: #aaa; }
+.login-suggest-close:hover { color: var(--color-text-muted, #aaa); }
 
 /* ===================================================
    BOTÓN SUBMIT
@@ -633,6 +633,10 @@ h1, h2, h3, h4, h5, h6 { margin-bottom: 0; }
   padding: 16px 20px;
   text-align: left;
   margin-bottom: 30px;
+}
+[data-theme="light"] .tracking-hint-box {
+  background: var(--color-bg-input);
+  border-color: var(--color-border);
 }
 
 /* Área de resultado */
@@ -1029,7 +1033,7 @@ h1, h2, h3, h4, h5, h6 { margin-bottom: 0; }
   margin-bottom: 3px;
 }
 .sol-dec-info span {
-  color: #888;
+  color: var(--color-text-muted, #888);
   font-size: 12px;
   line-height: 1.4;
 }

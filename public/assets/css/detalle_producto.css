@@ -129,7 +129,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #777;
+      color: var(--color-text-muted, #777);
       font-size: 18px;
       overflow: hidden;
       border: 2px solid var(--color-border);
@@ -156,7 +156,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #777;
+      color: var(--color-text-muted, #777);
       font-size: 12px;
       cursor: pointer;
       border: 2px solid var(--color-border);
@@ -337,7 +337,7 @@
 
     /* Clases generadas por el JS */
     .spec-key, .spec-label {
-      color: #aaa;
+      color: var(--color-text-muted, #aaa);
       font-size: 13px;
       font-weight: 600;
     }
@@ -356,7 +356,7 @@
     .spec-row-highlight .spec-label { color: var(--color-primary); }
 
     /* Feature items */
-    .feature-key { color: #aaa; font-size: 13px; font-weight: 600; }
+    .feature-key { color: var(--color-text-muted, #aaa); font-size: 13px; font-weight: 600; }
     .feature-val { color: var(--color-text-main); font-size: 13px; }
     .feature-item {
       display: flex;
@@ -445,7 +445,7 @@
     }
     .spec-row:last-child { border-bottom: none; }
     .spec-key {
-      color: #aaa;
+      color: var(--color-text-muted, #aaa);
       font-size: 13px;
       font-weight: 600;
     }
@@ -483,7 +483,7 @@
       transition: color .2s;
     }
     .breadcrumb-bar a:hover { color: var(--color-primary-hover); text-decoration: underline; }
-    .breadcrumb-bar span { color: #aaa; }
+    .breadcrumb-bar span { color: var(--color-text-muted, #aaa); }
 
     /* ===== QUANTITY INPUT — ocultar número, solo usar +/- ===== */
     .quantity-input {
@@ -595,7 +595,7 @@
       gap: 12px;
     }
     .tab-pane ul li {
-      color: #c0c0c0;
+      color: var(--color-text-muted, #c0c0c0);
       font-size: 14px;
       line-height: 1.6;
       padding: 10px 14px;
@@ -605,7 +605,7 @@
     }
     .tab-pane ul li strong { color: var(--color-text-main); }
     .tab-pane p {
-      color: #888;
+      color: var(--color-text-muted, #888);
       font-size: 14px;
       margin-top: 14px;
     }

@@ -30,7 +30,7 @@
   --color-success-bg: rgba(61, 107, 71, 0.15);
   --color-warning:    #c9a96e;
   --color-warning-bg: rgba(201, 169, 110, 0.15);
-  --color-error:      #c44a4a;
+  --color-error:      #d66666;
   --color-error-bg:   rgba(139, 74, 74, 0.15);
   --color-info:       #4a8bc4;
   --color-info-bg:    rgba(74, 139, 196, 0.15);
@@ -107,7 +107,7 @@
   --color-primary-hover: #8b7355;
   --color-primary-dark:  #56462f;
   --color-primary-light: rgba(110, 92, 66, 0.10);
-  --color-accent:        #9a7b3f;   /* Dorado, oscurecido para legibilidad sobre claro */
+  --color-accent:        #7d6230;   /* Dorado, oscurecido para legibilidad AA sobre claro (texto y fondo de badge) */
 
   /* === FONDOS === */
   --color-bg-main:  #f7f5f2;   /* Fondo general — crema cálido, no blanco puro */
@@ -125,8 +125,8 @@
   /* === ESTADOS === */
   --color-success:    #2f6b3f;
   --color-success-bg: rgba(47, 107, 63, 0.10);
-  --color-warning:    #9a7b3f;
-  --color-warning-bg: rgba(154, 123, 63, 0.10);
+  --color-warning:    #7d6230;
+  --color-warning-bg: rgba(125, 98, 48, 0.10);
   --color-error:      #a33a3a;
   --color-error-bg:   rgba(163, 58, 58, 0.10);
   --color-info:       #2d5f8a;
@@ -143,7 +143,7 @@
   --bs-primary-rgb:       110, 92, 66;
   --bs-secondary:         #6b6255;
   --bs-secondary-rgb:     107, 98, 85;
-  --bs-link-color:        #9a7b3f;
+  --bs-link-color:        #7d6230;
   --bs-link-hover-color:  #6e5c42;
   --bs-body-color:        #2b2620;
   --bs-body-color-rgb:    43, 38, 32;

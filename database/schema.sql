@@ -648,9 +648,9 @@ CREATE TABLE IF NOT EXISTS cotizador_items_catalogo (
 
 INSERT INTO cotizador_items_catalogo (clave, nombre, unidad, precio_unitario_default, orden) VALUES
  ('hoja', 'Hoja de material', 'pza', 0, 1),
- ('bisagra_oculta', 'Bisagra oculta', 'pza', 0, 2),
- ('bisagra_normal', 'Bisagra normal', 'pza', 0, 3),
- ('corredera', 'Corredera', 'pza', 0, 4),
+ ('bisagra', 'Bisagra', 'pza', 0, 2),
+ ('corredera_normal', 'Corredera normal', 'pza', 0, 3),
+ ('corredera_oculta', 'Corredera oculta', 'pza', 0, 4),
  ('brazo', 'Brazo', 'pza', 0, 5),
  ('enchape_m2', 'Enchape', 'm2', 0, 6),
  ('piedra_ml', 'Piedra (metro lineal)', 'ml', 0, 7);

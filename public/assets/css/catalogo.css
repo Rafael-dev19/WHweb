@@ -170,7 +170,7 @@
       box-shadow: 0 0 0 3px rgba(139,115,85,.18);
     }
 
-    .search-bar input::placeholder { color: #888; }
+    .search-bar input::placeholder { color: var(--color-text-muted, #888); }
 
     .btn-buscar {
       padding: 13px 20px;
@@ -225,7 +225,7 @@
 
     /* === CATALOGO META (contador de resultados) === */
     .catalogo-meta {
-      color: #888;
+      color: var(--color-text-muted, #888);
       font-size: 14px;
       margin-bottom: 20px;
       padding: 8px 0;
@@ -256,7 +256,7 @@
       align-items: center;
       justify-content: center;
       padding: 60px 20px;
-      color: #888;
+      color: var(--color-text-muted, #888);
       gap: 16px;
     }
 
@@ -276,7 +276,7 @@
       grid-column: 1 / -1;
       text-align: center;
       padding: 60px 20px;
-      color: #888;
+      color: var(--color-text-muted, #888);
     }
 
     .empty-state i { font-size: 48px; color: var(--color-border-light); margin-bottom: 16px; }

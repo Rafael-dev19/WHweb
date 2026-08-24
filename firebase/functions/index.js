@@ -719,48 +719,21 @@ exports.onNuevaNotificacion = onDocumentCreated(
       return;
     }
 
-    // ── cotizacion_en_produccion → cliente + empleados ────────────
+    // ── cotizacion_en_produccion → cliente (personal recibe solo push, nunca email) ──
     if (tipo === 'cotizacion_en_produccion') {
       let cot = {};
       try { cot = JSON.parse(data.datos_cotizacion || '{}'); } catch (e) {}
       if (!cot.correo_cliente) return;
 
-      const empleadosList = (data.correos_empleados || '').split(',').map(s => s.trim()).filter(Boolean);
-
-      const tasks = [
-        sendEmail({
-          from: emails.cotizaciones, fromName: 'WOODEN HOUSE',
-          to:      cot.correo_cliente,
-          replyTo: emails.replyTo,
-          subject: `Tu mueble está en fabricación — ${cot.numero_cotizacion} | Wooden House`,
-          html:    emailCotizacionEnProduccion(cot),
-          text:    `Tu mueble personalizado (${cot.numero_cotizacion}) ha comenzado la fabricación. Entrega estimada: ${cot.fecha_entrega_estimada || 'por confirmar'}.`,
-        }).then(() => console.log(`[CF] emailCotEnProduccion → ${cot.correo_cliente}`))
-          .catch(e => console.error('[CF] Error cot en produccion cliente:', e.message)),
-
-        // Notificar a empleados con resumen de fabricación
-        ...empleadosList.map(empCorreo =>
-          sendEmail({
-            from: emails.cotizaciones, fromName: 'WOODEN HOUSE SISTEMA',
-            to:      empCorreo,
-            replyTo: emails.replyTo,
-            subject: `🔨 Nueva orden de fabricación — ${cot.numero_cotizacion}`,
-            html: `
-<div style="font-family:'Segoe UI',Arial,sans-serif;max-width:560px;margin:0 auto;background:#faf6f0;border-radius:12px;overflow:hidden;border:1px solid #e5ddd4;">
-  <div style="background:#5C3D11;padding:20px 28px;"><h1 style="color:#e8dcc8;margin:0;font-size:18px;">Nueva orden de fabricación</h1></div>
-  <div style="padding:24px;">
-    <p style="color:#3a3020;"><strong>Folio:</strong> ${cot.numero_cotizacion}</p>
-    <p style="color:#3a3020;"><strong>Cliente:</strong> ${cot.nombre_cliente}</p>
-    <p style="color:#3a3020;"><strong>Entrega estimada:</strong> ${cot.fecha_entrega_estimada || 'Por definir'}</p>
-    ${cot.descripcion_respuesta ? `<div style="background:#fff8f0;border:1px solid #e5ddd4;border-radius:6px;padding:14px;margin-top:12px;"><strong style="color:#5C3D11;">Especificaciones:</strong><p style="color:#3a3020;margin:8px 0 0;">${cot.descripcion_respuesta.replace(/\n/g,'<br>')}</p></div>` : ''}
-  </div>
-</div>`,
-            text: `Nueva fabricación ${cot.numero_cotizacion} para ${cot.nombre_cliente}. Entrega: ${cot.fecha_entrega_estimada || 'por definir'}.`,
-          }).then(() => console.log(`[CF] emailCotEnProduccion empleado → ${empCorreo}`))
-            .catch(e => console.error(`[CF] Error cot produccion empleado ${empCorreo}:`, e.message))
-        ),
-      ];
-      await Promise.allSettled(tasks);
+      await sendEmail({
+        from: emails.cotizaciones, fromName: 'WOODEN HOUSE',
+        to:      cot.correo_cliente,
+        replyTo: emails.replyTo,
+        subject: `Tu mueble está en fabricación — ${cot.numero_cotizacion} | Wooden House`,
+        html:    emailCotizacionEnProduccion(cot),
+        text:    `Tu mueble personalizado (${cot.numero_cotizacion}) ha comenzado la fabricación. Entrega estimada: ${cot.fecha_entrega_estimada || 'por confirmar'}.`,
+      }).then(() => console.log(`[CF] emailCotEnProduccion → ${cot.correo_cliente}`))
+        .catch(e => console.error('[CF] Error cot en produccion cliente:', e.message));
       return;
     }
 
@@ -826,7 +799,8 @@ exports.onNuevaNotificacion = onDocumentCreated(
       const urlActivar = data.url_activacion   || '';
       if (!correoEmp || !urlActivar) return;
 
-      const rolLabel = rolEmp === 'administrador' ? 'Administrador' : 'Empleado';
+      const ROL_LABELS = { jefe: 'Jefe', administrador: 'Administrador', empleado: 'Empleado', disenador: 'Diseñador' };
+      const rolLabel = ROL_LABELS[rolEmp] || 'Empleado';
       await sendEmail({
         from: emails.admin, fromName: 'WOODEN HOUSE',
         to:      correoEmp,

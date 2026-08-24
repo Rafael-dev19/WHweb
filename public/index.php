@@ -242,39 +242,16 @@ if (!empty($_SESSION['_flash'])) {
       </div>
     </div>
 
-    <div>
-      <h2 class="section-title"><i class="fa-solid fa-clipboard-list"></i> Así Funciona</h2>
-      <div class="row row-cols-2 row-cols-md-4 g-4 mb-5">
-        <div class="col">
-          <div class="process-step h-100">
-            <div class="process-number">1</div>
-            <h4>Consulta o Cita</h4>
-            <p>Cuéntanos tu proyecto en línea o agenda una visita a domicilio gratuita</p>
-          </div>
-        </div>
-        <div class="col">
-          <div class="process-step h-100">
-            <div class="process-number">2</div>
-            <h4>Cotización en 24 hrs</h4>
-            <p>Recibes propuesta con precio, diseño y plazo de entrega — sin compromiso</p>
-          </div>
-        </div>
-        <div class="col">
-          <div class="process-step h-100">
-            <div class="process-number">3</div>
-            <h4>Fabricación a medida</h4>
-            <p>Nuestros artesanos fabrican tu mueble con materiales de calidad</p>
-          </div>
-        </div>
-        <div class="col">
-          <a href="/solicitudes" class="process-step h-100 d-block" style="text-decoration:none;color:inherit;">
-            <div class="process-number">4</div>
-            <h4>Entrega e instalación</h4>
-            <p>Instalamos en tu hogar, probamos y dejamos todo perfecto</p>
-            <span style="display:block;margin-top:10px;font-size:12px;color:#8b7355;font-weight:600;">Iniciar ahora →</span>
-          </a>
-        </div>
-      </div>
+    <div class="about-box">
+      <h2><i class="fa-solid fa-truck-fast" style="color:#c9a96e;"></i> Cobertura en todo Jalisco</h2>
+      <p>
+        Fabricamos e instalamos muebles a medida para toda la <strong>Zona Metropolitana de Guadalajara</strong>
+        (Guadalajara, Zapopan, Tlaquepaque, Tonalá, El Salto y Tlajomulco) sin costo adicional de traslado.
+      </p>
+      <p>
+        También atendemos el resto de <strong>Jalisco</strong> — fuera de la ZMG aplica un costo extra de traslado,
+        que te confirmamos junto con tu cotización antes de que decidas continuar.
+      </p>
     </div>
 
     <div id="proyectos">
