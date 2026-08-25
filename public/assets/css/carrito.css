@@ -880,7 +880,7 @@
     flex-wrap: wrap;
 }
 .login-suggest-icon { font-size: 20px; color: var(--color-accent); flex-shrink: 0; }
-.login-suggest-text { flex: 1; min-width: 180px; font-size: 14px; color: #ccc; line-height: 1.5; }
+.login-suggest-text { flex: 1; min-width: 180px; font-size: 14px; color: var(--color-text-muted); line-height: 1.5; }
 .login-suggest-text strong { color: var(--color-text-main); }
 .login-suggest-btn {
     background: var(--color-primary); color: #fff; border: none;
@@ -908,6 +908,10 @@
     margin-top: 16px;
     flex-wrap: wrap;
 }
+[data-theme="light"] .sesion-card {
+    background: linear-gradient(135deg, #eef5ee, #e4f0e4);
+    border-color: rgba(62,120,72,0.35);
+}
 .sesion-card-avatar {
     width: 46px;
     height: 46px;
@@ -932,6 +936,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
 }
+[data-theme="light"] .sesion-card-nombre { color: #1e5c2e; }
 .sesion-card-detalle {
     font-size: 13px;
     color: #8aac8a;
@@ -939,6 +944,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
 }
+[data-theme="light"] .sesion-card-detalle { color: #3a6b3a; }
 .sesion-card-editar {
     background: transparent;
     border: 1px solid rgba(62,120,72,0.5);

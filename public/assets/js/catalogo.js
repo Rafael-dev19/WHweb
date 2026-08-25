@@ -100,9 +100,9 @@ function seleccionarCategoriaPrincipal(cat, btnEl) {
   if (grid) {
     grid.innerHTML = `
       <div class="no-productos" style="grid-column:1/-1; text-align:center; padding:50px 20px;">
-        <i class="fa-solid fa-hammer" style="font-size:32px;color:#8b7355;margin-bottom:14px;display:block;"></i>
-        <p style="font-size:18px;font-weight:600;color:#e0e0e0;">¡Línea de ${escHtml(nombre)} próximamente!</p>
-        <p style="color:#a0a0a0;margin-top:6px;">Estamos preparando nuestro catálogo de ${escHtml(nombre.toLowerCase())} a la medida. Vuelve pronto.</p>
+        <i class="fa-solid fa-hammer" style="font-size:32px;color:var(--color-primary);margin-bottom:14px;display:block;"></i>
+        <p style="font-size:18px;font-weight:600;color: var(--color-text-muted);">¡Línea de ${escHtml(nombre)} próximamente!</p>
+        <p style="color: var(--color-text-muted);margin-top:6px;">Estamos preparando nuestro catálogo de ${escHtml(nombre.toLowerCase())} a la medida. Vuelve pronto.</p>
       </div>`;
   }
 

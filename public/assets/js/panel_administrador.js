@@ -176,7 +176,29 @@
     window.openNotifPanel   = openNotifPanel;
     window.closeNotifPanel  = closeNotifPanel;
 
+    // Iniciales de nombre y apellido (no del rol) para el avatar del panel.
+    function _iniciales(nombre) {
+      const partes = (nombre || '').trim().split(/\s+/).filter(Boolean);
+      if (partes.length === 0) return '?';
+      if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
+      return (partes[0][0] + partes[1][0]).toUpperCase();
+    }
+
+    async function cargarNombreAdmin() {
+      try {
+        const data = await apiFetch(`${API_BASE}/auth.php?action=perfil`);
+        if (data.success && data.usuario) {
+          const nombre = data.usuario.nombre_completo || data.usuario.correo || 'Usuario';
+          const el = document.getElementById('userNombreHeader');
+          if (el) el.textContent = nombre;
+          const avatar = document.getElementById('userAvatar');
+          if (avatar) avatar.textContent = _iniciales(data.usuario.nombre_completo);
+        }
+      } catch (e) { /* silencioso */ }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
+      cargarNombreAdmin();
       document.getElementById('notifBtn')?.addEventListener('click', e => {
         e.stopPropagation();
         document.getElementById('notifPanel')?.classList.contains('open') ? closeNotifPanel() : openNotifPanel();
@@ -287,12 +309,6 @@
       if(section === 'empleados')    cargarEmpleadosAPI();
       if(section === 'financiero')   cargarFinanciero();
       if(section === 'capacidad')  cargarCapacidad();
-      if(section === 'seguridad')  cargarEstado2FA();
-      if(section === 'seguridad' && new URLSearchParams(location.search).get('setup_2fa')) {
-        // Forzar apertura del flujo de setup si viene de login sin 2FA
-        setTimeout(iniciarSetup2FA, 400);
-        history.replaceState(null, '', location.pathname);   // limpiar URL
-      }
       refreshKPIs();
     }
 
@@ -588,7 +604,7 @@
           el.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
               <div>
-                <div class="t">📦 ${escapeHtml(e.cliente)} <span style="background:#c9a96e20;color:#c9a96e;border-radius:8px;padding:1px 7px;font-size:10px;font-weight:700;">Pedido</span></div>
+                <div class="t">📦 ${escapeHtml(e.cliente)} <span style="background:#c9a96e20;color:var(--accent);border-radius:8px;padding:1px 7px;font-size:10px;font-weight:700;">Pedido</span></div>
                 <div class="m">${escapeHtml(e.time)} • ${estadoLabels[e.estado]||e.estado} • ${escapeHtml(e.id)}</div>
               </div>
               ${dbId ? `<button data-call="verDetallePedidoAdmin" data-args="[${dbId}]" class="btn btn-primary btn-small" style="flex-shrink:0;white-space:nowrap;"><i class='fa-solid fa-eye'></i> Ver</button>` : ''}
@@ -867,7 +883,7 @@
       let list = getProductos();
 
       if (list.length === 0) {
-        if (catalogCards) catalogCards.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#888;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando productos...</div>';
+        if (catalogCards) catalogCards.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);"><i class="fa-solid fa-spinner fa-spin"></i> Cargando productos...</div>';
         return;
       }
 
@@ -883,7 +899,7 @@
         if (!catalogCards) return;
         catalogCards.innerHTML = '';
         if (!list.length) {
-          catalogCards.innerHTML = '<div style="grid-column:1/-1;color:#888;padding:20px;">No hay productos con esos filtros.</div>';
+          catalogCards.innerHTML = '<div style="grid-column:1/-1;color:var(--muted);padding:20px;">No hay productos con esos filtros.</div>';
           return;
         }
         list.forEach(p => {
@@ -898,8 +914,8 @@
           card.innerHTML = `
             <div style="position:relative;">${imgHTML}${badgeHTML}</div>
             <div class="cat-content">
-              <div class="cat-title">${escapeHtml(p.nombre)} <span style="color:#888;font-size:12px;">(${escapeHtml(p.categoria || '')})</span></div>
-              <div class="cat-desc" style="color:#aaa;font-size:13px;margin:6px 0;">${escapeHtml((p.descripcion || p.descLarga || '').substring(0, 80))}${(p.descripcion||'').length > 80 ? '...' : ''}</div>
+              <div class="cat-title">${escapeHtml(p.nombre)} <span style="color:var(--muted);font-size:12px;">(${escapeHtml(p.categoria || '')})</span></div>
+              <div class="cat-desc" style="color: var(--muted);font-size:13px;margin:6px 0;">${escapeHtml((p.descripcion || p.descLarga || '').substring(0, 80))}${(p.descripcion||'').length > 80 ? '...' : ''}</div>
               <div class="cat-footer">
                 <div class="cat-price">${money(p.precio || p.precio_base || 0)}</div>
                 <div class="cat-actions">
@@ -909,7 +925,7 @@
                 </div>
               </div>
               <div style="margin-top:8px;font-size:11px;color:#666;">
-                ID: <b style="color:#aaa;">${escapeHtml(String(p.id))}</b> •
+                ID: <b style="color: var(--muted);">${escapeHtml(String(p.id))}</b> •
                 <span class="status-badge ${p.estado === 'activo' ? 'status-completed' : 'status-disabled'}">${p.estado === 'activo' ? 'Activo' : 'Inactivo'}</span>
               </div>
             </div>
@@ -926,7 +942,7 @@
         if (!body) return;
         body.innerHTML = '';
         if (!list.length) {
-          body.innerHTML = '<tr><td colspan="6" style="color:#888;text-align:center;">No hay productos con esos filtros.</td></tr>';
+          body.innerHTML = '<tr><td colspan="6" style="color:var(--muted);text-align:center;">No hay productos con esos filtros.</td></tr>';
           return;
         }
         list.forEach(p => {
@@ -1323,12 +1339,12 @@
             <div class="detail-media">${imgHTML}</div>
             <div class="detail-body">
               <div class="detail-title">${escapeHtml(p.nombre)}</div>
-              <div class="detail-meta" style="color:#8b7355;margin:4px 0;">
+              <div class="detail-meta" style="color:var(--accent);margin:4px 0;">
                 ${escapeHtml(p.categoria || '')}
                 ${p.etiqueta || p.badge ? ` • <span style="background:#8b7355;color:#fff;padding:2px 8px;border-radius:4px;font-size:12px;">${escapeHtml(p.etiqueta || p.badge)}</span>` : ''}
               </div>
               <div class="detail-price">${money(p.precio || p.precio_base || 0)}</div>
-              <div class="detail-desc" style="margin-top:10px;color:#ccc;font-size:14px;line-height:1.6;">${escapeHtml(p.descripcion || p.descLarga || 'Sin descripción')}</div>
+              <div class="detail-desc" style="margin-top:10px;color:var(--muted2);font-size:14px;line-height:1.6;">${escapeHtml(p.descripcion || p.descLarga || 'Sin descripción')}</div>
             </div>
           </div>
           <div class="detail-side">
@@ -1336,7 +1352,7 @@
             <div class="kv"><span>ID en BD</span><b>${escapeHtml(String(p.id))}</b></div>
             <div class="kv"><span>Categoría</span><b>${escapeHtml(p.categoria || '—')}</b></div>
             <div class="kv"><span>Estado</span><b><span class="status-badge ${p.estado === 'activo' ? 'status-completed' : 'status-disabled'}">${p.estado || 'inactivo'}</span></b></div>
-            <div class="kv"><span>Precio</span><b style="color:#8b7355;">${money(p.precio || p.precio_base || 0)}</b></div>
+            <div class="kv"><span>Precio</span><b style="color:var(--accent);">${money(p.precio || p.precio_base || 0)}</b></div>
             <div style="margin-top:14px;"></div>
             <h4>Especificaciones</h4>
             ${specsHTML}
@@ -1775,6 +1791,10 @@
        KPIs DASHBOARD
     ========================= */
     function refreshKPIs(){
+      // El dashboard (y estas tarjetas) solo existe para jefe — administrador
+      // no lo tiene, así que estos elementos no están en el DOM para él.
+      if (!window.WH_ES_JEFE) return;
+
       const productos = getProductos();
       $('#kpiProductos').textContent = String(productos.length);
 
@@ -2006,10 +2026,6 @@
       cargarProductosAPI().then(() => {
         renderCatalogo();
       }).catch(e => console.warn('No se pudieron cargar productos:', e));
-      // Si viene de login sin 2FA configurado, forzar sección Seguridad
-      if (new URLSearchParams(location.search).get('setup_2fa')) {
-        showSection('seguridad');
-      }
       setTimeout(() => showNotification('Bienvenido, Administrador', 'success'), 450);
       if (typeof firebaseAuth !== 'undefined') {
         firebaseAuth.onAuthStateChanged(async (user) => {
@@ -2053,20 +2069,6 @@ async function apiFetch(url, options = {}) {
   }
   const data = await res.json();
   if ((res.status === 401 || res.status === 403) && !data.success) {
-    // 2FA obligatorio (jefe/administrador) sin configurar todavía: no es una sesión
-    // expirada, hay que mandarlo a configurar su 2FA en vez de cerrarle la sesión.
-    if (data['2fa_setup_required']) {
-      showNotification('Debes configurar la verificación en dos pasos antes de continuar.', 'error');
-      if (!location.search.includes('setup_2fa')) {
-        const sep = location.pathname.includes('?') ? '&' : '?';
-        window.location.href = location.pathname + sep + 'setup_2fa=1';
-      }
-      throw new Error(data.error || 'Configuración de 2FA requerida');
-    }
-    if (data['2fa_required']) {
-      showNotification('Verificación de dos factores requerida. Vuelve a iniciar sesión.', 'error');
-      throw new Error(data.error || 'Verificación de dos factores requerida');
-    }
     showNotification('Sesión expirada. Recarga la página.', 'error');
     throw new Error(data.error || 'No autenticado');
   }
@@ -2336,7 +2338,7 @@ async function cargarEmpleadosAPI() {
   const tbody = document.getElementById('empleadosTable');
   if (!tbody) return;
 
-  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px;">Cargando...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">Cargando...</td></tr>';
 
   try {
     const data = await apiFetch(`${API_BASE}/empleados.php`);
@@ -2344,7 +2346,7 @@ async function cargarEmpleadosAPI() {
 
     const empleados = data.empleados || [];
     if (empleados.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px;">No hay empleados registrados</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">No hay empleados registrados</td></tr>';
       return;
     }
 
@@ -2366,10 +2368,6 @@ async function cargarEmpleadosAPI() {
           <button class="btn btn-danger btn-small" data-call="desactivarEmpleado" data-args="[${e.id}]">
             ${e.activo ? '<i class="fa-solid fa-lock"></i>' : '<i class="fa-solid fa-lock-open"></i>'}
           </button>
-          <button class="btn btn-secondary btn-small" title="Resetear verificación en dos pasos"
-            data-call="resetear2FAEmpleado" data-args="[${e.id}]">
-            <i class="fa-solid fa-shield-halved"></i>
-          </button>
           <button class="btn btn-secondary btn-small" title="Revocar sesiones activas"
             data-call="revocarSesionesEmpleado" data-args="[${e.id}]">
             <i class="fa-solid fa-right-from-bracket"></i>
@@ -2388,7 +2386,7 @@ async function cargarEmpleadosAPI() {
       });
     });
   } catch(e) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#e05;padding:20px;">Error al cargar empleados</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--danger);padding:20px;">Error al cargar empleados</td></tr>';
     console.error('Empleados API error:', e);
   }
 }
@@ -2404,10 +2402,10 @@ async function desactivarEmpleado(id) {
   }
 }
 
-// ── Reset de 2FA / revocación de sesiones sobre otra cuenta de personal ──
+// ── Revocación de sesiones sobre otra cuenta de personal ──
 // Reproduce desde el sitio lo que antes solo se podía hacer con un UPDATE
 // directo en la base de datos. Exige un token de Firebase recién emitido
-// (reautenticación) igual que el resto del flujo de 2FA.
+// (reautenticación).
 async function _accionSeguridadPersonal(id, accion, mensajeExito) {
   try {
     const firebaseToken = await firebase.auth().currentUser?.getIdToken(true);
@@ -2428,11 +2426,6 @@ async function _accionSeguridadPersonal(id, accion, mensajeExito) {
   } catch (e) {
     showNotification('<i class="fa-solid fa-xmark"></i> ' + (e.message || 'Error de conexión'), 'error');
   }
-}
-
-async function resetear2FAEmpleado(id) {
-  if (!confirm('¿Resetear la verificación en dos pasos de este empleado? Deberá configurarla de nuevo en su próximo inicio de sesión.')) return;
-  await _accionSeguridadPersonal(id, 'reset_2fa', 'Verificación en dos pasos reseteada.');
 }
 
 async function revocarSesionesEmpleado(id) {
@@ -2526,8 +2519,8 @@ async function verDetallePedidoAdmin(id) {
     const saldoHtml = saldoPendiente > 0.009
       ? `<div style="background:var(--bg);border-left:3px solid #c9a96e;border-radius:6px;padding:12px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
           <div>
-            <div style="font-weight:700;color:#c9a96e;margin-bottom:4px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">${esAnticipo ? 'Anticipo (50%)' : 'Pago pendiente'}</div>
-            <div style="font-size:12px;color:var(--muted2);">Pagado: <strong>${money(p.monto_pagado||0)}</strong> · Saldo pendiente: <strong style="color:#c9a96e;">${money(saldoPendiente)}</strong></div>
+            <div style="font-weight:700;color:var(--accent);margin-bottom:4px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">${esAnticipo ? 'Anticipo (50%)' : 'Pago pendiente'}</div>
+            <div style="font-size:12px;color:var(--muted2);">Pagado: <strong>${money(p.monto_pagado||0)}</strong> · Saldo pendiente: <strong style="color:var(--accent);">${money(saldoPendiente)}</strong></div>
           </div>
           <button class="btn btn-secondary btn-small" data-call="marcarSaldoManualAdmin" data-args="[${id}]"><i class="fa-solid fa-hand-holding-dollar"></i> ${p.monto_pagado>0?'Marcar saldo pagado':'Marcar como pagado'}</button>
         </div>`
@@ -2570,7 +2563,7 @@ async function verDetallePedidoAdmin(id) {
 
       ${(p.imagenes_diseno?.length || p.mensaje_disenador) ? `
       <div style="background:var(--bg);border-left:3px solid #8b7355;border-radius:6px;padding:12px;margin-bottom:14px;">
-        <div style="font-weight:700;color:#8b7355;margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i class="fa-solid fa-pen-ruler"></i> Diseño (SketchUp / VCarve)</div>
+        <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i class="fa-solid fa-pen-ruler"></i> Diseño (SketchUp / VCarve)</div>
         ${p.imagenes_diseno?.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:${p.mensaje_disenador ? '10px' : '0'};">
           ${p.imagenes_diseno.map(img => `<a href="${img.url_imagen}" target="_blank" rel="noopener"><img src="${img.url_imagen}" alt="Diseño" style="width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}
         </div>` : ''}
@@ -2579,13 +2572,13 @@ async function verDetallePedidoAdmin(id) {
 
       ${p.cotizacion_origen ? `
       <div style="background:var(--bg);border-left:3px solid #c9a96e;border-radius:6px;padding:12px;margin-bottom:14px;">
-        <div style="font-weight:700;color:#c9a96e;margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i class="fa-solid fa-file-invoice-dollar"></i> Partidas cotizadas (${escapeHtml(p.cotizacion_origen.numero_cotizacion)})</div>
+        <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i class="fa-solid fa-file-invoice-dollar"></i> Partidas cotizadas (${escapeHtml(p.cotizacion_origen.numero_cotizacion)})</div>
         ${p.cotizacion_origen.items?.length ? `<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">
           <tbody>${p.cotizacion_origen.items.map(it => `<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 4px;color:var(--muted2);">${escapeHtml(it.nombre_item)}</td><td style="padding:5px 4px;text-align:center;color:var(--muted2);">${it.cantidad} ${escapeHtml(it.unidad)}</td><td style="padding:5px 4px;text-align:right;color:var(--accent);font-weight:700;">${money(it.subtotal)}</td></tr>`).join('')}</tbody>
         </table>` : ''}
         ${p.cotizacion_origen.descripcion_respuesta ? `<div style="font-size:12px;color:var(--muted2);margin-bottom:8px;">${escapeHtml(p.cotizacion_origen.descripcion_respuesta)}</div>` : ''}
         ${p.cotizacion_origen.imagenes?.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;">${p.cotizacion_origen.imagenes.map(im => `<a href="${im.url_imagen}" target="_blank" rel="noopener"><img src="${im.url_imagen}" alt="Referencia" style="width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}</div>` : ''}
-        ${p.cotizacion_origen.pdf_url ? `<p style="margin-top:8px;"><a href="${p.cotizacion_origen.pdf_url}" target="_blank" rel="noopener" style="color:#c9a96e;font-size:12px;"><i class="fa-solid fa-file-pdf"></i> Ver PDF de la propuesta</a></p>` : ''}
+        ${p.cotizacion_origen.pdf_url ? `<p style="margin-top:8px;"><a href="${p.cotizacion_origen.pdf_url}" target="_blank" rel="noopener" style="color:var(--accent);font-size:12px;"><i class="fa-solid fa-file-pdf"></i> Ver PDF de la propuesta</a></p>` : ''}
       </div>` : ''}
 
       <div style="margin-bottom:14px;">
@@ -2663,7 +2656,7 @@ async function verDetalleCitaAdmin(id) {
       </div>
 
       <div style="background:var(--bg);border-left:3px solid #4a7c8b;border-radius:6px;padding:12px;margin-bottom:14px;">
-        <div style="font-weight:700;color:#5b9aad;margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Fecha y Tipo</div>
+        <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Fecha y Tipo</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;color:var(--muted2);">
           <div><span style="color:var(--muted);display:block;font-size:10px;">📅 Fecha</span><strong style="font-size:15px;">${c.fecha_cita||'—'}</strong></div>
           <div><span style="color:var(--muted);display:block;font-size:10px;">🕐 Horario</span><strong style="font-size:15px;">${c.rango_horario||'Por confirmar'}</strong></div>
@@ -2917,7 +2910,7 @@ async function verDetalleCotAdmin(id) {
         <!-- ── Columna derecha: cotizador estructurado ── -->
         <div style="flex:1 1 420px;min-width:340px;">
           <div style="background:var(--bg);border-left:3px solid #c9a96e;border-radius:6px;padding:14px;">
-            <div style="font-weight:700;color:#c9a96e;margin-bottom:10px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">
+            <div style="font-weight:700;color:var(--accent);margin-bottom:10px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">
               Cotizador — partidas del proyecto
             </div>
 
@@ -2928,7 +2921,7 @@ async function verDetalleCotAdmin(id) {
 
             <div style="display:flex;justify-content:space-between;align-items:center;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:10px 14px;margin-bottom:14px;">
               <strong style="color:var(--muted2);">Total</strong>
-              <strong id="cotizadorTotal" style="font-size:18px;color:#c9a96e;">$0.00 MXN</strong>
+              <strong id="cotizadorTotal" style="font-size:18px;color:var(--accent);">$0.00 MXN</strong>
             </div>
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
@@ -2975,7 +2968,7 @@ async function verDetalleCotAdmin(id) {
               <div id="cotizadorImagenesJefeWrap" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
             </div>
 
-            ${cot.pdf_url ? `<p style="font-size:12px;margin-bottom:10px;"><a href="${cot.pdf_url}" target="_blank" rel="noopener" style="color:#c9a96e;"><i class="fa-solid fa-file-pdf"></i> Ver el PDF ya enviado</a></p>` : ''}
+            ${cot.pdf_url ? `<p style="font-size:12px;margin-bottom:10px;"><a href="${cot.pdf_url}" target="_blank" rel="noopener" style="color:var(--accent);"><i class="fa-solid fa-file-pdf"></i> Ver el PDF ya enviado</a></p>` : ''}
 
             <button class="btn btn-secondary btn-small" onclick="guardarCamposCotizacion(${cot.id})">
               <i class="fa-solid fa-floppy-disk"></i> Guardar borrador
@@ -3557,7 +3550,22 @@ function abrirEditarEmpleado(id, nombre, correo, rol) {
   document.getElementById('emp_id').value     = id;
   document.getElementById('emp_nombre').value = nombre;
   document.getElementById('emp_correo').value = correo;
-  document.getElementById('emp_rol').value    = rol;
+  const rolSelect = document.getElementById('emp_rol');
+  rolSelect.querySelector('option[data-temp-admin]')?.remove();
+  rolSelect.value = rol;
+  // El <select> no trae la opción "administrador" si quien ve el panel es jefe
+  // (jefe no puede asignar ese rol) — pero si la cuenta que se edita YA es
+  // administrador, hay que poder mostrarla igual sin degradarla por accidente
+  // al guardar. Se agrega la opción solo para reflejar el valor actual.
+  if (rolSelect.value !== rol && rol === 'administrador') {
+    const opt = document.createElement('option');
+    opt.value = 'administrador';
+    opt.textContent = 'Administrador (no puedes reasignar este rol)';
+    opt.disabled = true;
+    opt.dataset.tempAdmin = '1';
+    rolSelect.appendChild(opt);
+    rolSelect.value = rol;
+  }
   document.getElementById('empModalTitle').textContent = 'Editar Empleado';
   const help = document.getElementById('emp_correo_help');
   if (help) help.textContent = 'El correo no se puede cambiar aquí (está vinculado a Firebase).';
@@ -3575,6 +3583,7 @@ function abrirNuevoEmpleado() {
   document.getElementById('emp_nombre').value = '';
   document.getElementById('emp_correo').value = '';
   document.getElementById('emp_correo').readOnly = false;
+  document.getElementById('emp_rol').querySelector('option[data-temp-admin]')?.remove();
   document.getElementById('emp_rol').value    = 'empleado';
   document.getElementById('empModalTitle').textContent = 'Invitar Empleado';
   const help = document.getElementById('emp_correo_help');
@@ -3750,10 +3759,21 @@ async function toggleBloqueoDia(fecha, estaBloqueado) {
 }
 
 // Cargar capacidad cuando se activa la sección
-// ── AUTO-POLLING cada 30 segundos ──────────────────────────────────────
+// ── AUTO-POLLING silencioso ──────────────────────────────────────────
 // Refresca la sección visible automáticamente, igual que el panel empleado.
 // Sin necesidad de que el administrador recargue la página manualmente.
+// Se salta el ciclo por completo si hay un modal abierto o el foco está en
+// un campo de formulario — un re-render de la tabla en ese momento borraría
+// lo que se está escribiendo/editando, que es justo lo que no debe pasar.
+function _autoRefreshBloqueado() {
+  if (document.querySelector('.modal.active')) return true;
+  const activo = document.activeElement;
+  if (activo && /^(INPUT|TEXTAREA|SELECT)$/.test(activo.tagName)) return true;
+  return false;
+}
+
 function _autoRefreshAdmin() {
+  if (_autoRefreshBloqueado()) return;
   const section = window._currentSection || 'dashboard';
   try {
     if      (section === 'pedidos'      && typeof cargarPedidosAPI === 'function')          cargarPedidosAPI();
@@ -3773,11 +3793,12 @@ function _autoRefreshAdmin() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Sección inicial
-  window._currentSection = 'dashboard';
+  // Sección inicial: dashboard solo existe para jefe; administrador entra
+  // directo a Pedidos (ver panel_administrador.php, no tiene Dashboard).
+  window._currentSection = window.WH_ES_JEFE ? 'dashboard' : 'pedidos';
 
   // Iniciar ciclo de auto-polling
-  window._adminRefreshInterval = setInterval(_autoRefreshAdmin, 8000);
+  window._adminRefreshInterval = setInterval(_autoRefreshAdmin, 45000);
 
   // Pausar cuando la pestaña no es visible, reanudar al volver
   document.addEventListener('visibilitychange', () => {
@@ -3785,7 +3806,7 @@ document.addEventListener('DOMContentLoaded', () => {
       clearInterval(window._adminRefreshInterval);
     } else {
       _autoRefreshAdmin();
-      window._adminRefreshInterval = setInterval(_autoRefreshAdmin, 8000);
+      window._adminRefreshInterval = setInterval(_autoRefreshAdmin, 45000);
     }
   });
 });
@@ -3872,7 +3893,7 @@ async function cargarClientesAdmin() {
       }
     }
   } catch (e) {
-    body.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:20px;color:#e05;">${escapeHtml(e.message)}</td></tr>`;
+    body.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--danger);">${escapeHtml(e.message)}</td></tr>`;
   }
 }
 
@@ -3952,7 +3973,7 @@ async function verDetalleCliente(id) {
       </div>` : ''}
     `;
   } catch (e) {
-    body.innerHTML = `<p style="color:#e05;padding:20px;">${escapeHtml(e.message)}</p>`;
+    body.innerHTML = `<p style="color:var(--danger);padding:20px;">${escapeHtml(e.message)}</p>`;
   }
 }
 
@@ -4021,7 +4042,7 @@ async function cargarOfertasAdmin() {
     }).join('');
 
   } catch (e) {
-    body.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:20px;color:#e05;">${escapeHtml(e.message)}</td></tr>`;
+    body.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--danger);">${escapeHtml(e.message)}</td></tr>`;
   }
 }
 
@@ -4144,186 +4165,6 @@ window.showSection = function(section, ev) {
   if (section === 'ofertas')  cargarOfertasAdmin();
 };
 
-// ═══════════════════════════════════════════════════════════
-// SEGURIDAD — 2FA TOTP
-// ═══════════════════════════════════════════════════════════
-
-async function cargarEstado2FA() {
-  const csrf = document.cookie.split(';').find(c => c.trim().startsWith('XSRF-TOKEN='));
-  const csrfToken = csrf ? decodeURIComponent(csrf.split('=')[1]) : '';
-
-  try {
-    const res  = await fetch('/api/auth.php?action=verificar', {
-      headers: { 'X-CSRF-Token': csrfToken }
-    });
-    const data = await res.json();
-
-    const activo = data?.usuario?.totp_activo == 1;
-    _renderEstado2FA(activo);
-  } catch {
-    _renderEstado2FA(null);
-  }
-}
-
-function _renderEstado2FA(activo) {
-  const icono  = document.getElementById('seg-2fa-icono');
-  const texto  = document.getElementById('seg-2fa-estado-texto');
-  const badge  = document.getElementById('seg-2fa-badge');
-  const btnAct = document.getElementById('seg-btn-activar');
-  const btnDes = document.getElementById('seg-btn-desactivar');
-
-  if (activo === null) {
-    texto.textContent = 'No se pudo cargar el estado.';
-    return;
-  }
-
-  if (activo) {
-    icono.innerHTML  = '<i class="fa-solid fa-shield-halved" style="color:#4caf50;"></i>';
-    texto.textContent = 'El segundo factor está activo. Tu cuenta requiere un código TOTP al iniciar sesión.';
-    badge.textContent = 'ACTIVO';
-    badge.style.cssText += 'background:#1a3a1a;color:#4caf50;';
-    btnAct.style.display = 'none';
-    btnDes.style.display = '';
-  } else {
-    icono.innerHTML  = '<i class="fa-solid fa-lock-open" style="color:var(--muted);"></i>';
-    texto.textContent = 'El segundo factor está desactivado. Tu cuenta solo requiere contraseña.';
-    badge.textContent = 'INACTIVO';
-    badge.style.cssText += 'background:#2a2a2a;color:var(--muted);';
-    btnAct.style.display = '';
-    btnDes.style.display = 'none';
-  }
-
-  // Ocultar flujo de setup si estaba abierto
-  document.getElementById('seg-setup-flow').style.display = 'none';
-}
-
-async function iniciarSetup2FA() {
-  const csrf = document.cookie.split(';').find(c => c.trim().startsWith('XSRF-TOKEN='));
-  const csrfToken = csrf ? decodeURIComponent(csrf.split('=')[1]) : '';
-
-  const btnAct = document.getElementById('seg-btn-activar');
-  btnAct.disabled = true;
-  btnAct.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generando...';
-
-  try {
-    // Obtener token Firebase fresco para reautenticación
-    const firebaseToken = await firebase.auth().currentUser?.getIdToken(true);
-    if (!firebaseToken) throw new Error('No hay sesión activa en Firebase.');
-
-    const res  = await fetch('/api/auth.php?action=2fa-setup', {
-      headers: {
-        'X-CSRF-Token': csrfToken,
-        'Authorization': 'Bearer ' + firebaseToken
-      }
-    });
-    const data = await res.json();
-    if (!data.success) throw new Error(data.error || 'Error al generar configuración 2FA.');
-
-    // Mostrar secreto en texto
-    document.getElementById('seg-secreto-texto').textContent = data.secreto;
-
-    // Mostrar QR como imagen (sin dependencia de librería externa)
-    const canvas = document.getElementById('seg-qr-canvas');
-    canvas.src = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=8&data='
-      + encodeURIComponent(data.qr_url);
-    canvas.style.display = '';
-
-    // Limpiar campo de código y error
-    document.getElementById('seg-codigo-input').value = '';
-    document.getElementById('seg-setup-error').style.display = 'none';
-
-    // Mostrar flujo
-    document.getElementById('seg-setup-flow').style.display = '';
-    document.getElementById('seg-codigo-input').focus();
-
-  } catch(err) {
-    alert('Error: ' + err.message);
-  } finally {
-    btnAct.disabled = false;
-    btnAct.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Activar 2FA';
-  }
-}
-
-async function confirmarActivar2FA() {
-  const codigo = document.getElementById('seg-codigo-input').value.replace(/\D/g,'');
-  const errBox = document.getElementById('seg-setup-error');
-
-  if (codigo.length !== 6) {
-    errBox.textContent = 'Ingresa los 6 dígitos del código.';
-    errBox.style.display = '';
-    return;
-  }
-
-  const csrf = document.cookie.split(';').find(c => c.trim().startsWith('XSRF-TOKEN='));
-  const csrfToken = csrf ? decodeURIComponent(csrf.split('=')[1]) : '';
-  const firebaseToken = await firebase.auth().currentUser?.getIdToken(false);
-
-  try {
-    const res  = await fetch('/api/auth.php?action=2fa-activar', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': csrfToken,
-        'Authorization': 'Bearer ' + firebaseToken
-      },
-      body: JSON.stringify({ codigo })
-    });
-    const data = await res.json();
-
-    if (!data.success) {
-      errBox.textContent = data.error || 'Código incorrecto. Verifica la hora de tu dispositivo.';
-      errBox.style.display = '';
-      document.getElementById('seg-codigo-input').value = '';
-      document.getElementById('seg-codigo-input').focus();
-      return;
-    }
-
-    errBox.style.display = 'none';
-    document.getElementById('seg-setup-flow').style.display = 'none';
-    _renderEstado2FA(true);
-
-  } catch {
-    errBox.textContent = 'Error de red. Intenta nuevamente.';
-    errBox.style.display = '';
-  }
-}
-
-function cancelarSetup2FA() {
-  document.getElementById('seg-setup-flow').style.display = 'none';
-  document.getElementById('seg-codigo-input').value = '';
-  document.getElementById('seg-setup-error').style.display = 'none';
-}
-
-async function confirmarDesactivar2FA() {
-  const ok = confirm(
-    '¿Desactivar la verificación en dos pasos?\n\n' +
-    'Tu cuenta quedará protegida solo por contraseña.'
-  );
-  if (!ok) return;
-
-  const csrf = document.cookie.split(';').find(c => c.trim().startsWith('XSRF-TOKEN='));
-  const csrfToken = csrf ? decodeURIComponent(csrf.split('=')[1]) : '';
-  const firebaseToken = await firebase.auth().currentUser?.getIdToken(true);
-
-  try {
-    const res  = await fetch('/api/auth.php?action=2fa-desactivar', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': csrfToken,
-        'Authorization': 'Bearer ' + firebaseToken
-      },
-      body: JSON.stringify({})
-    });
-    const data = await res.json();
-    if (!data.success) throw new Error(data.error || 'No se pudo desactivar el 2FA.');
-    _renderEstado2FA(false);
-  } catch(err) {
-    alert('Error: ' + err.message);
-  }
-}
-
-// ── Exponer funciones para event-delegation.js (data-call / data-onchange) ────
 window.openModal              = openModal;
 window.closeModal             = closeModal;
 window.verDetallePedidoAdmin  = verDetallePedidoAdmin;
@@ -4341,11 +4182,6 @@ window.cargarClientesAdmin    = cargarClientesAdmin;
 window.abrirOfertaModal       = abrirOfertaModal;
 window.eliminarOferta         = eliminarOferta;
 window.actualizarValorLabel   = actualizarValorLabel;
-window.cargarEstado2FA        = cargarEstado2FA;
-window.iniciarSetup2FA        = iniciarSetup2FA;
-window.confirmarActivar2FA    = confirmarActivar2FA;
-window.cancelarSetup2FA       = cancelarSetup2FA;
-window.confirmarDesactivar2FA = confirmarDesactivar2FA;
 window.prevMonth              = prevMonth;
 window.nextMonth              = nextMonth;
 window.generarRutaDiaAdmin    = generarRutaDiaAdmin;
@@ -4497,7 +4333,7 @@ async function generarRutaDiaAdmin(fecha) {
     if (pos) {
       oLat = pos.lat; oLng = pos.lng;
       originStr   = `${pos.lat},${pos.lng}`;
-      originLabel = `<i class="fa-solid fa-location-dot" style="color:#4CAF50;"></i> Tu ubicación actual (GPS)`;
+      originLabel = `<i class="fa-solid fa-location-dot" style="color:var(--ok);"></i> Tu ubicación actual (GPS)`;
     } else {
       oLat = _ORIGEN_ADM.lat; oLng = _ORIGEN_ADM.lng;
       originStr   = _ORIGEN_ADM.address;
@@ -4522,7 +4358,7 @@ async function generarRutaDiaAdmin(fecha) {
         <div style="flex-shrink:0;width:28px;height:28px;border-radius:50%;background:${isCita?'#3d5a80':'var(--accent)'};color:#fff;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center;">${stopNum}</div>
         <div style="flex:1;min-width:0;">
           <div style="font-weight:700;font-size:13px;color:var(--text);">${s.icon} ${escapeHtml(s.label)}</div>
-          ${s.hora ? `<div style="font-size:11px;color:#4CAF50;margin-top:2px;font-weight:700;"><i class="fa-regular fa-clock"></i> Cita a las ${escapeHtml(s.hora)}</div>` : ''}
+          ${s.hora ? `<div style="font-size:11px;color:var(--ok);margin-top:2px;font-weight:700;"><i class="fa-regular fa-clock"></i> Cita a las ${escapeHtml(s.hora)}</div>` : ''}
           <div style="font-size:12px;color:var(--muted2);margin-top:4px;word-break:break-word;">${escapeHtml(s.address || '(sin dirección registrada)')}</div>
           <div style="display:flex;gap:6px;margin-top:5px;flex-wrap:wrap;">
             ${s.lat && s.lng

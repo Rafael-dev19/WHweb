@@ -5,12 +5,10 @@ $method = requestMethod();
 $id     = isset($_GET['id']) ? sanitizeInt($_GET['id']) : null;
 $action = $_GET['action'] ?? '';
 
-// ── Reset de 2FA / revocación de sesiones sobre OTRA cuenta de personal ──
-// Reproduce por el sitio lo que hoy solo se hacía con UPDATE directo en la BD:
-//   UPDATE usuarios_personal SET totp_secreto=NULL, totp_activo=0, sesiones_revocadas_desde=NULL WHERE id=?
+// ── Revocación de sesiones sobre OTRA cuenta de personal ──
 // Cualquier jefe/administrador puede ejecutarlo sobre cualquier otra cuenta de
 // personal (mismo poder que ya existía por SQL directo); queda auditado.
-if ($method === 'POST' && in_array($action, ['reset_2fa', 'revocar_sesiones'], true)) {
+if ($method === 'POST' && $action === 'revocar_sesiones') {
     $usuarioActual = requerirGestion();
     requerirCsrf();
     requerirReautenticacion('seguridad_personal', 300);
@@ -20,23 +18,10 @@ if ($method === 'POST' && in_array($action, ['reset_2fa', 'revocar_sesiones'], t
     }
     $objetivo = dbRow("SELECT id, rol FROM usuarios_personal WHERE id = ?", [$id]);
     if (!$objetivo) jsonError('Empleado no encontrado', 404);
-    // A diferencia de crear/editar/eliminar cuentas, aquí sí aplica la decisión
-    // explícita del plan: cualquier jefe/administrador puede resetear 2FA o
-    // revocar sesiones de cualquier otra cuenta de personal, pares incluidos
-    // (mismo poder que ya existía por SQL directo).
 
-    if ($action === 'reset_2fa') {
-        dbQuery(
-            "UPDATE usuarios_personal SET totp_secreto = NULL, totp_activo = 0, sesiones_revocadas_desde = NULL WHERE id = ?",
-            [$id]
-        );
-        $accionAuditoria = 'reset_2fa';
-        $mensaje = 'Verificación en dos pasos reseteada. El usuario deberá configurarla de nuevo en su próximo inicio de sesión.';
-    } else {
-        revocarSesionesPersonal($id);
-        $accionAuditoria = 'revocar_sesiones';
-        $mensaje = 'Sesiones activas revocadas. El usuario deberá iniciar sesión de nuevo.';
-    }
+    revocarSesionesPersonal($id);
+    $accionAuditoria = 'revocar_sesiones';
+    $mensaje = 'Sesiones activas revocadas. El usuario deberá iniciar sesión de nuevo.';
 
     try {
         dbInsert('auditoria_seguridad_personal', [
@@ -88,8 +73,10 @@ switch ($method) {
         if (!isValidEmail($body['correo'])) jsonError('correo inválido', 422);
         $rolesValidos = ['jefe', 'administrador', 'empleado', 'disenador'];
         if (!in_array($body['rol'], $rolesValidos)) jsonError('rol inválido', 422);
-        if (in_array($body['rol'], ['jefe', 'administrador'], true) && $usuarioActual['rol'] !== 'jefe') {
-            jsonError('Solo el jefe puede crear cuentas de jefe o administrador.', 403);
+        // Jefe y administrador pueden crear cuentas de cualquier rol, salvo que
+        // el rol de administrador solo lo puede asignar otro administrador.
+        if ($body['rol'] === 'administrador' && $usuarioActual['rol'] !== 'administrador') {
+            jsonError('Solo un administrador puede crear cuentas de administrador.', 403);
         }
 
         if (dbRow("SELECT id FROM usuarios_personal WHERE correo = ?", [$body['correo']])) {
@@ -115,13 +102,6 @@ switch ($method) {
         if (!$id) jsonError('ID requerido', 400);
         $objetivo = dbRow("SELECT id, rol FROM usuarios_personal WHERE id = ?", [$id]);
         if (!$objetivo) jsonError('Empleado no encontrado', 404);
-        // Un administrador no puede editar cuentas de jefe/administrador (ni la suya
-        // propia desde aquí): evita que el <select> de rol, que en su vista no incluye
-        // esas opciones, termine degradando por accidente el rol de una cuenta que no
-        // debería poder tocar.
-        if (in_array($objetivo['rol'], ['jefe', 'administrador'], true) && $usuarioActual['rol'] !== 'jefe') {
-            jsonError('Solo el jefe puede editar cuentas de jefe o administrador.', 403);
-        }
         $body = getJsonBody();
         $update = [];
         if (isset($body['nombre_completo'])) $update['nombre_completo'] = sanitize($body['nombre_completo']);
@@ -131,8 +111,10 @@ switch ($method) {
         }
         if (isset($body['rol'])) {
             if (!in_array($body['rol'], ['jefe', 'administrador', 'empleado', 'disenador'], true)) jsonError('rol inválido', 422);
-            if (in_array($body['rol'], ['jefe', 'administrador'], true) && $usuarioActual['rol'] !== 'jefe') {
-                jsonError('Solo el jefe puede asignar el rol de jefe o administrador.', 403);
+            // Jefe y administrador pueden asignar cualquier rol, salvo que el rol de
+            // administrador solo lo puede asignar otro administrador.
+            if ($body['rol'] === 'administrador' && $usuarioActual['rol'] !== 'administrador') {
+                jsonError('Solo un administrador puede asignar el rol de administrador.', 403);
             }
             $update['rol'] = $body['rol'];
         }
@@ -147,9 +129,6 @@ switch ($method) {
         if (!$id) jsonError('ID requerido', 400);
         $objetivo = dbRow("SELECT id, rol FROM usuarios_personal WHERE id = ?", [$id]);
         if (!$objetivo) jsonError('Empleado no encontrado', 404);
-        if (in_array($objetivo['rol'], ['jefe', 'administrador'], true) && $usuarioActual['rol'] !== 'jefe') {
-            jsonError('Solo el jefe puede desactivar cuentas de jefe o administrador.', 403);
-        }
         dbUpdate('usuarios_personal', ['activo' => 0], 'id = ?', [$id]);
         jsonSuccess(['mensaje' => 'Empleado desactivado']);
         break;

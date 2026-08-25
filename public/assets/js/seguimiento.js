@@ -168,7 +168,7 @@ async function trackOrder() {
       if (item.total) infoItems += `
         <div class="track-info-item">
           <div class="track-info-label">Total</div>
-          <div class="track-info-value" style="color:#8b7355;font-size:16px;">
+          <div class="track-info-value" style="color:var(--color-primary);font-size:16px;">
             ${new Intl.NumberFormat('es-MX', { style:'currency', currency:'MXN' }).format(item.total)}
           </div>
         </div>`;
@@ -183,7 +183,7 @@ async function trackOrder() {
         if (saldoPendiente > 0.009) infoItems += `
           <div class="track-info-item">
             <div class="track-info-label">Saldo pendiente</div>
-            <div class="track-info-value" style="color:#e0a050;font-size:16px;">
+            <div class="track-info-value" style="color:var(--color-primary-dark);font-size:16px;">
               ${new Intl.NumberFormat('es-MX', { style:'currency', currency:'MXN' }).format(saldoPendiente)}
             </div>
           </div>`;
@@ -338,10 +338,10 @@ function renderCotizacionToken(cot, token) {
       </div>
       <div class="track-result-body">
         <div style="text-align:center;background:#fff;border:1px solid #e5ddd4;border-radius:8px;padding:16px;margin-bottom:16px;">
-          <div style="color:#888;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Precio total</div>
+          <div style="color: var(--color-text-muted);font-size:11px;text-transform:uppercase;letter-spacing:1px;">Precio total</div>
           <div style="font-size:28px;font-weight:700;color:#5C3D11;">${money(cot.precio_cotizado)}</div>
-          ${cot.fecha_visita ? `<div style="color:#888;font-size:12px;margin-top:6px;">📍 Visita: ${escapeHtml(cot.fecha_visita)}${cot.hora_visita ? ' — ' + escapeHtml(cot.hora_visita) : ''}</div>` : ''}
-          <div style="color:#888;font-size:12px;margin-top:4px;">${parseInt(cot.requiere_instalacion) ? '✅ Incluye instalación' : '— Sin instalación'}</div>
+          ${cot.fecha_visita ? `<div style="color: var(--color-text-muted);font-size:12px;margin-top:6px;">📍 Visita: ${escapeHtml(cot.fecha_visita)}${cot.hora_visita ? ' — ' + escapeHtml(cot.hora_visita) : ''}</div>` : ''}
+          <div style="color: var(--color-text-muted);font-size:12px;margin-top:4px;">${parseInt(cot.requiere_instalacion) ? '✅ Incluye instalación' : '— Sin instalación'}</div>
         </div>
 
         ${itemsRows ? `<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px;">
@@ -351,7 +351,7 @@ function renderCotizacionToken(cot, token) {
 
         ${cot.descripcion_respuesta ? `<div style="background:#fff;border:1px solid #e5ddd4;border-radius:6px;padding:14px;line-height:1.7;color:#3a3a3a;margin-bottom:12px;">${escapeHtml(cot.descripcion_respuesta).replace(/\n/g,'<br>')}</div>` : ''}
 
-        ${cot.pdf_url ? `<p style="text-align:center;"><a href="${cot.pdf_url}" target="_blank" rel="noopener" style="color:#8b7355;font-weight:600;"><i class="fa-solid fa-file-pdf"></i> Descargar propuesta en PDF</a></p>` : ''}
+        ${cot.pdf_url ? `<p style="text-align:center;"><a href="${cot.pdf_url}" target="_blank" rel="noopener" style="color:var(--color-primary);font-weight:600;"><i class="fa-solid fa-file-pdf"></i> Descargar propuesta en PDF</a></p>` : ''}
 
         ${accionHtml}
       </div>

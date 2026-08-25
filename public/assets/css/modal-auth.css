@@ -234,7 +234,7 @@
   font-weight: 600;
   transition: color 0.2s;
 }
-.auth-switch-link a:hover { color: #e0c080; text-decoration: underline; }
+.auth-switch-link a:hover { color: var(--color-primary-dark, #e0c080); text-decoration: underline; }
 
 /* ── Divisor "o continúa con" ────────────────────────────────────── */
 .auth-social-divider {
@@ -360,7 +360,7 @@
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 .btn-auth-logout:hover {
-  color: #ffb3b3;
+  color: var(--color-error, #ffb3b3);
   border-color: rgba(196,74,74,0.6);
 }
 
@@ -439,8 +439,8 @@
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
-  background: var(--color-border);
-  border: 1px solid #444;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: 14px;
   min-width: 220px;
   box-shadow: 0 12px 40px rgba(0,0,0,0.6);
@@ -499,10 +499,10 @@
 
 .auth-mini-divider { height: 1px; background: var(--color-border); margin: 2px 0; }
 
-.auth-mini-logout { color: #c0c0c0; }
-.auth-mini-logout i { color: #c07070; }
-.auth-mini-logout:hover { background: rgba(196,74,74,0.1); color: #ffb3b3; }
-.auth-mini-logout:hover i { color: #ffb3b3; }
+.auth-mini-logout { color: var(--color-text-muted, #c0c0c0); }
+.auth-mini-logout i { color: var(--color-error, #c07070); }
+.auth-mini-logout:hover { background: rgba(196,74,74,0.1); color: var(--color-error, #ffb3b3); }
+.auth-mini-logout:hover i { color: var(--color-error, #ffb3b3); }
 
 /* ── Login suggest card ──────────────────────────────────────────── */
 .login-suggest-card {

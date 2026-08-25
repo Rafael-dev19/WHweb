@@ -37,6 +37,7 @@ unset($_usuario);
 </head>
 
 <body>
+  <script>window.WH_ES_JEFE = <?= json_encode($_esJefe) ?>;</script>
   <div class="header">
     <div class="header-left">
     <button class="menu-toggle" id="menuToggle" aria-label="Abrir menú" aria-expanded="false">
@@ -52,8 +53,8 @@ unset($_usuario);
         <i class="fa-solid fa-bell"></i>
         <span class="badge-dot" id="notifDot"></span>
       </button>
-      <div class="user-avatar">AD</div>
-      <span>Administrador</span>
+      <div class="user-avatar" id="userAvatar">—</div>
+      <span id="userNombreHeader">Cargando…</span>
       <button class="logout-btn" data-call="logoutAdmin">Salir</button>
     </div>
   </div>
@@ -78,9 +79,11 @@ unset($_usuario);
       <button class="nav-close" id="navClose" aria-label="Cerrar menú">×</button>
     </div>
 
+    <?php if ($_esJefe): ?>
     <a href="#" data-section="dashboard" class="active"><span class="icon"><i class="fa-solid fa-chart-bar"></i></span> Dashboard</a>
+    <?php endif; ?>
 
-    <a href="#" data-section="pedidos"><span class="icon"><i class="fa-solid fa-box"></i></span> Todos los Pedidos</a>
+    <a href="#" data-section="pedidos"<?= $_esJefe ? '' : ' class="active"' ?>><span class="icon"><i class="fa-solid fa-box"></i></span> Todos los Pedidos</a>
     <a href="#" data-section="citas"><span class="icon"><i class="fa-solid fa-calendar-days"></i></span> Calendario de Citas</a>
     <a href="#" data-section="cotizaciones"><span class="icon"><i class="fa-solid fa-briefcase"></i></span> Cotizaciones</a>
 
@@ -94,17 +97,18 @@ unset($_usuario);
     <?php if ($_esJefe): ?>
     <a href="#" data-section="ofertas"><span class="icon"><i class="fa-solid fa-tag"></i></span> Ofertas & Marketing</a>
     <?php endif; ?>
-    <a href="#" data-section="seguridad"><span class="icon"><i class="fa-solid fa-shield-halved"></i></span> Seguridad</a>
   </div>
 
   <div class="container">
     <aside class="sidebar">
+      <?php if ($_esJefe): ?>
       <div class="sidebar-item active" data-section="dashboard">
         <span class="icon"><i class="fa-solid fa-chart-bar"></i></span><span>Dashboard</span>
       </div>
+      <?php endif; ?>
 
       <div class="sidebar-section">GESTIÓN</div>
-      <div class="sidebar-item" data-section="pedidos"><span class="icon"><i class="fa-solid fa-box"></i></span><span>Todos los Pedidos</span></div>
+      <div class="sidebar-item<?= $_esJefe ? '' : ' active' ?>" data-section="pedidos"><span class="icon"><i class="fa-solid fa-box"></i></span><span>Todos los Pedidos</span></div>
       <div class="sidebar-item" data-section="citas"><span class="icon"><i class="fa-solid fa-calendar-days"></i></span><span>Calendario de Citas</span></div>
       <div class="sidebar-item" data-section="cotizaciones"><span class="icon"><i class="fa-solid fa-briefcase"></i></span><span>Cotizaciones</span></div>
 
@@ -124,13 +128,11 @@ unset($_usuario);
 
       <div class="sidebar-section">PRODUCCIÓN</div>
       <div class="sidebar-item" data-section="capacidad"><span class="icon"><i class="fa-solid fa-industry"></i></span><span>Capacidad del Taller</span></div>
-
-      <div class="sidebar-section">MI CUENTA</div>
-      <div class="sidebar-item" data-section="seguridad"><span class="icon"><i class="fa-solid fa-shield-halved"></i></span><span>Seguridad</span></div>
     </aside>
 
     <main class="main-content">
-      <!-- DASHBOARD -->
+      <!-- DASHBOARD (solo jefe: el administrador no lo necesita, entra directo a Pedidos) -->
+      <?php if ($_esJefe): ?>
       <div id="dashboard-section" class="content-section">
         <h1 class="page-title">Dashboard Administrativo</h1>
         <p class="page-subtitle">Control total del sistema</p>
@@ -252,9 +254,10 @@ unset($_usuario);
           </div>
         </div>
       </div>
+      <?php endif; ?>
 
       <!-- PEDIDOS -->
-      <div id="pedidos-section" class="content-section hidden">
+      <div id="pedidos-section" class="content-section<?= $_esJefe ? ' hidden' : '' ?>">
         <h1 class="page-title">Gestión Total de Pedidos</h1>
         <p class="page-subtitle">Control completo de todos los pedidos</p>
 
@@ -757,9 +760,9 @@ unset($_usuario);
             <select class="form-select" id="emp_rol">
               <option value="empleado">Empleado</option>
               <option value="disenador">Diseñador</option>
-              <?php if ($_esJefe): ?>
-              <option value="administrador">Administrador</option>
               <option value="jefe">Jefe</option>
+              <?php if ($_rolPanel === 'administrador'): ?>
+              <option value="administrador">Administrador</option>
               <?php endif; ?>
             </select>
           </div>
@@ -1075,127 +1078,6 @@ unset($_usuario);
             <button class="btn btn-primary" id="of_btn_guardar" data-call="guardarOferta">
               <i class="fa-solid fa-floppy-disk"></i> Guardar Oferta
             </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- SEGURIDAD -->
-      <div id="seguridad-section" class="content-section hidden">
-        <h1 class="page-title"><i class="fa-solid fa-shield-halved"></i> Seguridad de Cuenta</h1>
-        <p class="page-subtitle">Configuración de autenticación de dos factores (2FA) para tu cuenta de administrador</p>
-
-        <div class="section">
-          <div class="section-header">
-            <h2 class="section-title">Autenticación de Dos Factores (TOTP)</h2>
-          </div>
-
-          <!-- Tarjeta de estado 2FA -->
-          <div class="table-card" style="max-width:560px;">
-            <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
-              <div id="seg-2fa-icono" style="font-size:36px;color:var(--muted);">
-                <i class="fa-solid fa-lock-open"></i>
-              </div>
-              <div>
-                <div style="font-weight:700;font-size:15px;color:var(--text);">
-                  Verificación en dos pasos
-                </div>
-                <div id="seg-2fa-estado-texto" style="font-size:13px;color:var(--muted);margin-top:3px;">
-                  Cargando estado...
-                </div>
-              </div>
-              <span id="seg-2fa-badge" style="
-                margin-left:auto;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;
-                background:#2a2a2a;color:var(--muted);">
-                —
-              </span>
-            </div>
-
-            <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:20px;">
-              Con 2FA activado, al iniciar sesión necesitarás ingresar un código de 6 dígitos
-              generado por tu app de autenticación (Google Authenticator, Authy, etc.)
-              además de tu contraseña.
-            </p>
-
-            <!-- Botones de acción (se muestran según el estado) -->
-            <div id="seg-2fa-acciones" style="display:flex;gap:10px;flex-wrap:wrap;">
-              <button id="seg-btn-activar" class="btn btn-primary" data-call="iniciarSetup2FA" style="display:none;">
-                <i class="fa-solid fa-shield-halved"></i> Activar 2FA
-              </button>
-              <button id="seg-btn-desactivar" class="btn btn-danger" data-call="confirmarDesactivar2FA" style="display:none;">
-                <i class="fa-solid fa-shield-xmark"></i> Desactivar 2FA
-              </button>
-            </div>
-          </div>
-
-          <!-- Flujo de configuración (oculto hasta que el admin haga clic en Activar) -->
-          <div id="seg-setup-flow" style="display:none;max-width:560px;margin-top:16px;">
-            <div class="table-card">
-              <h3 style="font-size:14px;font-weight:700;color:var(--accent);margin-bottom:16px;">
-                <i class="fa-solid fa-qrcode"></i> Configurar Autenticador
-              </h3>
-
-              <div style="display:flex;flex-direction:column;gap:20px;">
-                <!-- Paso 1: QR -->
-                <div>
-                  <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;">
-                    Paso 1 — Escanea el código QR con tu app
-                  </div>
-                  <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">
-                    Abre Google Authenticator o Authy y escanea este código.
-                  </div>
-                  <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;">
-                    <img id="seg-qr-canvas" src="" alt="Código QR" width="180" height="180"
-                         style="border:3px solid #333;border-radius:8px;background:#fff;display:none;">
-                    <div style="flex:1;min-width:180px;">
-                      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">
-                        O ingresa el código manualmente:
-                      </div>
-                      <code id="seg-secreto-texto" style="
-                        display:block;font-size:14px;letter-spacing:2px;
-                        background:#1a1a1a;border:1px solid #333;
-                        padding:10px 14px;border-radius:6px;word-break:break-all;
-                        color:var(--accent);font-family:monospace;">
-                        —
-                      </code>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Paso 2: Verificación -->
-                <div>
-                  <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;">
-                    Paso 2 — Confirma con el código de 6 dígitos
-                  </div>
-                  <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">
-                    Ingresa el código que muestra tu app para confirmar que quedó configurada correctamente.
-                  </div>
-                  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-                    <input id="seg-codigo-input"
-                      type="text" inputmode="numeric" autocomplete="one-time-code"
-                      maxlength="6" placeholder="000 000"
-                      class="form-input"
-                      style="width:140px;font-size:22px;letter-spacing:6px;text-align:center;font-family:monospace;">
-                    <button class="btn btn-primary" data-call="confirmarActivar2FA">
-                      <i class="fa-solid fa-check"></i> Verificar y Activar
-                    </button>
-                    <button class="btn btn-secondary" data-call="cancelarSetup2FA">
-                      Cancelar
-                    </button>
-                  </div>
-                  <div id="seg-setup-error" style="display:none;color:#e05;font-size:13px;margin-top:10px;
-                    padding:10px;background:#2a0a0a;border-radius:6px;"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Info adicional -->
-          <div class="table-card" style="max-width:560px;margin-top:16px;border-left:3px solid var(--accent);">
-            <div style="font-size:13px;color:var(--muted);line-height:1.7;">
-              <strong style="color:var(--text);">Importante:</strong> Si pierdes acceso a tu app de autenticación,
-              deberás contactar a soporte técnico para desactivar el 2FA.
-              Se recomienda guardar el código secreto en un lugar seguro como respaldo.
-            </div>
           </div>
         </div>
       </div>

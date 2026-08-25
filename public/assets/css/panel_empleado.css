@@ -954,7 +954,7 @@
   /* ── CLASES DE ESTADO FALTANTES ──────────────────── */
   .status-info     { background: var(--info);   color: #fff; }
   .status-warn     { background: var(--warn);   color: #fff; }
-  .status-disabled { background: #444;          color: #888; }
+  .status-disabled { background: #444;          color: var(--muted); }
   .status-warning  { background: var(--warn);   color: #fff; }
 
   /* ── ANIMACIÓN DE SALIDA PARA NOTIFICACIONES ─────── */
@@ -1004,7 +1004,7 @@
     content: attr(data-tip);
     position: absolute; bottom: calc(100% + 8px); left: 50%;
     transform: translateX(-50%);
-    background: #333; color: #e0e0e0; font-size: 12px; font-weight: 400;
+    background: #333; color: var(--muted); font-size: 12px; font-weight: 400;
     padding: 8px 12px; border-radius: 8px; width: 220px; line-height: 1.5;
     white-space: normal; pointer-events: none; z-index: 9999;
     opacity: 0; visibility: hidden; transition: opacity 0.18s;

@@ -416,15 +416,15 @@ select:focus-visible,
   gap: 12px;
   animation: whAlertaIn .3s ease;
 }
-.wh-alerta i { color: #c9a96e; font-size: 20px; flex-shrink: 0; }
+.wh-alerta i { color: var(--color-accent, #c9a96e); font-size: 20px; flex-shrink: 0; }
 .wh-alerta-cerrar {
   position: absolute;
   top: 8px; right: 10px;
   background: none; border: none;
-  color: #888; font-size: 18px;
+  color: var(--color-text-muted); font-size: 18px;
   cursor: pointer; line-height: 1;
 }
-.wh-alerta-cerrar:hover { color: #e0e0e0; }
+.wh-alerta-cerrar:hover { color: var(--color-text-muted); }
 @keyframes whAlertaIn {
   from { opacity: 0; transform: translateX(-50%) translateY(-16px); }
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -501,7 +501,7 @@ select:focus-visible,
   right: 18px;
   background: transparent;
   border: none;
-  color: #888;
+  color: var(--color-text-muted);
   font-size: 26px;
   cursor: pointer;
   line-height: 1;
@@ -520,7 +520,7 @@ select:focus-visible,
 }
 .wh-guide-subtitle {
   font-size: 15px;
-  color: #aaa;
+  color: var(--color-text-muted);
   margin-bottom: 22px;
 }
 
@@ -569,7 +569,7 @@ select:focus-visible,
   font-size: 15px;
 }
 .wh-step-info span {
-  color: #999;
+  color: var(--color-text-muted);
   font-size: 13px;
   line-height: 1.4;
 }
@@ -620,7 +620,7 @@ select:focus-visible,
 }
 .nav-link-desc small {
   font-size: 10px;
-  color: #888;
+  color: var(--color-text-muted);
   font-weight: 400;
 }
 

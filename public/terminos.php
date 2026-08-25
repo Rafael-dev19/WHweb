@@ -11,6 +11,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Términos y Condiciones – Wooden House</title>
   <meta name="description" content="Términos y condiciones de Wooden House. Conoce nuestras políticas de compra, envíos, devoluciones, garantías y aviso de privacidad.">
+  <link rel="canonical" href="<?= APP_URL ?>/terminos">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
   <link rel="stylesheet" href="./assets/<?= av('css/variables.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/styles.css') ?>">
@@ -42,8 +43,8 @@ require_once dirname(__DIR__) . '/includes/env.php';
 
   <div class="page-header">
     <h1><i class="fa-solid fa-file-contract"></i> Términos y Condiciones</h1>
-    <p>Wooden House &nbsp;·&nbsp; Fecha de elaboración: abril de 2026 &nbsp;·&nbsp; Guadalajara, Jalisco</p>
-    <p style="margin-top:6px;font-size:13px;color:#aaa;">Estos Términos y Condiciones constituyen un contrato válido conforme a la normativa mexicana vigente. Al usar este sitio, el usuario acepta todas las condiciones aquí establecidas.</p>
+    <p>Wooden House &nbsp;·&nbsp; Fecha de elaboración: agosto de 2026 &nbsp;·&nbsp; Guadalajara, Jalisco</p>
+    <p style="margin-top:6px;font-size:13px;color:var(--color-text-muted);">Estos Términos y Condiciones constituyen un contrato válido conforme a la normativa mexicana vigente. Al usar este sitio, el usuario acepta todas las condiciones aquí establecidas.</p>
   </div>
 
   <!-- 1. Datos de la empresa -->
@@ -95,8 +96,8 @@ require_once dirname(__DIR__) . '/includes/env.php';
       La autenticación en este sitio utiliza Firebase de Google con verificación por correo electrónico.
       Wooden House no almacena contraseñas en texto plano.
     </div>
-    <p style="margin-top:12px;font-size:13px;color:#aaa;">
-      Este sitio está protegido por <strong style="color:#c9a96e;">reCAPTCHA de Google</strong> para prevenir
+    <p style="margin-top:12px;font-size:13px;color:var(--color-text-muted);">
+      Este sitio está protegido por <strong style="color:var(--color-accent);">reCAPTCHA de Google</strong> para prevenir
       el acceso automatizado. Se aplican la
       <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Política de Privacidad</a>
       y los
@@ -293,8 +294,8 @@ require_once dirname(__DIR__) . '/includes/env.php';
       El uso continuado del sitio web después de la publicación de cualquier modificación constituirá
       la aceptación de los nuevos términos por parte del usuario.
     </p>
-    <p style="margin-top:14px;color:#aaa;font-size:13px;">
-      Estos Términos y Condiciones fueron elaborados en <strong>abril de 2026</strong> y se encuentran vigentes a partir de esa fecha.
+    <p style="margin-top:14px;color:var(--color-text-muted);font-size:13px;">
+      Estos Términos y Condiciones fueron elaborados en <strong>agosto de 2026</strong> y se encuentran vigentes a partir de esa fecha.
     </p>
   </div>
 

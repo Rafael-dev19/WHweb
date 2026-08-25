@@ -599,9 +599,9 @@
     .notification i{ flex-shrink:0; margin-top:2px; font-size:15px; }
     .notification.success{ color:var(--text); }
     .notification.success i{ color:var(--ok); }
-    .notification.error  { color:#f48a8a; }
+    .notification.error  { color:var(--text); }
     .notification.error i{ color:var(--danger); }
-    .notification.warning{ color:#f0c97a; }
+    .notification.warning{ color:var(--text); }
     .notification.warning i{ color:var(--warn); }
     .notification.info   { color:var(--text); }
     .notification.info i{ color:var(--info); }
@@ -863,7 +863,7 @@
 
     .cat-content{ padding:16px; }
     .cat-title{ font-size:18px; font-weight:900; color:var(--accent); margin-bottom:6px; }
-    .cat-desc{ color:#ccc; font-size:13px; line-height:1.4; margin-bottom:12px; }
+    .cat-desc{ color: var(--muted); font-size:13px; line-height:1.4; margin-bottom:12px; }
     .cat-specs{ display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
     .cat-spec{
       background:#252525;
@@ -908,7 +908,7 @@
       display:flex;
       align-items:center;
       justify-content:center;
-      color:#bbb;
+      color: var(--muted);
       font-weight:800;
       letter-spacing:.4px;
       text-transform:uppercase;
@@ -917,8 +917,8 @@
     .detail-body{ padding:16px; }
     .detail-title{ color:var(--accent); font-weight:900; font-size:22px; margin-bottom:6px; }
     .detail-price{ color:var(--accent); font-weight:900; font-size:20px; margin:10px 0; }
-    .detail-meta{ color:#bbb; font-size:12px; }
-    .detail-desc{ color:#ccc; font-size:13px; line-height:1.55; margin-top:12px; }
+    .detail-meta{ color: var(--muted); font-size:12px; }
+    .detail-desc{ color: var(--muted); font-size:13px; line-height:1.55; margin-top:12px; }
     .detail-list{
       display:flex;
       flex-direction:column;
@@ -948,7 +948,7 @@
       font-weight:900;
       margin-bottom:10px;
     }
-    .detail-side small{ color:#aaa; display:block; margin-top:6px; }
+    .detail-side small{ color: var(--muted); display:block; margin-top:6px; }
     .kv{
       display:flex;
       justify-content:space-between;
@@ -1106,7 +1106,7 @@
       content: attr(data-tip);
       position: absolute; bottom: calc(100% + 8px); left: 50%;
       transform: translateX(-50%);
-      background: #333; color: #e0e0e0; font-size: 12px; font-weight: 400;
+      background: #333; color: var(--muted); font-size: 12px; font-weight: 400;
       padding: 8px 12px; border-radius: 8px; width: 220px; line-height: 1.5;
       white-space: normal; pointer-events: none; z-index: 9999;
       opacity: 0; visibility: hidden; transition: opacity 0.18s;

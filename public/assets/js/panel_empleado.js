@@ -102,11 +102,6 @@ function showSection(section){
   if(section === 'pedidos')      cargarPedidosEmpleadoAPI();
   if(section === 'citas')        cargarCitasAPI();
   if(section === 'cotizaciones') cargarCotizacionesAPI();
-  if(section === 'seguridad')    cargarEstado2FA();
-  if(section === 'seguridad' && new URLSearchParams(location.search).get('setup_2fa')) {
-    setTimeout(iniciarSetup2FA, 400);
-    history.replaceState(null, '', location.pathname);
-  }
 }
 
 // ================== MODALES: click fuera ==================
@@ -743,7 +738,7 @@ function renderDayEvents(dayISO){
     const esManual = !esApi;
     const icon = e.eventoTipo === 'pedido' ? '📦' : e.eventoTipo === 'cita' ? '📅' : '';
     const badge = e.eventoTipo === 'pedido'
-      ? `<span style="background:rgba(201,169,110,.2);color:#c9a96e;border-radius:8px;padding:1px 7px;font-size:10px;font-weight:700;">Pedido</span>`
+      ? `<span style="background:rgba(201,169,110,.2);color:var(--accent);border-radius:8px;padding:1px 7px;font-size:10px;font-weight:700;">Pedido</span>`
       : e.eventoTipo === 'cita'
       ? `<span style="background:rgba(74,124,139,.2);color:#4a7c8b;border-radius:8px;padding:1px 7px;font-size:10px;font-weight:700;">Cita</span>`
       : '';
@@ -1163,7 +1158,7 @@ async function cargarCitasAPI() {
       <tr>
         <td>${c.numero_cita}</td>
         <td>${escapeHtml(c.nombre_cliente)}</td>
-        <td>${c.cliente_id ? `<span class="status-badge status-active" style="font-size:10px;padding:2px 8px;"><i class="fa-solid fa-user-check"></i> #${c.cliente_id}</span>` : '<span style="color:#aaa;font-size:11px;">—</span>'}</td>
+        <td>${c.cliente_id ? `<span class="status-badge status-active" style="font-size:10px;padding:2px 8px;"><i class="fa-solid fa-user-check"></i> #${c.cliente_id}</span>` : '<span style="color: var(--muted);font-size:11px;">—</span>'}</td>
         <td>${c.fecha_cita}</td>
         <td>${c.rango_horario || '—'}</td>
         <td>${c.tipo}</td>
@@ -1219,7 +1214,7 @@ async function cargarCotizacionesAPI() {
       <tr>
         <td>${c.numero_cotizacion}</td>
         <td>${escapeHtml(c.nombre_cliente)}</td>
-        <td>${cid ? `<span class="status-badge status-active" style="font-size:10px;padding:2px 8px;"><i class="fa-solid fa-user-check"></i> #${cid}</span>` : '<span style="color:#aaa;font-size:11px;">—</span>'}</td>
+        <td>${cid ? `<span class="status-badge status-active" style="font-size:10px;padding:2px 8px;"><i class="fa-solid fa-user-check"></i> #${cid}</span>` : '<span style="color: var(--muted);font-size:11px;">—</span>'}</td>
         <td>${escapeHtml(tipo)}</td>
         <td>${c.rango_presupuesto || '—'}</td>
         <td><span class="status-badge ${clsMap[c.estado]||''}">${estadoLabels[c.estado]||c.estado}</span></td>
@@ -1336,8 +1331,8 @@ async function verDetallePedidoEmp(id) {
     const saldoHtml = saldoPendiente > 0.009
       ? `<div style="background:var(--bg);border-left:3px solid #c9a96e;border-radius:6px;padding:12px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
           <div>
-            <div style="font-weight:700;color:#c9a96e;margin-bottom:4px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">${esAnticipo ? 'Anticipo (50%)' : 'Pago pendiente'}</div>
-            <div style="font-size:12px;color:var(--muted2);">Pagado: <strong>${money(p.monto_pagado||0)}</strong> · Saldo pendiente: <strong style="color:#c9a96e;">${money(saldoPendiente)}</strong></div>
+            <div style="font-weight:700;color:var(--accent);margin-bottom:4px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">${esAnticipo ? 'Anticipo (50%)' : 'Pago pendiente'}</div>
+            <div style="font-size:12px;color:var(--muted2);">Pagado: <strong>${money(p.monto_pagado||0)}</strong> · Saldo pendiente: <strong style="color:var(--accent);">${money(saldoPendiente)}</strong></div>
           </div>
           <button class="btn btn-secondary btn-small" data-call="marcarSaldoManualEmp" data-args="[${id}]"><i class="fa-solid fa-hand-holding-dollar"></i> ${p.monto_pagado>0?'Marcar saldo pagado':'Marcar como pagado'}</button>
         </div>`
@@ -1372,7 +1367,7 @@ async function verDetallePedidoEmp(id) {
 
       ${(p.imagenes_diseno?.length || p.mensaje_disenador) ? `
       <div style="background:var(--bg);border-left:3px solid #8b7355;border-radius:6px;padding:12px;margin-bottom:14px;">
-        <div style="font-weight:700;color:#8b7355;margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i class="fa-solid fa-pen-ruler"></i> Diseño (SketchUp / VCarve)</div>
+        <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i class="fa-solid fa-pen-ruler"></i> Diseño (SketchUp / VCarve)</div>
         ${p.imagenes_diseno?.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:${p.mensaje_disenador ? '10px' : '0'};">
           ${p.imagenes_diseno.map(img => `<a href="${img.url_imagen}" target="_blank" rel="noopener"><img src="${img.url_imagen}" alt="Diseño" style="width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}
         </div>` : ''}
@@ -1381,13 +1376,13 @@ async function verDetallePedidoEmp(id) {
 
       ${p.cotizacion_origen ? `
       <div style="background:var(--bg);border-left:3px solid #c9a96e;border-radius:6px;padding:12px;margin-bottom:14px;">
-        <div style="font-weight:700;color:#c9a96e;margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i class="fa-solid fa-file-invoice-dollar"></i> Partidas cotizadas (${escapeHtml(p.cotizacion_origen.numero_cotizacion)})</div>
+        <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i class="fa-solid fa-file-invoice-dollar"></i> Partidas cotizadas (${escapeHtml(p.cotizacion_origen.numero_cotizacion)})</div>
         ${p.cotizacion_origen.items?.length ? `<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">
           <tbody>${p.cotizacion_origen.items.map(it => `<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 4px;color:var(--muted2);">${escapeHtml(it.nombre_item)}</td><td style="padding:5px 4px;text-align:center;color:var(--muted2);">${it.cantidad} ${escapeHtml(it.unidad)}</td><td style="padding:5px 4px;text-align:right;color:var(--accent);font-weight:700;">${money(it.subtotal)}</td></tr>`).join('')}</tbody>
         </table>` : ''}
         ${p.cotizacion_origen.descripcion_respuesta ? `<div style="font-size:12px;color:var(--muted2);margin-bottom:8px;">${escapeHtml(p.cotizacion_origen.descripcion_respuesta)}</div>` : ''}
         ${p.cotizacion_origen.imagenes?.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;">${p.cotizacion_origen.imagenes.map(im => `<a href="${im.url_imagen}" target="_blank" rel="noopener"><img src="${im.url_imagen}" alt="Referencia" style="width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}</div>` : ''}
-        ${p.cotizacion_origen.pdf_url ? `<p style="margin-top:8px;"><a href="${p.cotizacion_origen.pdf_url}" target="_blank" rel="noopener" style="color:#c9a96e;font-size:12px;"><i class="fa-solid fa-file-pdf"></i> Ver PDF de la propuesta</a></p>` : ''}
+        ${p.cotizacion_origen.pdf_url ? `<p style="margin-top:8px;"><a href="${p.cotizacion_origen.pdf_url}" target="_blank" rel="noopener" style="color:var(--accent);font-size:12px;"><i class="fa-solid fa-file-pdf"></i> Ver PDF de la propuesta</a></p>` : ''}
       </div>` : ''}
 
       <div style="margin-bottom:14px;">
@@ -1402,7 +1397,7 @@ async function verDetallePedidoEmp(id) {
 
       ${window.WH_ROL === 'disenador' && ['anticipo_pagado','pagado'].includes(est) ? `
       <div style="padding-top:14px;border-top:1px solid var(--border);margin-bottom:14px;">
-        <div style="font-weight:700;color:#8b7355;margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i class="fa-solid fa-pen-ruler"></i> Diseñar — marcar listo para producción</div>
+        <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i class="fa-solid fa-pen-ruler"></i> Diseñar — marcar listo para producción</div>
         <div class="form-group" style="margin-bottom:8px;">
           <label class="form-label" style="font-size:11px;">Imágenes de diseño (SketchUp / VCarve) *</label>
           <input type="file" id="disenoImgInput" accept="image/jpeg,image/jpg,image/png,image/webp" multiple class="form-input">
@@ -1544,7 +1539,7 @@ async function verDetalleCitaEmp(id) {
       </div>
 
       <div style="background:var(--bg);border-left:3px solid #4a7c8b;border-radius:6px;padding:12px;margin-bottom:14px;">
-        <div style="font-weight:700;color:#5b9aad;margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Fecha y Tipo</div>
+        <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Fecha y Tipo</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;color:var(--muted2);">
           <div><span style="color:var(--muted);display:block;font-size:10px;">📅 Fecha</span><strong style="font-size:15px;">${c.fecha_cita||'—'}</strong></div>
           <div><span style="color:var(--muted);display:block;font-size:10px;">🕐 Horario</span><strong style="font-size:15px;">${c.rango_horario||'Por confirmar'}</strong></div>
@@ -1630,12 +1625,23 @@ async function actualizarCotizacion(id, estado) {
 }
 
 // ── KPIs dashboard ────────────────────────────────────────────
+// Iniciales de nombre y apellido (no del rol) para el avatar del panel.
+function _iniciales(nombre) {
+  const partes = (nombre || '').trim().split(/\s+/).filter(Boolean);
+  if (partes.length === 0) return '?';
+  if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
+  return (partes[0][0] + partes[1][0]).toUpperCase();
+}
+
 async function cargarNombreEmpleado() {
   try {
     const data = await apiFetch(`${API_BASE}/auth.php?action=perfil`);
     if (data.success && data.usuario) {
+      const nombre = data.usuario.nombre_completo || data.usuario.correo || 'Empleado';
       const el = document.getElementById('empNombreHeader');
-      if (el) el.textContent = data.usuario.nombre_completo || data.usuario.correo || 'Empleado';
+      if (el) el.textContent = nombre;
+      const avatar = document.getElementById('userAvatar');
+      if (avatar) avatar.textContent = _iniciales(data.usuario.nombre_completo);
     }
   } catch(e) { /* silencioso */ }
 }
@@ -1661,7 +1667,17 @@ window.refrescarCalendarioEmp = refrescarCalendarioEmp;
 
 const _CAL_REFRESH_MS = 90_000; // 90 s entre recargas silenciosas del calendario
 
+// Se salta el ciclo por completo si hay un modal abierto o el foco está en un
+// campo de formulario — evita que un re-render borre lo que se está escribiendo.
+function _autoRefreshBloqueado() {
+  if (document.querySelector('.modal.active')) return true;
+  const activo = document.activeElement;
+  if (activo && /^(INPUT|TEXTAREA|SELECT)$/.test(activo.tagName)) return true;
+  return false;
+}
+
 function _autoRefresh() {
+  if (_autoRefreshBloqueado()) return;
   const section = window._currentSection || 'dashboard';
   try {
     if      (section === 'pedidos'       && typeof cargarPedidosEmpleadoAPI === 'function') cargarPedidosEmpleadoAPI();
@@ -1702,15 +1718,10 @@ document.addEventListener('DOMContentLoaded', () => {
   setTimeout(cargarNombreEmpleado, 200);
   setTimeout(refreshKpisAPI, 400);
   setTimeout(fetchNotificationsFromAPI, 800);
-  // Si viene de login sin 2FA configurado, forzar sección Seguridad
-  if (new URLSearchParams(location.search).get('setup_2fa')) {
-    showSection('seguridad');
-  } else {
-    showSection('dashboard');
-  }
+  showSection('dashboard');
 
   window._currentSection = 'dashboard';
-  window._autoRefreshInterval = setInterval(_autoRefresh, 8000);
+  window._autoRefreshInterval = setInterval(_autoRefresh, 45000);
   setInterval(fetchNotificationsFromAPI, 60000);
 
   // Pausar polling cuando la pestaña no está visible (ahorra requests innecesarios)
@@ -1719,148 +1730,10 @@ document.addEventListener('DOMContentLoaded', () => {
       clearInterval(window._autoRefreshInterval);
     } else {
       _autoRefresh();
-      window._autoRefreshInterval = setInterval(_autoRefresh, 8000);
+      window._autoRefreshInterval = setInterval(_autoRefresh, 45000);
     }
   });
 });
-
-// ═══════════════════════════════════════════════════════════
-// SEGURIDAD — 2FA TOTP (empleado)
-// ═══════════════════════════════════════════════════════════
-
-function _getCsrf() {
-  const c = document.cookie.split(';').find(x => x.trim().startsWith('XSRF-TOKEN='));
-  return c ? decodeURIComponent(c.split('=')[1]) : '';
-}
-
-async function cargarEstado2FA() {
-  try {
-    const res  = await fetch('/api/auth.php?action=verificar', {
-      headers: { 'X-CSRF-Token': _getCsrf() }
-    });
-    const data = await res.json();
-    _renderEstado2FA(data?.usuario?.totp_activo == 1);
-  } catch {
-    _renderEstado2FA(null);
-  }
-}
-
-function _renderEstado2FA(activo) {
-  const icono  = document.getElementById('seg-2fa-icono');
-  const texto  = document.getElementById('seg-2fa-estado-texto');
-  const badge  = document.getElementById('seg-2fa-badge');
-  const btnAct = document.getElementById('seg-btn-activar');
-  const btnDes = document.getElementById('seg-btn-desactivar');
-  if (!icono) return;
-
-  if (activo === null) { texto.textContent = 'No se pudo cargar el estado.'; return; }
-
-  if (activo) {
-    icono.innerHTML   = '<i class="fa-solid fa-shield-halved" style="color:#4caf50;"></i>';
-    texto.textContent = 'El segundo factor está activo. Tu cuenta requiere un código TOTP al iniciar sesión.';
-    badge.textContent = 'ACTIVO';
-    badge.style.cssText += 'background:#1a3a1a;color:#4caf50;';
-    btnAct.style.display = 'none';
-    btnDes.style.display = '';
-  } else {
-    icono.innerHTML   = '<i class="fa-solid fa-lock-open" style="color:var(--muted);"></i>';
-    texto.textContent = 'El segundo factor está desactivado. Tu cuenta solo requiere contraseña.';
-    badge.textContent = 'INACTIVO';
-    badge.style.cssText += 'background:#2a2a2a;color:var(--muted);';
-    btnAct.style.display = '';
-    btnDes.style.display = 'none';
-  }
-  document.getElementById('seg-setup-flow').style.display = 'none';
-}
-
-async function iniciarSetup2FA() {
-  const btnAct = document.getElementById('seg-btn-activar');
-  btnAct.disabled = true;
-  btnAct.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generando...';
-  try {
-    const firebaseToken = await firebase.auth().currentUser?.getIdToken(true);
-    if (!firebaseToken) throw new Error('No hay sesión activa en Firebase.');
-
-    const res  = await fetch('/api/auth.php?action=2fa-setup', {
-      headers: { 'X-CSRF-Token': _getCsrf(), 'Authorization': 'Bearer ' + firebaseToken }
-    });
-    const data = await res.json();
-    if (!data.success) throw new Error(data.error || 'Error al generar configuración 2FA.');
-
-    document.getElementById('seg-secreto-texto').textContent = data.secreto;
-    const qrImg = document.getElementById('seg-qr-canvas');
-    qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=8&data='
-      + encodeURIComponent(data.qr_url);
-    qrImg.style.display = '';
-    document.getElementById('seg-codigo-input').value = '';
-    document.getElementById('seg-setup-error').style.display = 'none';
-    document.getElementById('seg-setup-flow').style.display = '';
-    document.getElementById('seg-codigo-input').focus();
-  } catch(err) {
-    alert('Error: ' + err.message);
-  } finally {
-    btnAct.disabled = false;
-    btnAct.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Activar 2FA';
-  }
-}
-
-async function confirmarActivar2FA() {
-  const codigo = document.getElementById('seg-codigo-input').value.replace(/\D/g,'');
-  const errBox = document.getElementById('seg-setup-error');
-  if (codigo.length !== 6) { errBox.textContent = 'Ingresa los 6 dígitos del código.'; errBox.style.display = ''; return; }
-
-  try {
-    const firebaseToken = await firebase.auth().currentUser?.getIdToken(false);
-    const res  = await fetch('/api/auth.php?action=2fa-activar', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': _getCsrf(), 'Authorization': 'Bearer ' + firebaseToken },
-      body: JSON.stringify({ codigo })
-    });
-    const data = await res.json();
-    if (!data.success) {
-      errBox.textContent = data.error || 'Código incorrecto. Verifica la hora de tu dispositivo.';
-      errBox.style.display = '';
-      document.getElementById('seg-codigo-input').value = '';
-      document.getElementById('seg-codigo-input').focus();
-      return;
-    }
-    errBox.style.display = 'none';
-    document.getElementById('seg-setup-flow').style.display = 'none';
-    _renderEstado2FA(true);
-  } catch {
-    errBox.textContent = 'Error de red. Intenta nuevamente.';
-    errBox.style.display = '';
-  }
-}
-
-function cancelarSetup2FA() {
-  document.getElementById('seg-setup-flow').style.display = 'none';
-  document.getElementById('seg-codigo-input').value = '';
-  document.getElementById('seg-setup-error').style.display = 'none';
-}
-
-async function confirmarDesactivar2FA() {
-  if (!confirm('¿Desactivar la verificación en dos pasos?\n\nTu cuenta quedará protegida solo por contraseña.')) return;
-  try {
-    const firebaseToken = await firebase.auth().currentUser?.getIdToken(true);
-    const res  = await fetch('/api/auth.php?action=2fa-desactivar', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': _getCsrf(), 'Authorization': 'Bearer ' + firebaseToken },
-      body: JSON.stringify({})
-    });
-    const data = await res.json();
-    if (!data.success) throw new Error(data.error || 'No se pudo desactivar el 2FA.');
-    _renderEstado2FA(false);
-  } catch(err) {
-    alert('Error: ' + err.message);
-  }
-}
-
-window.cargarEstado2FA        = cargarEstado2FA;
-window.iniciarSetup2FA        = iniciarSetup2FA;
-window.confirmarActivar2FA    = confirmarActivar2FA;
-window.cancelarSetup2FA       = cancelarSetup2FA;
-window.confirmarDesactivar2FA = confirmarDesactivar2FA;
 
 window.actualizarEstadoPedidoEmp = actualizarEstadoPedidoEmp;
 window.confirmarCita      = confirmarCita;
@@ -2112,7 +1985,7 @@ async function generarRutaDia(fecha) {
       oLat = pos.lat;
       oLng = pos.lng;
       originStr   = `${pos.lat},${pos.lng}`;
-      originLabel = `<i class="fa-solid fa-location-dot" style="color:#4CAF50;"></i> Tu ubicación actual (GPS)`;
+      originLabel = `<i class="fa-solid fa-location-dot" style="color:var(--ok);"></i> Tu ubicación actual (GPS)`;
     } else {
       oLat = ORIGEN_TIENDA.lat;
       oLng = ORIGEN_TIENDA.lng;
@@ -2143,7 +2016,7 @@ async function generarRutaDia(fecha) {
         <div style="flex-shrink:0;width:28px;height:28px;border-radius:50%;background:${isCita?'#3d5a80':'var(--accent)'};color:#fff;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center;">${stopNum}</div>
         <div style="flex:1;min-width:0;">
           <div style="font-weight:700;font-size:13px;color:var(--text);">${s.icon} ${escapeHtml(s.label)}</div>
-          ${s.hora ? `<div style="font-size:11px;color:#4CAF50;margin-top:2px;font-weight:700;"><i class="fa-regular fa-clock"></i> Cita a las ${escapeHtml(s.hora)}</div>` : ''}
+          ${s.hora ? `<div style="font-size:11px;color:var(--ok);margin-top:2px;font-weight:700;"><i class="fa-regular fa-clock"></i> Cita a las ${escapeHtml(s.hora)}</div>` : ''}
           <div style="font-size:12px;color:var(--muted2);margin-top:4px;word-break:break-word;">${escapeHtml(s.address || '(sin dirección registrada)')}</div>
           <div style="display:flex;gap:6px;margin-top:5px;flex-wrap:wrap;">
             ${s.lat && s.lng

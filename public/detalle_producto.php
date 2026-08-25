@@ -2,6 +2,20 @@
 header('Content-Type: text/html; charset=utf-8');
 require_once dirname(__DIR__) . '/includes/assets.php';
 require_once dirname(__DIR__) . '/includes/env.php';
+require_once dirname(__DIR__) . '/includes/db.php';
+
+// Devolver 404 real cuando el producto no existe/no está activo — sin esto
+// la página siempre respondía 200 aunque mostrara "no encontrado" solo por
+// JS, lo que Google reporta como "soft 404" y evita que se indexe bien.
+$_prodId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+if ($_prodId > 0) {
+    $_prodExiste = dbRow("SELECT id FROM productos WHERE id = ? AND activo = 1 LIMIT 1", [$_prodId]);
+    if (!$_prodExiste) {
+        http_response_code(404);
+    }
+} else {
+    http_response_code(404);
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -11,6 +25,9 @@ require_once dirname(__DIR__) . '/includes/env.php';
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title id="pageTitle">Producto - Wooden House</title>
   <meta name="description" content="Descubre los detalles de nuestros muebles de madera artesanales en Wooden House. Características, especificaciones y precio. Fabricación a medida en Guadalajara.">
+  <?php if ($_prodId > 0): ?>
+  <link rel="canonical" href="<?= APP_URL ?>/detalle/<?= $_prodId ?>">
+  <?php endif; ?>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
   <link rel="stylesheet" href="/assets/<?= av('css/variables.css') ?>">
   <link rel="stylesheet" href="/assets/<?= av('css/styles.css') ?>">

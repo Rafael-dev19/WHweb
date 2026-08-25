@@ -29,10 +29,10 @@ switch ($action) {
             jsonError('Correo inválido', 422);
         if (!in_array($rol, ['jefe', 'administrador', 'empleado', 'disenador'], true))
             jsonError('Rol inválido', 422);
-        // Solo jefe puede otorgar roles de gestión (jefe/administrador);
-        // administrador solo puede invitar empleado/disenador.
-        if (in_array($rol, ['jefe', 'administrador'], true) && $usuarioActual['rol'] !== 'jefe')
-            jsonError('Solo el jefe puede invitar cuentas de jefe o administrador.', 403);
+        // Jefe y administrador pueden invitar cualquier rol, salvo que el rol de
+        // administrador solo lo puede otorgar otro administrador.
+        if ($rol === 'administrador' && $usuarioActual['rol'] !== 'administrador')
+            jsonError('Solo un administrador puede invitar cuentas de administrador.', 403);
 
         // Verificar que el correo no esté ya en uso
         if (dbRow("SELECT id FROM usuarios_personal WHERE correo = ?", [$correo]))
@@ -152,8 +152,8 @@ switch ($action) {
         $redirect = in_array($inv['rol'], ['jefe', 'administrador'], true) ? '/admin' : '/empleado';
         jsonSuccess([
             'activado' => true,
-            'redirect' => $redirect . '?setup_2fa=1',   // forzar setup de 2FA al entrar
-            'mensaje'  => '¡Cuenta creada! Configura tu autenticación de dos factores.',
+            'redirect' => $redirect,
+            'mensaje'  => '¡Cuenta creada!',
         ]);
         break;
 

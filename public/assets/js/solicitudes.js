@@ -167,7 +167,7 @@ function showFieldError(input, msg) {
   input.style.boxShadow   = '0 0 0 2px rgba(192,57,43,0.3)';
   const err = document.createElement('div');
   err.className = 'field-error-msg';
-  err.style.cssText = 'color:#e74c3c;font-size:12px;margin-top:5px;font-weight:500;';
+  err.style.cssText = 'color:var(--color-error);font-size:12px;margin-top:5px;font-weight:500;';
   err.textContent = msg;
   input.parentNode.appendChild(err);
 }
@@ -344,7 +344,7 @@ function initMapPickerCotizacion() {
       const editSection = document.getElementById('cotDireccionDetalleEdit');
       if (editSection) editSection.style.display = 'block';
       container.innerHTML =
-        '<p style="text-align:center;padding:20px 12px;color:#888;font-size:13px;">' +
+        '<p style="text-align:center;padding:20px 12px;color: var(--color-text-muted);font-size:13px;">' +
         '<i class="fa-solid fa-map-location-dot" style="font-size:28px;display:block;margin-bottom:8px;"></i>' +
         'Mapa no disponible. Ingresa tu dirección en los campos de abajo.</p>';
     }
@@ -529,7 +529,7 @@ async function cargarSlotsDisponibles(fecha) {
   if (!container || !fecha) return;
 
   selectedTime = null;
-  container.innerHTML = '<div style="color:#888;font-size:14px;padding:12px;grid-column:1/-1;"><i class="fa-solid fa-spinner fa-spin"></i> Verificando disponibilidad...</div>';
+  container.innerHTML = '<div style="color: var(--color-text-muted);font-size:14px;padding:12px;grid-column:1/-1;"><i class="fa-solid fa-spinner fa-spin"></i> Verificando disponibilidad...</div>';
 
   try {
     const res   = await fetch(`${API_URL}/citas.php?fecha=${encodeURIComponent(fecha)}&limit=50`);

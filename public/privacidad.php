@@ -11,6 +11,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Política de Privacidad – Wooden House</title>
   <meta name="description" content="Política de privacidad de Wooden House. Conoce cómo recopilamos, usamos y protegemos tus datos personales conforme a la LFPDPPP.">
+  <link rel="canonical" href="<?= APP_URL ?>/privacidad">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
   <link rel="stylesheet" href="./assets/<?= av('css/variables.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/styles.css') ?>">
@@ -42,9 +43,9 @@ require_once dirname(__DIR__) . '/includes/env.php';
 
   <div class="page-header">
     <h1><i class="fa-solid fa-shield-halved"></i> Política de Privacidad</h1>
-    <p>Wooden House &nbsp;·&nbsp; Última actualización: junio de 2026 &nbsp;·&nbsp; Guadalajara, Jalisco</p>
-    <p style="margin-top:6px;font-size:13px;color:#aaa;">
-      En cumplimiento de la <strong style="color:#c9a96e;">Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP)</strong>,
+    <p>Wooden House &nbsp;·&nbsp; Última actualización: agosto de 2026 &nbsp;·&nbsp; Guadalajara, Jalisco</p>
+    <p style="margin-top:6px;font-size:13px;color:var(--color-text-muted);">
+      En cumplimiento de la <strong style="color:var(--color-accent);">Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP)</strong>,
       Wooden House informa a sus usuarios la manera en que se recopilan, usan y protegen sus datos personales.
     </p>
   </div>
@@ -108,43 +109,43 @@ require_once dirname(__DIR__) . '/includes/env.php';
     <div style="overflow-x:auto;">
       <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:10px;">
         <thead>
-          <tr style="border-bottom:2px solid #3d3d3d;">
-            <th style="padding:10px 14px;text-align:left;color:#c9a96e;">Proveedor</th>
-            <th style="padding:10px 14px;text-align:left;color:#c9a96e;">Finalidad</th>
-            <th style="padding:10px 14px;text-align:left;color:#c9a96e;">Datos compartidos</th>
+          <tr style="border-bottom:2px solid var(--color-border);">
+            <th style="padding:10px 14px;text-align:left;color:var(--color-accent);">Proveedor</th>
+            <th style="padding:10px 14px;text-align:left;color:var(--color-accent);">Finalidad</th>
+            <th style="padding:10px 14px;text-align:left;color:var(--color-accent);">Datos compartidos</th>
           </tr>
         </thead>
         <tbody>
-          <tr style="border-bottom:1px solid #3a3a3a;">
-            <td style="padding:10px 14px;color:#e0e0e0;"><strong>Firebase / Google</strong></td>
-            <td style="padding:10px 14px;color:#aaa;">Autenticación, base de datos y notificaciones</td>
-            <td style="padding:10px 14px;color:#aaa;">Correo electrónico, nombre, UID de sesión</td>
+          <tr style="border-bottom:1px solid var(--color-border);">
+            <td style="padding:10px 14px;color:var(--color-text-main);"><strong>Firebase / Google</strong></td>
+            <td style="padding:10px 14px;color:var(--color-text-muted);">Autenticación, base de datos y notificaciones</td>
+            <td style="padding:10px 14px;color:var(--color-text-muted);">Correo electrónico, nombre, UID de sesión</td>
           </tr>
-          <tr style="border-bottom:1px solid #3a3a3a;">
-            <td style="padding:10px 14px;color:#e0e0e0;"><strong>Stripe</strong></td>
-            <td style="padding:10px 14px;color:#aaa;">Procesamiento de pagos con tarjeta</td>
-            <td style="padding:10px 14px;color:#aaa;">Nombre, correo, monto de transacción</td>
+          <tr style="border-bottom:1px solid var(--color-border);">
+            <td style="padding:10px 14px;color:var(--color-text-main);"><strong>Stripe</strong></td>
+            <td style="padding:10px 14px;color:var(--color-text-muted);">Procesamiento de pagos con tarjeta</td>
+            <td style="padding:10px 14px;color:var(--color-text-muted);">Nombre, correo, monto de transacción</td>
           </tr>
-          <tr style="border-bottom:1px solid #3a3a3a;">
-            <td style="padding:10px 14px;color:#e0e0e0;"><strong>PayPal</strong></td>
-            <td style="padding:10px 14px;color:#aaa;">Procesamiento de pagos con PayPal</td>
-            <td style="padding:10px 14px;color:#aaa;">Nombre, correo, monto de transacción</td>
+          <tr style="border-bottom:1px solid var(--color-border);">
+            <td style="padding:10px 14px;color:var(--color-text-main);"><strong>PayPal</strong></td>
+            <td style="padding:10px 14px;color:var(--color-text-muted);">Procesamiento de pagos con PayPal</td>
+            <td style="padding:10px 14px;color:var(--color-text-muted);">Nombre, correo, monto de transacción</td>
           </tr>
-          <tr style="border-bottom:1px solid #3a3a3a;">
-            <td style="padding:10px 14px;color:#e0e0e0;"><strong>Brevo</strong></td>
-            <td style="padding:10px 14px;color:#aaa;">Envío de correos transaccionales</td>
-            <td style="padding:10px 14px;color:#aaa;">Nombre y correo electrónico</td>
+          <tr style="border-bottom:1px solid var(--color-border);">
+            <td style="padding:10px 14px;color:var(--color-text-main);"><strong>Brevo</strong></td>
+            <td style="padding:10px 14px;color:var(--color-text-muted);">Envío de correos transaccionales</td>
+            <td style="padding:10px 14px;color:var(--color-text-muted);">Nombre y correo electrónico</td>
           </tr>
           <tr>
-            <td style="padding:10px 14px;color:#e0e0e0;"><strong>reCAPTCHA (Google)</strong></td>
-            <td style="padding:10px 14px;color:#aaa;">Protección contra acceso automatizado</td>
-            <td style="padding:10px 14px;color:#aaa;">Datos de comportamiento del navegador</td>
+            <td style="padding:10px 14px;color:var(--color-text-main);"><strong>reCAPTCHA (Google)</strong></td>
+            <td style="padding:10px 14px;color:var(--color-text-muted);">Protección contra acceso automatizado</td>
+            <td style="padding:10px 14px;color:var(--color-text-muted);">Datos de comportamiento del navegador</td>
           </tr>
         </tbody>
       </table>
     </div>
-    <p style="margin-top:14px;font-size:13px;color:#888;">
-      Este sitio está protegido por <strong style="color:#c9a96e;">reCAPTCHA de Google</strong>. Se aplican la
+    <p style="margin-top:14px;font-size:13px;color:var(--color-text-muted);">
+      Este sitio está protegido por <strong style="color:var(--color-accent);">reCAPTCHA de Google</strong>. Se aplican la
       <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Política de Privacidad</a>
       y los
       <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer">Términos de Servicio</a>
@@ -171,9 +172,9 @@ require_once dirname(__DIR__) . '/includes/env.php';
     </div>
   </div>
 
-  <!-- 6. Cookies y tecnologías de rastreo -->
+  <!-- 6. Cookies y consentimiento -->
   <div class="section">
-    <h2><i class="fa-solid fa-cookie-bite"></i> 6. Cookies y tecnologías de rastreo</h2>
+    <h2><i class="fa-solid fa-cookie-bite"></i> 6. Cookies, tecnologías similares y tu consentimiento</h2>
     <p>El sitio utiliza las siguientes cookies y tecnologías similares:</p>
     <ul>
       <li><strong>Cookies de sesión:</strong> necesarias para mantener tu sesión activa. Se eliminan al cerrar el navegador.</li>
@@ -181,7 +182,21 @@ require_once dirname(__DIR__) . '/includes/env.php';
       <li><strong>Cookies de Firebase:</strong> para gestión de autenticación y sesión de usuario.</li>
       <li><strong>reCAPTCHA (Google):</strong> analiza el comportamiento del usuario para detectar actividad automatizada.</li>
     </ul>
-    <p>No utilizamos cookies de rastreo publicitario de terceros.</p>
+    <div class="highlight-box">
+      <strong>¿Necesitas dar tu consentimiento para estas cookies?</strong><br>
+      Todas las cookies que usamos son <strong>estrictamente necesarias</strong> para que el sitio funcione
+      (iniciar sesión, mantener tu carrito, protegerte de ataques). Ninguna es de publicidad, rastreo entre
+      sitios o analítica de terceros — por eso no requieren tu autorización previa conforme a la LFPDPPP y
+      los lineamientos del INAI, aunque igual te lo informamos aquí de forma transparente.
+    </div>
+    <p style="margin-top:14px;">
+      Si de todas formas prefieres no recibir cookies, puedes desactivarlas desde la configuración de tu
+      navegador. Ten en cuenta que, al ser necesarias para el funcionamiento del sitio, desactivarlas puede
+      impedir que inicies sesión, hagas un pedido o completes una cotización.
+    </p>
+    <p>No utilizamos cookies de rastreo publicitario de terceros. Si en el futuro incorporamos herramientas
+      de analítica o marketing que sí las requieran, actualizaremos esta sección y pediremos tu consentimiento
+      antes de activarlas.</p>
   </div>
 
   <!-- 7. Seguridad -->
@@ -226,10 +241,10 @@ require_once dirname(__DIR__) . '/includes/env.php';
     </p>
     <p style="margin-top:14px;">
       ¿Tienes dudas? Consulta también nuestras
-      <a href="/terminos" style="color:#c9a96e;">Condiciones del Servicio</a> o
+      <a href="/terminos" style="color:var(--color-accent);">Condiciones del Servicio</a> o
       escríbenos a <a href="mailto:<?= SITE_EMAIL ?>"><?= SITE_EMAIL ?></a>.
     </p>
-    <p style="margin-top:10px;color:#aaa;font-size:13px;">
+    <p style="margin-top:10px;color:var(--color-text-muted);font-size:13px;">
       Política elaborada en <strong>junio de 2026</strong> y vigente a partir de esa fecha.
     </p>
   </div>

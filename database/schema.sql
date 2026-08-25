@@ -715,3 +715,8 @@ ALTER TABLE cotizaciones ADD CONSTRAINT fk_cotizaciones_cita
 -- solicitudes.js para no re-pedir la ubicación en cotizaciones/citas).
 ALTER TABLE clientes ADD COLUMN lat DECIMAL(10,7) NULL AFTER cp;
 ALTER TABLE clientes ADD COLUMN lng DECIMAL(10,7) NULL AFTER lat;
+
+-- 2FA retirado del sitio (tráfico bajo, no lo justifica): ningún código PHP/JS
+-- referencia ya totp_secreto/totp_activo, seguro quitar las columnas.
+ALTER TABLE usuarios_personal DROP COLUMN totp_secreto;
+ALTER TABLE usuarios_personal DROP COLUMN totp_activo;

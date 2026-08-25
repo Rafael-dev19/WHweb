@@ -305,9 +305,11 @@ h1, h2, h3, h4, h5, h6 { margin-bottom: 0; }
 
 .info-box.warning { border-left-color: #c8921a; }
 .info-box.warning h4 { color: #e8a820; }
+[data-theme="light"] .info-box.warning h4 { color: #6e4d0a; }
 
 .info-box.success { border-left-color: #2e7d4f; }
 .info-box.success h4 { color: #3aac6a; }
+[data-theme="light"] .info-box.success h4 { color: #166238; }
 
 /* ===================================================
    TARJETA DE SESIÓN ACTIVA (pre-llenado de contacto)
@@ -322,6 +324,10 @@ h1, h2, h3, h4, h5, h6 { margin-bottom: 0; }
   padding: 16px 20px;
   margin-bottom: 22px;
   flex-wrap: wrap;
+}
+[data-theme="light"] .sesion-card {
+  background: linear-gradient(135deg, #eef5ee, #e4f0e4);
+  border-color: rgba(62,120,72,0.35);
 }
 
 .sesion-card-avatar {
@@ -352,6 +358,7 @@ h1, h2, h3, h4, h5, h6 { margin-bottom: 0; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
+[data-theme="light"] .sesion-card-nombre { color: #1e5c2e; }
 
 .sesion-card-detalle {
   font-size: 13px;
@@ -360,6 +367,7 @@ h1, h2, h3, h4, h5, h6 { margin-bottom: 0; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
+[data-theme="light"] .sesion-card-detalle { color: #3a6b3a; }
 
 .sesion-card-aviso {
   font-size: 12px;
@@ -413,7 +421,7 @@ h1, h2, h3, h4, h5, h6 { margin-bottom: 0; }
   flex: 1;
   min-width: 180px;
   font-size: 14px;
-  color: #ccc;
+  color: var(--color-text-muted);
   line-height: 1.5;
 }
 .login-suggest-text strong { color: var(--color-text-main); }
@@ -1024,6 +1032,8 @@ h1, h2, h3, h4, h5, h6 { margin-bottom: 0; }
 .sol-decision-card--cot  .sol-dec-icon { color: var(--color-primary); }
 .sol-decision-card--cita .sol-dec-icon { color: #5b9aad; }
 .sol-decision-card--seg  .sol-dec-icon { color: #6aad7a; }
+[data-theme="light"] .sol-decision-card--cita .sol-dec-icon { color: #155670; }
+[data-theme="light"] .sol-decision-card--seg  .sol-dec-icon { color: #166238; }
 
 .sol-dec-info strong {
   display: block;
@@ -1079,6 +1089,7 @@ h1, h2, h3, h4, h5, h6 { margin-bottom: 0; }
   border-left: 4px solid #5b9aad;
 }
 #tab-cita .info-box h4 { color: #7ec4d8; }
+[data-theme="light"] #tab-cita .info-box h4 { color: #155670; }
 
 #tab-seguimiento .tracking-section {
   border-top: 3px solid #6aad7a;

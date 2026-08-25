@@ -125,8 +125,7 @@ $token = htmlspecialchars(trim($_GET['token'] ?? ''), ENT_QUOTES, 'UTF-8');
       <i class="fa-solid fa-key"></i> Crear cuenta y entrar
     </button>
     <p style="color:#5a5040;font-size:11px;text-align:center;margin-top:14px;">
-      Al activar, aceptas las políticas de seguridad de Wooden House.<br>
-      Deberás configurar 2FA al entrar por primera vez.
+      Al activar, aceptas las políticas de seguridad de Wooden House.
     </p>
   </div>
 </div>

@@ -176,29 +176,13 @@ function verificarTokenFirebaseViaAPI(string $token): ?array {
 function obtenerUsuarioPorFirebaseUid(string $uid): ?array {
     if (!preg_match('/^[a-zA-Z0-9]{20,128}$/', $uid)) return null;
 
-    try {
-        return dbRow(
-            "SELECT id, firebase_uid, nombre_completo, correo, rol, activo,
-                    totp_activo, totp_secreto
-             FROM usuarios_personal
-             WHERE firebase_uid = ? AND activo = 1
-             LIMIT 1",
-            [$uid]
-        );
-    } catch (\Throwable $e) {
-        // Columnas 2FA aún no existen (migración pendiente): consultar sin ellas
-        if (str_contains($e->getMessage(), 'Unknown column')) {
-            $row = dbRow(
-                "SELECT id, firebase_uid, nombre_completo, correo, rol, activo
-                 FROM usuarios_personal
-                 WHERE firebase_uid = ? AND activo = 1 LIMIT 1",
-                [$uid]
-            );
-            if ($row) { $row['totp_activo'] = 0; $row['totp_secreto'] = null; }
-            return $row ?: null;
-        }
-        throw $e;
-    }
+    return dbRow(
+        "SELECT id, firebase_uid, nombre_completo, correo, rol, activo
+         FROM usuarios_personal
+         WHERE firebase_uid = ? AND activo = 1
+         LIMIT 1",
+        [$uid]
+    );
 }
 
 // ── Middlewares de autenticación ──────────────────────────────────
@@ -216,27 +200,12 @@ function requerirAutenticacion(): array {
         }
         $_SESSION['_last_activity'] = $now;
 
-        try {
-            $usuario = dbRow(
-                "SELECT id, firebase_uid, nombre_completo, correo, rol,
-                        totp_activo, totp_secreto
-                 FROM usuarios_personal
-                 WHERE id = ? AND activo = 1 LIMIT 1",
-                [$_SESSION['usuario_id']]
-            );
-        } catch (\Throwable $e) {
-            if (str_contains($e->getMessage(), 'Unknown column')) {
-                $usuario = dbRow(
-                    "SELECT id, firebase_uid, nombre_completo, correo, rol
-                     FROM usuarios_personal WHERE id = ? AND activo = 1 LIMIT 1",
-                    [$_SESSION['usuario_id']]
-                );
-                if ($usuario) { $usuario['totp_activo'] = 0; $usuario['totp_secreto'] = null; }
-            } else { throw $e; }
-        }
+        $usuario = dbRow(
+            "SELECT id, firebase_uid, nombre_completo, correo, rol
+             FROM usuarios_personal WHERE id = ? AND activo = 1 LIMIT 1",
+            [$_SESSION['usuario_id']]
+        );
         if ($usuario) {
-            // 2FA: bloquea si el usuario tiene TOTP activo y no lo ha verificado en esta sesión
-            if (function_exists('requerir2FA')) requerir2FA($usuario);
             return $usuario;
         }
         _destruirSesion();
@@ -286,7 +255,7 @@ function requerirDisenador(): array {
     return $usuario;
 }
 
-// Cualquiera de los 4 roles de personal (ver pedidos, notificaciones propias, 2FA propio).
+// Cualquiera de los 4 roles de personal (ver pedidos, notificaciones propias).
 function requerirPersonal(): array {
     $usuario = requerirAutenticacion();
     if (!in_array($usuario['rol'], ['jefe', 'administrador', 'empleado', 'disenador'], true)) {
@@ -297,23 +266,12 @@ function requerirPersonal(): array {
 
 function sesionActiva(): ?array {
     if (!empty($_SESSION['usuario_id'])) {
-        try {
-            return dbRow(
-                "SELECT id, nombre_completo, correo, rol, totp_activo
-                 FROM usuarios_personal
-                 WHERE id = ? AND activo = 1 LIMIT 1",
-                [$_SESSION['usuario_id']]
-            );
-        } catch (\Throwable $e) {
-            if (str_contains($e->getMessage(), 'Unknown column')) {
-                return dbRow(
-                    "SELECT id, nombre_completo, correo, rol
-                     FROM usuarios_personal WHERE id = ? AND activo = 1 LIMIT 1",
-                    [$_SESSION['usuario_id']]
-                );
-            }
-            throw $e;
-        }
+        return dbRow(
+            "SELECT id, nombre_completo, correo, rol
+             FROM usuarios_personal
+             WHERE id = ? AND activo = 1 LIMIT 1",
+            [$_SESSION['usuario_id']]
+        );
     }
     return null;
 }

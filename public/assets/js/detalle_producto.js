@@ -160,7 +160,7 @@ function mostrarProducto() {
   const specTable = document.getElementById('specTable');
   if (specTable) {
     if (specs.length === 0) {
-      specTable.innerHTML = '<p style="color:#888;">Sin especificaciones registradas.</p>';
+      specTable.innerHTML = '<p style="color: var(--color-text-muted);">Sin especificaciones registradas.</p>';
     } else {
       const tipo      = getSpec('instalacion');
       const largo     = getSpec('largo');

@@ -179,7 +179,7 @@ function mostrarErrorCampo(input, msg) {
     limpiarErrorCampo(input);
     const err = document.createElement('div');
     err.className = 'field-error-checkout';
-    err.style.cssText = 'color:#e74c3c;font-size:12px;margin-top:4px;font-weight:500;';
+    err.style.cssText = 'color:var(--color-error);font-size:12px;margin-top:4px;font-weight:500;';
     err.textContent = msg;
     input.parentNode.appendChild(err);
 }
@@ -379,7 +379,7 @@ function renderizarItems() {
 
     if (estado.items.length === 0) {
         cont.innerHTML = `
-            <div style="text-align:center;padding:40px;color:#888;">
+            <div style="text-align:center;padding:40px;color: var(--color-text-muted);">
                 <div style="font-size:48px;margin-bottom:16px;"><i class="fa-solid fa-cart-shopping"></i></div>
                 <p>Tu carrito está vacío.</p>
                 <a href="/catalogo" class="btn-checkout" style="display:inline-block;margin-top:16px;text-decoration:none;">Ver catálogo</a>
@@ -398,7 +398,7 @@ function renderizarItems() {
             </div>
             <div class="cart-item-details">
                 <div class="cart-item-name">${esc(item.nombre)}</div>
-                <div class="cart-item-specs" style="color:#a0a0a0;font-size:13px;margin:6px 0;">
+                <div class="cart-item-specs" style="color: var(--color-text-muted);font-size:13px;margin:6px 0;">
                     ${item.categoria ? `<strong>Categoría:</strong> ${esc(item.categoria)}<br>` : ''}
                     ${item.material  ? `<strong>Material:</strong> ${esc(item.material)}<br>`  : ''}
                 </div>
@@ -416,7 +416,7 @@ function renderizarItems() {
                     </div>
                 </div>
             </div>
-            <div style="text-align:right;min-width:90px;font-weight:700;color:#8b7355;">
+            <div style="text-align:right;min-width:90px;font-weight:700;color:var(--color-primary);">
                 ${fmt(item.precio * item.cantidad)}
             </div>
         </div>`).join('');
@@ -534,7 +534,7 @@ function _initMapPickerCheckout() {
             if (editSection) editSection.style.display = 'block';
             const canvas = document.getElementById('mpMapCanvas');
             if (canvas) canvas.innerHTML =
-                '<p style="text-align:center;padding:20px 12px;color:#888;font-size:13px;">' +
+                '<p style="text-align:center;padding:20px 12px;color: var(--color-text-muted);font-size:13px;">' +
                 '<i class="fa-solid fa-map-location-dot" style="font-size:28px;display:block;margin-bottom:8px;"></i>' +
                 'Mapa no disponible. Ingresa tu dirección en los campos de abajo.</p>';
         }
@@ -712,7 +712,7 @@ function actualizarTotales() {
     }
     if (elNota) {
         elNota.innerHTML = totalMuebles > 1
-            ? `<i class="fa-solid fa-circle-info"></i> ${fmt(costoInstUnit)} por mueble · ${totalMuebles} muebles = <strong style="color:#8b7355;">${fmt(costoInst)}</strong>`
+            ? `<i class="fa-solid fa-circle-info"></i> ${fmt(costoInstUnit)} por mueble · ${totalMuebles} muebles = <strong style="color:var(--color-primary);">${fmt(costoInst)}</strong>`
             : `<i class="fa-solid fa-circle-info"></i> ${fmt(costoInstUnit)} por mueble`;
     }
 }

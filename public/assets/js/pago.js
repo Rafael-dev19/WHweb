@@ -286,7 +286,7 @@ function initPayPal() {
   if (!window.paypal) {
     console.warn('[PayPal] SDK no cargado - verificar Client ID en .env');
     const ppContainer = document.getElementById('paypal-button-container');
-    if (ppContainer) ppContainer.innerHTML = '<p style="color:#e74c3c;font-size:13px;">⚠ PayPal no disponible. Usa Stripe.</p>';
+    if (ppContainer) ppContainer.innerHTML = '<p style="color:var(--color-error);font-size:13px;">⚠ PayPal no disponible. Usa Stripe.</p>';
     return;
   }
 

@@ -44,11 +44,6 @@ switch ($action) {
         $redirect    = in_array($usuario['rol'], ['jefe', 'administrador'], true)
             ? '/admin/panel_administrador.php'
             : '/empleado/panel_empleado.php';
-        $tiene2fa    = !empty($usuario['totp_activo']);
-        // Si el usuario aún no tiene 2FA configurado, forzar que lo configure
-        // antes de entrar al panel (obligatorio para jefe/administrador, sugerido
-        // para empleado/disenador).
-        $forzar2fa   = !$tiene2fa;
 
         jsonSuccess([
             'usuario' => [
@@ -57,10 +52,8 @@ switch ($action) {
                 'correo' => $usuario['correo'],
                 'rol'    => $usuario['rol'],
             ],
-            'redirect'      => $redirect,
-            'csrf'          => getCsrfToken(),
-            '2fa_required'  => $tiene2fa,   // ya tiene 2FA → pedir código
-            '2fa_setup'     => $forzar2fa,  // no tiene 2FA → forzar configuración
+            'redirect' => $redirect,
+            'csrf'      => getCsrfToken(),
         ]);
         break;
 
@@ -157,13 +150,10 @@ switch ($action) {
             if (!$usuario) jsonError('Tu cuenta de personal no está activa. Contacta al administrador.', 403);
             _crearSesion($usuario);
             $redirect   = in_array($usuario['rol'], ['jefe', 'administrador'], true) ? '/admin' : '/empleado';
-            $tiene2fa   = !empty($usuario['totp_activo']);
             jsonSuccess([
-                'redirect'     => $redirect,
-                'tipo'         => 'personal',
-                'rol'          => $usuario['rol'],
-                '2fa_required' => $tiene2fa,   // tiene 2FA → pedir código antes de entrar
-                '2fa_setup'    => !$tiene2fa,  // no tiene 2FA → forzar configuración
+                'redirect' => $redirect,
+                'tipo'     => 'personal',
+                'rol'      => $usuario['rol'],
             ]);
         }
         $cliente = $uid ? obtenerClientePorFirebaseUid($uid) : null;
@@ -240,88 +230,6 @@ switch ($action) {
         jsonSuccess(['cliente' => $cliente]);
         break;
 
-    // ── 2FA: verificar código durante login ───────────────────────
-    // El frontend envía el código tras el login normal si la respuesta
-    // incluye 2fa_required=true.  No requiere sesión autenticada aún.
-    case '2fa-check':
-        if ($method !== 'POST') jsonError('Método no permitido', 405);
-        requerirCsrf();
-        checkRateLimit('2fa_check', 5, 120);   // 5 intentos / 2 min
-        if (empty($_SESSION['usuario_id'])) jsonError('Sesión no iniciada', 401);
-        $body    = getJsonBody();
-        $codigo  = trim($body['codigo'] ?? '');
-        $usuario = dbRow(
-            "SELECT id, rol, totp_activo, totp_secreto FROM usuarios_personal WHERE id = ? AND activo = 1 LIMIT 1",
-            [$_SESSION['usuario_id']]
-        );
-        if (!$usuario) jsonError('Usuario no encontrado', 403);
-        if (!verificarYMarcar2FA($usuario, $codigo)) {
-            jsonError('Código de verificación incorrecto.', 403);
-        }
-        jsonSuccess(['verificado' => true, 'csrf' => getCsrfToken()]);
-        break;
-
-    // ── 2FA: obtener URL de configuración (QR) ───────────────────
-    // Solo admin puede configurar 2FA; devuelve el secreto y la URL QR.
-    // El secreto provisional se almacena en sesión hasta que se active.
-    case '2fa-setup':
-        if ($method !== 'GET') jsonError('Método no permitido', 405);
-        $usuario = requerirPersonal();   // cualquier rol de personal puede configurar su propio 2FA
-        requerirReautenticacion('2fa_setup', 300);
-        $secreto = generarSecreto2FA();
-        $_SESSION['_2fa_secreto_provisional'] = $secreto;
-        $urlQr   = generarUrlQr2FA($secreto, $usuario['correo']);
-        jsonSuccess(['secreto' => $secreto, 'qr_url' => $urlQr]);
-        break;
-
-    // ── 2FA: activar TOTP tras confirmar el primer código ─────────
-    // El usuario escanea el QR y envía el primer código para confirmar
-    // que el secreto quedó bien configurado en su app.
-    case '2fa-activar':
-        if ($method !== 'POST') jsonError('Método no permitido', 405);
-        requerirCsrf();
-        $usuario = requerirPersonal();
-        requerirReautenticacion('2fa_setup', 300);
-        $body    = getJsonBody();
-        $codigo  = trim($body['codigo'] ?? '');
-        $secreto = $_SESSION['_2fa_secreto_provisional'] ?? '';
-        if (empty($secreto)) jsonError('No hay configuración de 2FA pendiente. Inicia el proceso desde /2fa-setup.', 400);
-        if (!verificarTotp($secreto, $codigo)) {
-            jsonError('Código incorrecto. Verifica la hora de tu dispositivo e intenta de nuevo.', 403);
-        }
-        dbQuery(
-            "UPDATE usuarios_personal SET totp_secreto = ?, totp_activo = 1 WHERE id = ?",
-            [$secreto, $usuario['id']]
-        );
-        unset($_SESSION['_2fa_secreto_provisional']);
-        $_SESSION['_2fa_verified'] = (int)$usuario['id'];   // ya verificado en esta sesión
-        jsonSuccess(['activado' => true, 'mensaje' => 'Autenticación de dos factores activada correctamente.']);
-        break;
-
-    // ── 2FA: desactivar (cada quien la suya; jefe/administrador sobre cualquiera) ─
-    case '2fa-desactivar':
-        if ($method !== 'POST') jsonError('Método no permitido', 405);
-        requerirCsrf();
-        $usuario = requerirPersonal();
-        requerirReautenticacion('2fa_desactivar', 300);
-        $body       = getJsonBody();
-        // empleado/disenador solo pueden desactivar su propia cuenta; jefe/administrador
-        // pueden desactivarla sobre cualquier cuenta de personal (mismo poder que ya
-        // tienen por SQL directo, ver Fase 2 — auditoria_seguridad_personal).
-        $puedeGestionarOtros = in_array($usuario['rol'], ['jefe', 'administrador'], true);
-        $objetivoId = isset($body['usuario_id']) && $puedeGestionarOtros
-            ? (int)$body['usuario_id']
-            : (int)$usuario['id'];
-        dbQuery(
-            "UPDATE usuarios_personal SET totp_secreto = NULL, totp_activo = 0 WHERE id = ?",
-            [$objetivoId]
-        );
-        if ($objetivoId === (int)$usuario['id']) {
-            unset($_SESSION['_2fa_verified']);
-        }
-        jsonSuccess(['desactivado' => true]);
-        break;
-
     default:
-        jsonError('Acción no válida. Opciones: login, logout, verificar, perfil, cliente-login, cliente-registro, cliente-verificar, cliente-logout, 2fa-check, 2fa-setup, 2fa-activar, 2fa-desactivar', 400);
+        jsonError('Acción no válida. Opciones: login, logout, verificar, perfil, cliente-login, cliente-registro, cliente-verificar, cliente-logout', 400);
 }

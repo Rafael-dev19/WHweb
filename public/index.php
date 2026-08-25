@@ -15,6 +15,7 @@ if (!empty($_SESSION['_flash'])) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Wooden House - Muebles de Madera a Medida en Guadalajara</title>
   <meta name="description" content="Wooden House — muebles de madera a medida en Guadalajara, Jalisco. Cocinas integrales, clósets, muebles de baño y más. Calidad artesanal con entrega en toda la ZMG.">
+  <link rel="canonical" href="<?= APP_URL ?>/">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
   <link rel="stylesheet" href="./assets/<?= av('css/variables.css') ?>">

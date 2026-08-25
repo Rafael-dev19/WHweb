@@ -10,6 +10,7 @@ header('Content-Type: text/html; charset=utf-8');
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Seguimiento de Solicitud – Wooden House</title>
   <meta name="description" content="Consulta el estado de tu pedido, cita o cotización en Wooden House. Ingresa tu número de folio WH-, CIT- o COT- para ver el estado en tiempo real.">
+  <link rel="canonical" href="<?= APP_URL ?>/seguimiento">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
   <link rel="stylesheet" href="./assets/<?= av('css/variables.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/solicitudes.css') ?>">

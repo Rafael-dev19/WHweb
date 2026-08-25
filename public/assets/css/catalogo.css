@@ -545,8 +545,8 @@
       max-width: 320px;
       pointer-events: none;
     }
-    .wh-toast.success { background: var(--color-bg-main); color: #fff; border-left: 4px solid var(--color-primary); }
-    .wh-toast.error   { background: var(--color-bg-main); color: #fff; border-left: 4px solid #ef4444; }
+    .wh-toast.success { background: var(--color-bg-main); color: var(--color-text-main); border-left: 4px solid var(--color-primary); }
+    .wh-toast.error   { background: var(--color-bg-main); color: var(--color-text-main); border-left: 4px solid #ef4444; }
     .wh-toast.success i { color: var(--color-primary); font-size: 18px; }
     .wh-toast.error   i { color: #ef4444; font-size: 18px; }
     @keyframes toastIn {
