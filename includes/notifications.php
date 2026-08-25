@@ -129,6 +129,18 @@ function _obtenerCorreosEmpleados(): string {
 
 // ── Push (FCM) al personal interno ─────────────────────────────────
 
+// El jefe es el único rol de personal que además recibe email (los demás
+// roles solo push). Cuenta única esperada; si hay más de una activa se toma
+// la más reciente.
+function _obtenerCorreoJefe(): ?string {
+    try {
+        $row = dbRow("SELECT correo FROM usuarios_personal WHERE rol = 'jefe' AND activo = 1 ORDER BY id DESC LIMIT 1");
+        return $row['correo'] ?? null;
+    } catch (\Throwable $e) {
+        return null;
+    }
+}
+
 // Tokens de dispositivo activos de todo el personal con alguno de los roles dados.
 function _obtenerTokensPushPorRol(array $roles): array {
     if (empty($roles)) return [];
@@ -151,15 +163,24 @@ function _obtenerTokensPushPorRol(array $roles): array {
 // dispara la Cloud Function, agregando los campos push_* que ésta lee para
 // mandar el Web Push. El contenido del push es SIEMPRE genérico (nunca datos
 // del cliente/pedido) — el detalle real solo se ve entrando al panel.
-function crearNotificacionPush(string $tipo, array $roles, string $titulo, string $mensaje, string $clickUrl = '/'): bool {
+// $tambienEmailJefe: además del push, el jefe recibe un correo corto del
+// mismo aviso (único rol de personal con email; el resto solo push).
+function crearNotificacionPush(string $tipo, array $roles, string $titulo, string $mensaje, string $clickUrl = '/', bool $tambienEmailJefe = false): bool {
     $tokens = _obtenerTokensPushPorRol($roles);
-    if (empty($tokens)) return false;
-    return crearNotificacionFirestore($tipo, $titulo, $mensaje, [
-        'push_tokens_json' => json_encode($tokens),
-        'push_titulo'      => $titulo,
-        'push_mensaje'     => $mensaje,
-        'push_url'         => $clickUrl,
-    ]);
+    $extra  = [
+        'push_titulo' => $titulo,
+        'push_mensaje' => $mensaje,
+        'push_url'    => $clickUrl,
+    ];
+    if (!empty($tokens)) {
+        $extra['push_tokens_json'] = json_encode($tokens);
+    }
+    if ($tambienEmailJefe && in_array('jefe', $roles, true)) {
+        $correoJefe = _obtenerCorreoJefe();
+        if ($correoJefe) $extra['correo_jefe'] = $correoJefe;
+    }
+    if (empty($tokens) && empty($extra['correo_jefe'])) return false;
+    return crearNotificacionFirestore($tipo, $titulo, $mensaje, $extra);
 }
 
 // $desdeConversionCotizacion=true cuando el pedido nace de convertir una
@@ -205,14 +226,16 @@ function notificarNuevoPedido(array $pedido, bool $desdeConversionCotizacion = f
 
     // Push: al diseñador siempre (tiene que diseñarlo); al jefe solo si el
     // pedido vino directo del carrito (si vino de una cotización, el jefe ya
-    // recibió el push de confirmación — evita avisarle dos veces).
-    $roles = $desdeConversionCotizacion ? ['disenador'] : ['jefe', 'disenador'];
+    // recibió el push+email de confirmación — evita avisarle dos veces).
+    $desdeCarrito = !$desdeConversionCotizacion;
+    $roles = $desdeCarrito ? ['jefe', 'disenador'] : ['disenador'];
     crearNotificacionPush(
         'push_nuevo_pedido',
         $roles,
         'Nuevo pedido',
         'Hay un nuevo pedido, ingresa al sitio para revisarlo.',
-        '/empleado#pedidos'
+        '/empleado#pedidos',
+        $desdeCarrito
     );
 }
 
@@ -262,19 +285,21 @@ function notificarNuevaCotizacion(array $cot): void {
         ['jefe'],
         'Nueva cotización',
         'Hay una nueva cotización, ingresa al sitio para revisarla.',
-        '/admin#cotizaciones'
+        '/admin#cotizaciones',
+        true
     );
 }
 
-// Push al jefe cuando el cliente confirma una cotización respondida desde el
-// portal de seguimiento (Fase 7). No genera email adicional al cliente.
+// Push+email al jefe cuando el cliente confirma una cotización respondida
+// desde el portal de seguimiento (Fase 7). No genera email adicional al cliente.
 function notificarConfirmacionCotizacion(array $cot): void {
     crearNotificacionPush(
         'push_confirmacion_cotizacion',
         ['jefe'],
         'Cotización confirmada',
         'Un cliente confirmó su cotización, ingresa al sitio para continuar.',
-        '/admin#cotizaciones'
+        '/admin#cotizaciones',
+        true
     );
 }
 
@@ -400,7 +425,8 @@ function notificarNuevaCita(array $cita): void {
         ['jefe'],
         'Nueva cita',
         'Hay una nueva cita agendada, ingresa al sitio para revisarla.',
-        '/admin#citas'
+        '/admin#citas',
+        true
     );
 }
 

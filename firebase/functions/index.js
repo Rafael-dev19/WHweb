@@ -14,6 +14,43 @@ const db = getFirestore();
 // El contenido siempre es genérico (título/mensaje cortos): el detalle real
 // se ve entrando al panel, nunca viaja en el push. Ver includes/notifications.php
 // (PHP) para quién dispara cada evento y a qué roles.
+// Avisa al sitio (PHP) qué tokens ya no son válidos para que los desactive —
+// sin esto, un token muerto (dispositivo desinstalado, permiso revocado)
+// se sigue intentando para siempre y nunca se sabe que ese usuario dejó de
+// recibir push de verdad.
+function limpiarTokensMuertos(tokens) {
+  return new Promise((resolve) => {
+    const secreto = process.env.PUSH_CLEANUP_SECRET;
+    const appUrl  = process.env.APP_URL;
+    if (!secreto || !appUrl || !tokens.length) { resolve(); return; }
+
+    let hostname, pathBase;
+    try {
+      const u = new URL(appUrl);
+      hostname = u.hostname;
+      pathBase = u.pathname.replace(/\/$/, '');
+    } catch (e) { resolve(); return; }
+
+    const body = JSON.stringify({ tokens });
+    const req = https.request({
+      hostname,
+      path: `${pathBase}/api/push_tokens.php?action=limpiar`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Push-Secret': secreto,
+        'Content-Length': Buffer.byteLength(body),
+      },
+    }, (res) => {
+      res.on('data', () => {});
+      res.on('end', () => resolve());
+    });
+    req.on('error', (e) => { console.warn('[CF] limpiarTokensMuertos error:', e.message); resolve(); });
+    req.write(body);
+    req.end();
+  });
+}
+
 async function enviarPush(tokens, titulo, cuerpo, clickUrl) {
   if (!Array.isArray(tokens) || tokens.length === 0) return;
   try {
@@ -26,6 +63,24 @@ async function enviarPush(tokens, titulo, cuerpo, clickUrl) {
       },
     });
     console.log(`[CF] push enviado: ${resp.successCount}/${tokens.length} ok`);
+
+    // Tokens con error permanente (no transitorio) → avisar al sitio que los
+    // desactive. Códigos de error de FCM: docs.expo.dev / firebase-admin.
+    const CODIGOS_MUERTOS = new Set([
+      'messaging/invalid-registration-token',
+      'messaging/registration-token-not-registered',
+      'messaging/invalid-argument',
+    ]);
+    const tokensMuertos = [];
+    resp.responses.forEach((r, i) => {
+      if (!r.success && r.error && CODIGOS_MUERTOS.has(r.error.code)) {
+        tokensMuertos.push(tokens[i]);
+      }
+    });
+    if (tokensMuertos.length) {
+      await limpiarTokensMuertos(tokensMuertos);
+      console.log(`[CF] ${tokensMuertos.length} token(s) muerto(s) desactivado(s)`);
+    }
   } catch (e) {
     console.error('[CF] Error enviando push:', e.message);
   }
@@ -34,7 +89,7 @@ async function enviarPush(tokens, titulo, cuerpo, clickUrl) {
 const SECRETS = [
   'BREVO_API_KEY',
   'EMAIL_GENERAL', 'REPLY_TO', 'ADMIN_EMAIL',
-  'APP_URL',
+  'APP_URL', 'PUSH_CLEANUP_SECRET',
 ];
 
 function getEmails() {
@@ -622,9 +677,10 @@ exports.onNuevaNotificacion = onDocumentCreated(
 
     // ── Push al personal interno (jefe/administrador/empleado/disenador) ──
     // Independiente del tipo: cualquier notificación puede traer push_tokens_json
-    // (ver includes/notifications.php → crearNotificacionPush). El personal NUNCA
-    // recibe email de contenido de estos eventos, solo push — el cliente sigue
-    // recibiendo su email normal más abajo.
+    // (ver includes/notifications.php → crearNotificacionPush). El personal solo
+    // recibe push de estos eventos — EXCEPTO el jefe, que además recibe un email
+    // corto (sin datos sensibles, solo un aviso) cuando el doc trae correo_jefe.
+    // El cliente sigue recibiendo su email normal más abajo.
     if (data.push_tokens_json) {
       try {
         const tokens = JSON.parse(data.push_tokens_json);
@@ -634,6 +690,23 @@ exports.onNuevaNotificacion = onDocumentCreated(
       } catch (e) {
         console.error('[CF] Error procesando push_tokens_json:', e.message);
       }
+    }
+
+    if (data.correo_jefe) {
+      const clickUrl = data.push_url ? `${process.env.APP_URL || ''}${data.push_url}` : (process.env.APP_URL || '');
+      sendEmail({
+        from: emails.admin, fromName: 'WOODEN HOUSE',
+        to:      data.correo_jefe,
+        replyTo: emails.replyTo,
+        subject: `${data.push_titulo || 'Aviso'} — Wooden House`,
+        html:    emailWrapper(data.push_titulo || 'Wooden House', `
+          <p style="margin-top:0;">${data.push_mensaje || 'Ingresa al sitio para ver los detalles.'}</p>
+          <div style="text-align:center;margin:26px 0;">
+            <a href="${clickUrl}" style="background:#8B6914;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:6px;font-size:14px;font-weight:bold;display:inline-block;font-family:Georgia,serif;">Ir al panel</a>
+          </div>`),
+        text:    `${data.push_mensaje || 'Ingresa al sitio para ver los detalles.'} ${clickUrl}`,
+      }).then(() => console.log(`[CF] emailJefe (${tipo}) → ${data.correo_jefe}`))
+        .catch(e => console.error('[CF] Error emailJefe:', e.message));
     }
 
     // ── nuevo_pedido → emailPedidoConfirmado (cliente) ──────────────

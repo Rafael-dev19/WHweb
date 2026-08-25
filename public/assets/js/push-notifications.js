@@ -3,14 +3,42 @@
 // disenador). Los clientes nunca reciben push, solo correo — ver
 // includes/notifications.php.
 
+// Aviso visible (no solo consola) de por qué no se pudo activar el push —
+// sin esto el usuario no se entera de nada si algo falla (ej. iOS sin
+// instalar el panel a pantalla de inicio).
+function _avisoPush(msg, tipo) {
+  console.warn('[Push] ' + msg);
+  if (typeof showNotification === 'function') {
+    showNotification('<i class="fa-solid fa-bell-slash"></i> ' + msg, tipo || 'info');
+  }
+}
+
+function _esIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPadOS moderno
+}
+
+function _esStandalone() {
+  return window.navigator.standalone === true ||
+    (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+}
+
 async function registerPush() {
   try {
+    // iOS/iPadOS: Safari solo permite Web Push si el sitio está agregado a la
+    // pantalla de inicio (iOS 16.4+) — en una pestaña normal ni siquiera se
+    // puede pedir el permiso, así que hay que explicarlo en vez de fallar mudo.
+    if (_esIOS() && !_esStandalone()) {
+      _avisoPush('En iPhone/iPad: para recibir notificaciones, toca Compartir → "Agregar a pantalla de inicio" y vuelve a abrir el panel desde ese ícono (no desde Safari).', 'warning');
+      return false;
+    }
+
     if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
-      console.warn('[Push] Este navegador no soporta notificaciones push.');
+      _avisoPush('Este navegador no soporta notificaciones push. Prueba con Chrome, Edge o Safari 16.4+.', 'warning');
       return false;
     }
     if (!window.WH_FCM_VAPID_KEY) {
-      console.warn('[Push] FCM_VAPID_KEY no configurada — el jefe debe generarla en Firebase Console.');
+      _avisoPush('Las notificaciones push aún no están configuradas en el sitio (falta la clave VAPID en Firebase).', 'warning');
       return false;
     }
     if (typeof firebase === 'undefined' || !firebase.messaging) {
@@ -23,7 +51,7 @@ async function registerPush() {
       permiso = await Notification.requestPermission();
     }
     if (permiso !== 'granted') {
-      console.warn('[Push] Permiso de notificaciones no concedido.');
+      _avisoPush('No podrás recibir notificaciones porque el permiso fue denegado. Actívalo desde los ajustes del sitio en tu navegador.', 'warning');
       return false;
     }
 
@@ -43,12 +71,17 @@ async function registerPush() {
       return false;
     }
 
-    await fetch('/api/push_tokens.php', {
+    const resToken = await fetch('/api/push_tokens.php', {
       method: 'POST',
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ fcm_token: token }),
     });
+    const dataToken = await resToken.json().catch(() => ({}));
+    if (!resToken.ok || !dataToken.success) {
+      _avisoPush('No se pudo registrar este dispositivo para notificaciones (' + (dataToken.error || 'error del servidor') + ').', 'error');
+      return false;
+    }
 
     // Notificaciones en primer plano (pestaña activa): el service worker solo
     // dispara con la pestaña en segundo plano, así que aquí se muestra la
@@ -63,7 +96,7 @@ async function registerPush() {
 
     return true;
   } catch (e) {
-    console.warn('[Push] registerPush error:', e);
+    _avisoPush('No se pudieron activar las notificaciones (' + (e.message || 'error desconocido') + ').', 'error');
     return false;
   }
 }

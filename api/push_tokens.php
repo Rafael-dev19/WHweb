@@ -5,6 +5,27 @@
 require_once __DIR__ . '/_helpers.php';
 
 $method = requestMethod();
+$action = $_GET['action'] ?? '';
+
+// ── Limpieza de tokens muertos, llamada por la Cloud Function ──────────
+// FCM le dice a enviarPush() qué tokens ya no son válidos (dispositivo
+// desinstalado, permiso revocado, token rotado); esta acción los marca
+// inactivos aquí para no seguir intentando enviarles push en vano.
+// Autenticada con un secreto compartido (no hay sesión de personal del
+// lado de la Cloud Function), nunca con las credenciales de un usuario.
+if ($method === 'POST' && $action === 'limpiar') {
+    $secreto = $_SERVER['HTTP_X_PUSH_SECRET'] ?? '';
+    if (empty(PUSH_CLEANUP_SECRET) || !hash_equals(PUSH_CLEANUP_SECRET, $secreto)) {
+        jsonError('No autorizado', 403);
+    }
+    $body   = getJsonBody();
+    $tokens = array_values(array_filter(array_map('trim', $body['tokens'] ?? []), fn($t) => $t !== '' && strlen($t) <= 255));
+    if (empty($tokens)) jsonSuccess(['desactivados' => 0]);
+
+    $placeholders = implode(',', array_fill(0, count($tokens), '?'));
+    dbQuery("UPDATE dispositivos_push SET activo = 0 WHERE fcm_token IN ($placeholders)", $tokens);
+    jsonSuccess(['desactivados' => count($tokens)]);
+}
 
 switch ($method) {
     case 'POST':

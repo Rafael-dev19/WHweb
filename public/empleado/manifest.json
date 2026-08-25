@@ -1,0 +1,13 @@
+{
+  "name": "Wooden House — Panel de Empleado",
+  "short_name": "WH Panel",
+  "start_url": "/empleado",
+  "scope": "/empleado",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#8b7355",
+  "icons": [
+    { "src": "/assets/img/logo-header.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/assets/img/logo-header.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

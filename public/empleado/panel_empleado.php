@@ -24,6 +24,13 @@ unset($_usuario);
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Panel Empleado - Wooden House</title>
+  <!-- PWA: requerido para que iOS permita notificaciones push al agregar el
+       panel a la pantalla de inicio (Safari no las soporta en pestaña normal). -->
+  <link rel="manifest" href="/empleado/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="WH Panel">
+  <link rel="apple-touch-icon" href="/assets/img/logo-header.png">
   <meta name="description" content="Panel de empleados de Wooden House. Gestión de pedidos, cotizaciones y citas del personal.">
   <meta name="robots" content="noindex, nofollow">
 

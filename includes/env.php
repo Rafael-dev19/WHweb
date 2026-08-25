@@ -59,6 +59,10 @@ define('FIREBASE_API_KEY',    env('FIREBASE_API_KEY',    ''));
 // Cloud Messaging → Web configuration → Generate key pair). Ver instrucciones
 // completas en el mensaje de la Fase 4.
 define('FCM_VAPID_KEY',       env('FCM_VAPID_KEY',       ''));
+// Secreto compartido con la Cloud Function para que pueda avisarle al sitio
+// qué tokens de push ya no son válidos y hay que desactivarlos (limpieza,
+// no expone nada del usuario — ver api/push_tokens.php acción "limpiar").
+define('PUSH_CLEANUP_SECRET', env('PUSH_CLEANUP_SECRET', ''));
 
 // ── Stripe ────────────────────────────────────────────────────────
 define('STRIPE_SECRET_KEY',     env('STRIPE_SECRET_KEY',     ''));
