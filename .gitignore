@@ -3,7 +3,7 @@
 # ================================================
 
 .claude/
-.impecable/
+.impeccable/
 
 # ── NUNCA SUBIR — Credenciales y datos sensibles ─────────────────
 .env
@@ -79,6 +79,19 @@ $RECYCLE.BIN/
 *.iml
 *.sublime-project
 *.sublime-workspace
+
+# ── SERVIDOR LOCAL DE DESARROLLO (php -S) ─────────────────────────
+# Solo emula localmente el Alias /api que en el VPS define Apache.
+router.php
+
+# ── PLAYWRIGHT (verificación visual local, no es parte del sitio) ─
+.playwright-mcp/
+test-results/
+playwright-report/
+playwright/.cache/
+/*.png
+/*.jpg
+/*.jpeg
 
 # ── ARCHIVOS TEMPORALES ───────────────────────────────────────────
 tmp/
