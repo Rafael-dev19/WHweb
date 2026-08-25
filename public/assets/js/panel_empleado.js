@@ -976,7 +976,11 @@ document.addEventListener('DOMContentLoaded', () => {
   setUnreadCount(getUnreadCount());
   refreshKpisFromPedidosTable();
 
-  setTimeout(() => showNotification('Bienvenido', 'success'), 400);
+  // No pisar un aviso ya visible (ej. de push-notifications.js) — "Bienvenido"
+  // es decorativo, un aviso real (permisos, errores) importa más y debe leerse.
+  setTimeout(() => {
+    if (!document.querySelector('.notification')) showNotification('Bienvenido', 'success');
+  }, 400);
 
   // ── FIX MENSAJE DE DEBUG: Guardar sin iconos en addActivity, el render los pone ──
   // addActivity ya recibe el título con <i> tag y renderActivity lo muestra con innerHTML

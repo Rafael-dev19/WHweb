@@ -53,25 +53,22 @@ function verificarPropiedadRecurso(
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// 3. HUELLA DE SESIÓN (IP + User-Agent)
-// Detecta robo de cookie de sesión desde otra IP/dispositivo.
-// Usa sólo 3 octetos de IPv4 para tolerar CGNAT y proxies estables.
+// 3. HUELLA DE SESIÓN (User-Agent)
+// Detecta robo de cookie de sesión desde otro dispositivo/navegador.
+// Ya NO usa IP: incluso solo con /16 (2 octetos) causaba falsos positivos
+// reales con jefe/empleados en redes móviles mexicanas (Telcel/AT&T/Movistar)
+// — el CGNAT reasigna IP de rangos amplios y basta un salto de torre o de
+// WiFi a datos para que cambie, destruyendo la sesión con "sesión expirada"
+// sin que haya habido ningún robo de cookie de por medio. La cookie de
+// sesión ya está protegida por httpOnly+SameSite=Strict, más CSRF,
+// revocación al cerrar sesión y 2FA obligatorio para jefe/administrador —
+// no depende únicamente de esta huella.
 // ═══════════════════════════════════════════════════════════════════
 
 function _calcularHuellaSesion(): string {
-    // CF-Connecting-IP contiene la IP real del cliente detrás de Cloudflare.
-    // REMOTE_ADDR es la IP del edge node de Cloudflare — cambia entre requests
-    // desde distintos PoPs y causaría falsos positivos en la verificación de huella.
-    $ip = $_SERVER['HTTP_CF_CONNECTING_IP']
-       ?? $_SERVER['HTTP_X_REAL_IP']
-       ?? $_SERVER['REMOTE_ADDR']
-       ?? '';
     $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
-    // Solo los primeros 2 octetos de IPv4 (/16) para tolerar CGNAT, redes móviles y VPNs
-    // que cambian el tercer/cuarto octeto entre peticiones del mismo usuario.
-    $ipBase = implode('.', array_slice(explode('.', $ip), 0, 2));
     $semilla = defined('APP_KEY') ? APP_KEY : 'wh-session-key-2026';
-    return hash('sha256', $ipBase . '|' . $ua . '|' . $semilla);
+    return hash('sha256', $ua . '|' . $semilla);
 }
 
 function inicializarHuellaSesion(): void {
@@ -129,7 +126,11 @@ function verificarSesionPersonalRevocada(): void {
             [$_SESSION['usuario_id']]
         );
         if (!$row || empty($row['sesiones_revocadas_desde'])) return;
-        if (strtotime($row['sesiones_revocadas_desde']) > $_SESSION['_usuario_login_time']) {
+        // Margen de 3s: el timestamp de revocación viene del reloj de MySQL y el
+        // de login del reloj de PHP — sin margen, un re-login inmediato tras
+        // cerrar sesión puede quedar "antes" de la revocación por desfase de
+        // reloj entre servidores y expulsar al usuario que apenas inició sesión.
+        if (strtotime($row['sesiones_revocadas_desde']) > $_SESSION['_usuario_login_time'] + 3) {
             _destruirSesionPersonal();
             jsonError('Sesión revocada. Por favor inicia sesión nuevamente.', 401);
         }
@@ -148,7 +149,9 @@ function verificarSesionClienteRevocada(): void {
             [$_SESSION['cliente_id']]
         );
         if (!$row || empty($row['sesiones_revocadas_desde'])) return;
-        if (strtotime($row['sesiones_revocadas_desde']) > $_SESSION['_cliente_login_time']) {
+        // Mismo margen que verificarSesionPersonalRevocada() — evita el falso
+        // positivo de "sesión expirada" en un re-login inmediato.
+        if (strtotime($row['sesiones_revocadas_desde']) > $_SESSION['_cliente_login_time'] + 3) {
             _destruirSesionCliente();
             jsonError('Sesión revocada. Por favor inicia sesión nuevamente.', 401);
         }

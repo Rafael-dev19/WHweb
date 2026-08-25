@@ -37,6 +37,7 @@ unset($_usuario);
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
   <link rel="stylesheet" href="../assets/<?= av('css/panel_empleado.css') ?>">
+  <link rel="stylesheet" href="../assets/<?= av('css/push-prompt.css') ?>">
   <link rel="stylesheet" href="../assets/<?= av('css/animations.css') ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous" defer></script>
@@ -522,7 +523,7 @@ unset($_usuario);
   <script>
     if (typeof firebaseAuth !== 'undefined') {
       firebaseAuth.onAuthStateChanged(function (user) {
-        if (user) registerPush();
+        if (user) initPushPrompt();
       });
     }
   </script>

@@ -130,14 +130,14 @@ function _obtenerCorreosEmpleados(): string {
 // ── Push (FCM) al personal interno ─────────────────────────────────
 
 // El jefe es el único rol de personal que además recibe email (los demás
-// roles solo push). Cuenta única esperada; si hay más de una activa se toma
-// la más reciente.
-function _obtenerCorreoJefe(): ?string {
+// roles solo push). Puede haber varias cuentas jefe activas a la vez (ej.
+// una cuenta de prueba para validar el panel) — se le manda a todas.
+function _obtenerCorreosJefe(): array {
     try {
-        $row = dbRow("SELECT correo FROM usuarios_personal WHERE rol = 'jefe' AND activo = 1 ORDER BY id DESC LIMIT 1");
-        return $row['correo'] ?? null;
+        $rows = dbRows("SELECT correo FROM usuarios_personal WHERE rol = 'jefe' AND activo = 1");
+        return array_values(array_filter(array_column($rows, 'correo')));
     } catch (\Throwable $e) {
-        return null;
+        return [];
     }
 }
 
@@ -176,10 +176,10 @@ function crearNotificacionPush(string $tipo, array $roles, string $titulo, strin
         $extra['push_tokens_json'] = json_encode($tokens);
     }
     if ($tambienEmailJefe && in_array('jefe', $roles, true)) {
-        $correoJefe = _obtenerCorreoJefe();
-        if ($correoJefe) $extra['correo_jefe'] = $correoJefe;
+        $correosJefe = _obtenerCorreosJefe();
+        if (!empty($correosJefe)) $extra['correos_jefe_json'] = json_encode($correosJefe);
     }
-    if (empty($tokens) && empty($extra['correo_jefe'])) return false;
+    if (empty($tokens) && empty($extra['correos_jefe_json'])) return false;
     return crearNotificacionFirestore($tipo, $titulo, $mensaje, $extra);
 }
 

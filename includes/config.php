@@ -68,7 +68,11 @@ if (session_status() === PHP_SESSION_NONE) {
     }
 
     // ── Timeout por inactividad ───────────────────────────────────
-    if (isset($_SESSION['_last_activity'])
+    // Solo para sesiones de cliente/anónimas. El personal (jefe/administrador/
+    // empleado/disenador) tiene su propio timeout en requerirAutenticacion()
+    // (2h inactividad / 8h absoluto) — aplicarles también este de 15 min los
+    // desconecta de golpe con solo dejar el panel abierto leyendo un reporte.
+    if (empty($_SESSION['usuario_id']) && isset($_SESSION['_last_activity'])
         && (time() - $_SESSION['_last_activity']) > SESSION_IDLE_TIMEOUT) {
         $teniaSesion = !empty($_SESSION['cliente_id']) || !empty($_SESSION['usuario_id']);
         // El token CSRF ya emitido sigue siendo válido para la petición en curso
@@ -94,7 +98,11 @@ if (session_status() === PHP_SESSION_NONE) {
     }
 
     // ── Timeout absoluto (2 horas) ────────────────────────────────
-    if (isset($_SESSION['_created']) && (time() - $_SESSION['_created']) > 7200) {
+    // Igual que arriba: solo cliente/anónimas. Para personal, este contador
+    // arranca desde la primera visita al navegador (no desde el login), así
+    // que podía cerrarles la sesión minutos después de haber iniciado sesión
+    // si ya llevaban tiempo con el sitio abierto antes de loguearse.
+    if (empty($_SESSION['usuario_id']) && isset($_SESSION['_created']) && (time() - $_SESSION['_created']) > 7200) {
         $csrfPrevio = $_SESSION['_csrf'] ?? null;
         session_unset();
         session_destroy();

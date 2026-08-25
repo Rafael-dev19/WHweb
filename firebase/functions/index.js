@@ -679,7 +679,8 @@ exports.onNuevaNotificacion = onDocumentCreated(
     // Independiente del tipo: cualquier notificación puede traer push_tokens_json
     // (ver includes/notifications.php → crearNotificacionPush). El personal solo
     // recibe push de estos eventos — EXCEPTO el jefe, que además recibe un email
-    // corto (sin datos sensibles, solo un aviso) cuando el doc trae correo_jefe.
+    // corto (sin datos sensibles, solo un aviso) por cada correo en correos_jefe_json
+    // (puede haber más de una cuenta jefe activa, ej. una de prueba para el panel).
     // El cliente sigue recibiendo su email normal más abajo.
     if (data.push_tokens_json) {
       try {
@@ -692,21 +693,30 @@ exports.onNuevaNotificacion = onDocumentCreated(
       }
     }
 
-    if (data.correo_jefe) {
-      const clickUrl = data.push_url ? `${process.env.APP_URL || ''}${data.push_url}` : (process.env.APP_URL || '');
-      sendEmail({
-        from: emails.admin, fromName: 'WOODEN HOUSE',
-        to:      data.correo_jefe,
-        replyTo: emails.replyTo,
-        subject: `${data.push_titulo || 'Aviso'} — Wooden House`,
-        html:    emailWrapper(data.push_titulo || 'Wooden House', `
-          <p style="margin-top:0;">${data.push_mensaje || 'Ingresa al sitio para ver los detalles.'}</p>
-          <div style="text-align:center;margin:26px 0;">
-            <a href="${clickUrl}" style="background:#8B6914;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:6px;font-size:14px;font-weight:bold;display:inline-block;font-family:Georgia,serif;">Ir al panel</a>
-          </div>`),
-        text:    `${data.push_mensaje || 'Ingresa al sitio para ver los detalles.'} ${clickUrl}`,
-      }).then(() => console.log(`[CF] emailJefe (${tipo}) → ${data.correo_jefe}`))
-        .catch(e => console.error('[CF] Error emailJefe:', e.message));
+    if (data.correos_jefe_json) {
+      try {
+        const correosJefe = JSON.parse(data.correos_jefe_json);
+        const clickUrl = data.push_url ? `${process.env.APP_URL || ''}${data.push_url}` : (process.env.APP_URL || '');
+        if (Array.isArray(correosJefe)) {
+          correosJefe.forEach(correoJefe => {
+            sendEmail({
+              from: emails.admin, fromName: 'WOODEN HOUSE',
+              to:      correoJefe,
+              replyTo: emails.replyTo,
+              subject: `${data.push_titulo || 'Aviso'} — Wooden House`,
+              html:    emailWrapper(data.push_titulo || 'Wooden House', `
+                <p style="margin-top:0;">${data.push_mensaje || 'Ingresa al sitio para ver los detalles.'}</p>
+                <div style="text-align:center;margin:26px 0;">
+                  <a href="${clickUrl}" style="background:#8B6914;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:6px;font-size:14px;font-weight:bold;display:inline-block;font-family:Georgia,serif;">Ir al panel</a>
+                </div>`),
+              text:    `${data.push_mensaje || 'Ingresa al sitio para ver los detalles.'} ${clickUrl}`,
+            }).then(() => console.log(`[CF] emailJefe (${tipo}) → ${correoJefe}`))
+              .catch(e => console.error('[CF] Error emailJefe:', e.message));
+          });
+        }
+      } catch (e) {
+        console.error('[CF] Error procesando correos_jefe_json:', e.message);
+      }
     }
 
     // ── nuevo_pedido → emailPedidoConfirmado (cliente) ──────────────

@@ -2026,7 +2026,11 @@
       cargarProductosAPI().then(() => {
         renderCatalogo();
       }).catch(e => console.warn('No se pudieron cargar productos:', e));
-      setTimeout(() => showNotification('Bienvenido, Administrador', 'success'), 450);
+      // No pisar un aviso ya visible (ej. de push-notifications.js) — "Bienvenido"
+      // es decorativo, un aviso real (permisos, errores) importa más y debe leerse.
+      setTimeout(() => {
+        if (!document.querySelector('.notification')) showNotification('Bienvenido, Administrador', 'success');
+      }, 450);
       if (typeof firebaseAuth !== 'undefined') {
         firebaseAuth.onAuthStateChanged(async (user) => {
           if (user) {
