@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', function () {
   initFormCotizacion();
   initFormCita();
   initMapPickerCotizacion();
+  initMapPickerCita();
   setMinDate();
   checkURLParams();
   initRealTimeValidation();
@@ -334,14 +335,21 @@ async function subirImagenesCotizacionCliente(cotId, fileList, tipo) {
   }
 }
 
-// ── Mapa interactivo de dirección (cotización) ────────────────────
-function initMapPickerCotizacion() {
-  const container = document.getElementById('cotMapPickerContainer');
+// ── Mapa interactivo de dirección (cotización y cita) ──────────────
+// Cada picker guarda su propio handle (setValue/getValues) — ambas formas
+// coexisten en la misma página (pestañas), así que no se puede depender del
+// atajo MapsPicker.setValue()/getValues() a nivel módulo (solo apunta a la
+// última instancia inicializada, pisaría la del otro formulario).
+let _mapHandleCotizacion = null;
+let _mapHandleCita       = null;
+
+function _initMapPickerGenerico(prefix, setHandle) {
+  const container = document.getElementById(`${prefix}MapPickerContainer`);
   if (!container || !window.MapsPicker) return;
 
   const _mapsLoadTimer = setTimeout(() => {
     if (!window.google?.maps) {
-      const editSection = document.getElementById('cotDireccionDetalleEdit');
+      const editSection = document.getElementById(`${prefix}DireccionDetalleEdit`);
       if (editSection) editSection.style.display = 'block';
       container.innerHTML =
         '<p style="text-align:center;padding:20px 12px;color: var(--color-text-muted);font-size:13px;">' +
@@ -351,35 +359,36 @@ function initMapPickerCotizacion() {
   }, 4000);
   document.addEventListener('maps-picker-ready', () => clearTimeout(_mapsLoadTimer), { once: true });
 
-  MapsPicker.init(container, {
+  const handle = MapsPicker.init(container, {
     onConfirm(v) {
       const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
-      set('cotDireccion', v.direccion);
-      set('cotColonia',   v.colonia);
-      set('cotCiudad',    v.ciudad);
-      set('cotMunicipio', v.municipio);
-      set('cotCP',        v.cp);
-      set('cotLat',       v.lat);
-      set('cotLng',       v.lng);
+      set(`${prefix}Direccion`, v.direccion);
+      set(`${prefix}Colonia`,   v.colonia);
+      set(`${prefix}Ciudad`,    v.ciudad);
+      set(`${prefix}Municipio`, v.municipio);
+      set(`${prefix}CP`,        v.cp);
+      set(`${prefix}Lat`,       v.lat);
+      set(`${prefix}Lng`,       v.lng);
 
-      set('cotDireccionEdit', v.direccion);
-      set('cotColoniaEdit',   v.colonia);
-      set('cotCiudadEdit',    v.ciudad);
-      set('cotMunicipioEdit', v.municipio);
-      set('cotCPEdit',        v.cp);
+      set(`${prefix}DireccionEdit`, v.direccion);
+      set(`${prefix}ColoniaEdit`,   v.colonia);
+      set(`${prefix}CiudadEdit`,    v.ciudad);
+      set(`${prefix}MunicipioEdit`, v.municipio);
+      set(`${prefix}CPEdit`,        v.cp);
 
-      const detalle = document.getElementById('cotDireccionDetalleEdit');
+      const detalle = document.getElementById(`${prefix}DireccionDetalleEdit`);
       if (detalle) detalle.style.display = 'block';
     }
   });
+  setHandle(handle);
 
   // Sincronizar edición manual → hidden inputs
   [
-    ['cotDireccionEdit', 'cotDireccion'],
-    ['cotColoniaEdit',   'cotColonia'],
-    ['cotCiudadEdit',    'cotCiudad'],
-    ['cotMunicipioEdit', 'cotMunicipio'],
-    ['cotCPEdit',        'cotCP'],
+    [`${prefix}DireccionEdit`, `${prefix}Direccion`],
+    [`${prefix}ColoniaEdit`,   `${prefix}Colonia`],
+    [`${prefix}CiudadEdit`,    `${prefix}Ciudad`],
+    [`${prefix}MunicipioEdit`, `${prefix}Municipio`],
+    [`${prefix}CPEdit`,        `${prefix}CP`],
   ].forEach(([editId, hiddenId]) => {
     const editEl = document.getElementById(editId);
     if (editEl) editEl.addEventListener('input', () => {
@@ -388,10 +397,10 @@ function initMapPickerCotizacion() {
     });
   });
 
-  const btnSkip = document.getElementById('cotBtnSkipMapa');
+  const btnSkip = document.getElementById(`${prefix}BtnSkipMapa`);
   if (btnSkip) {
     btnSkip.addEventListener('click', () => {
-      const detalle = document.getElementById('cotDireccionDetalleEdit');
+      const detalle = document.getElementById(`${prefix}DireccionDetalleEdit`);
       if (detalle) detalle.style.display = 'block';
       detalle?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       btnSkip.style.display = 'none';
@@ -399,27 +408,38 @@ function initMapPickerCotizacion() {
   }
 }
 
+function initMapPickerCotizacion() {
+  _initMapPickerGenerico('cot', (h) => { _mapHandleCotizacion = h; });
+}
+
+function initMapPickerCita() {
+  _initMapPickerGenerico('cit', (h) => { _mapHandleCita = h; });
+}
+
 // Precarga el mapa con una dirección ya guardada (perfil del cliente logueado).
-function precargarMapaCotizacion(cliente) {
-  if (!cliente?.direccion || !window.MapsPicker) return;
+function _precargarMapaGenerico(prefix, handle, cliente) {
+  if (!cliente?.direccion || !handle) return;
   const intentar = () => {
     if (!window.google?.maps) { setTimeout(intentar, 300); return; }
-    MapsPicker.setValue({
+    handle.setValue({
       lat: cliente.lat ? parseFloat(cliente.lat) : null,
       lng: cliente.lng ? parseFloat(cliente.lng) : null,
       direccion: cliente.direccion, colonia: cliente.colonia,
       ciudad: cliente.ciudad, municipio: cliente.municipio, cp: cliente.cp,
     });
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
-    set('cotDireccion', cliente.direccion); set('cotColonia', cliente.colonia);
-    set('cotCiudad', cliente.ciudad); set('cotMunicipio', cliente.municipio); set('cotCP', cliente.cp);
-    set('cotDireccionEdit', cliente.direccion); set('cotColoniaEdit', cliente.colonia);
-    set('cotCiudadEdit', cliente.ciudad); set('cotMunicipioEdit', cliente.municipio); set('cotCPEdit', cliente.cp);
-    const detalle = document.getElementById('cotDireccionDetalleEdit');
+    set(`${prefix}Direccion`, cliente.direccion); set(`${prefix}Colonia`, cliente.colonia);
+    set(`${prefix}Ciudad`, cliente.ciudad); set(`${prefix}Municipio`, cliente.municipio); set(`${prefix}CP`, cliente.cp);
+    set(`${prefix}DireccionEdit`, cliente.direccion); set(`${prefix}ColoniaEdit`, cliente.colonia);
+    set(`${prefix}CiudadEdit`, cliente.ciudad); set(`${prefix}MunicipioEdit`, cliente.municipio); set(`${prefix}CPEdit`, cliente.cp);
+    const detalle = document.getElementById(`${prefix}DireccionDetalleEdit`);
     if (detalle) detalle.style.display = 'block';
   };
   intentar();
 }
+
+function precargarMapaCotizacion(cliente) { _precargarMapaGenerico('cot', _mapHandleCotizacion, cliente); }
+function precargarMapaCita(cliente)       { _precargarMapaGenerico('cit', _mapHandleCita, cliente); }
 
 // ── Formulario Cita ───────────────────────────────────────────────
 function initFormCita() {
@@ -730,17 +750,13 @@ async function prefillContactoSiLogueado() {
     setVal('email',        cliente.correo   || '');
     setVal('emailConfirm', cliente.correo   || '');
     setVal('telefono',     cliente.telefono || '');
+    // La dirección de ambas formas vive en el mapa interactivo, no en un
+    // input de texto visible — precargarla ahí para que el cliente la VEA
+    // confirmada, en vez de solo rellenar el campo oculto en silencio.
     if (formId === 'formCotizacion') {
-      // La dirección de esta forma vive en el mapa interactivo, no en un
-      // input de texto visible — precargarla ahí para que el cliente la VEA
-      // confirmada, en vez de solo rellenar el campo oculto en silencio.
       precargarMapaCotizacion(cliente);
     } else {
-      setVal('direccion',    cliente.direccion || '');
-      setVal('colonia',      cliente.colonia   || '');
-      setVal('municipio',    cliente.municipio || '');
-      setVal('ciudad',       cliente.ciudad    || '');
-      setVal('cp',           cliente.cp        || '');
+      precargarMapaCita(cliente);
     }
 
     const _partes   = (cliente.nombre || 'C').trim().split(/\s+/).filter(Boolean);

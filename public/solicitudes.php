@@ -306,25 +306,51 @@ if (empty($_SESSION['cliente_email_verified'])) {
             </div>
 
             <div class="col-12 form-group">
-              <label>Dirección <span class="required">*</span></label>
-              <input type="text" name="direccion" placeholder="Calle y número" maxlength="255" autocomplete="street-address" required>
-              <div class="help-text">Requerida para la visita a domicilio</div>
-            </div>
-            <div class="col-md-6 form-group">
-              <label>Colonia</label>
-              <input type="text" name="colonia" placeholder="Ej: Col. Providencia" maxlength="120" autocomplete="address-line2">
-            </div>
-            <div class="col-md-6 form-group">
-              <label>Municipio / Alcaldía</label>
-              <input type="text" name="municipio" placeholder="Ej: Zapopan" maxlength="100">
-            </div>
-            <div class="col-md-6 form-group">
-              <label>Ciudad</label>
-              <input type="text" name="ciudad" placeholder="Ej: Guadalajara" maxlength="100" autocomplete="address-level2">
-            </div>
-            <div class="col-md-6 form-group">
-              <label>Código Postal</label>
-              <input type="text" name="cp" placeholder="Ej: 44100" maxlength="10" autocomplete="postal-code">
+              <div class="wh-info-box" style="margin-bottom:10px;">
+                <i class="fa-solid fa-location-dot"></i>
+                <span>Busca tu dirección y confirma la ubicación en el mapa — así llegamos exacto el día de la visita.</span>
+              </div>
+              <div id="citMapPickerContainer" class="form-group"></div>
+              <div style="text-align:right;margin-top:-4px;margin-bottom:4px;">
+                <button type="button" id="citBtnSkipMapa"
+                  style="background:none;border:none;color:var(--muted,#888);font-size:12px;cursor:pointer;text-decoration:underline;padding:0;">
+                  Ingresar dirección manualmente
+                </button>
+              </div>
+              <input type="hidden" name="direccion" id="citDireccion">
+              <input type="hidden" name="colonia"   id="citColonia">
+              <input type="hidden" name="ciudad"    id="citCiudad">
+              <input type="hidden" name="municipio" id="citMunicipio">
+              <input type="hidden" name="cp"        id="citCP">
+              <input type="hidden" name="lat"       id="citLat">
+              <input type="hidden" name="lng"       id="citLng">
+              <div id="citDireccionDetalleEdit" style="display:none;margin-top:6px;">
+                <p style="font-size:12px;color:var(--muted);margin-bottom:8px;"><i class="fa-solid fa-pen-to-square"></i> Ingresa o corrige tu dirección:</p>
+                <div class="row g-2">
+                  <div class="col-md-8 form-group" style="margin-bottom:8px;">
+                    <label style="font-size:12px;">Calle y número</label>
+                    <input type="text" id="citDireccionEdit" placeholder="Calle y número" style="font-size:13px;">
+                  </div>
+                  <div class="col-md-4 form-group" style="margin-bottom:8px;">
+                    <label style="font-size:12px;">CP</label>
+                    <input type="text" id="citCPEdit" placeholder="45000" maxlength="5" style="font-size:13px;">
+                  </div>
+                </div>
+                <div class="row g-2">
+                  <div class="col-md-4 form-group" style="margin-bottom:8px;">
+                    <label style="font-size:12px;">Colonia</label>
+                    <input type="text" id="citColoniaEdit" placeholder="Colonia" style="font-size:13px;">
+                  </div>
+                  <div class="col-md-4 form-group" style="margin-bottom:8px;">
+                    <label style="font-size:12px;">Ciudad</label>
+                    <input type="text" id="citCiudadEdit" placeholder="Ciudad" style="font-size:13px;">
+                  </div>
+                  <div class="col-md-4 form-group" style="margin-bottom:8px;">
+                    <label style="font-size:12px;">Municipio</label>
+                    <input type="text" id="citMunicipioEdit" placeholder="Municipio" style="font-size:13px;">
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

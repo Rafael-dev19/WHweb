@@ -148,6 +148,8 @@ switch ($method) {
         $municipioCita = sanitize($body['municipio'] ?? '');
         $ciudadCita    = sanitize($body['ciudad']    ?? '');
         $cpCita        = sanitize($body['cp']        ?? '');
+        $latCita       = filter_var($body['lat'] ?? null, FILTER_VALIDATE_FLOAT);
+        $lngCita       = filter_var($body['lng'] ?? null, FILTER_VALIDATE_FLOAT);
 
         $datosCita = [
             'numero_cita'      => $numeroCita,
@@ -164,6 +166,11 @@ switch ($method) {
             'tipo'             => $body['tipo'],
             'estado'           => 'nueva',
         ];
+        try {
+            dbRows("SELECT lat FROM citas LIMIT 0");
+            $datosCita['lat'] = $latCita !== false && $latCita !== null ? $latCita : null;
+            $datosCita['lng'] = $lngCita !== false && $lngCita !== null ? $lngCita : null;
+        } catch (\Throwable $e) {}
         $clienteSession = sesionClienteActiva();
         if ($clienteSession) {
             $tieneClienteId = false;

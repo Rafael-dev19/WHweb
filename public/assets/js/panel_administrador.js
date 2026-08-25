@@ -1907,8 +1907,13 @@
         const hoy   = new Date().toISOString().slice(0, 10);
         const hace7 = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
 
+        // tipo=ingresos es Reportes Avanzados (exclusivo de jefe, ver reportes.php) —
+        // no pedirlo para administrador/empleado/disenador, el servidor lo rechaza
+        // con 403 de cualquier forma y solo ensucia la consola sin dar nada útil.
         const [ingResult, resResult] = await Promise.allSettled([
-          apiFetch(`${API_BASE}/reportes.php?tipo=ingresos&agrupacion=dia&desde=${hace7}&hasta=${hoy}`),
+          window.WH_ES_JEFE
+            ? apiFetch(`${API_BASE}/reportes.php?tipo=ingresos&agrupacion=dia&desde=${hace7}&hasta=${hoy}`)
+            : Promise.resolve({ success: false }),
           apiFetch(`${API_BASE}/reportes.php?tipo=resumen`),
         ]);
 
@@ -2029,7 +2034,7 @@
       // No pisar un aviso ya visible (ej. de push-notifications.js) — "Bienvenido"
       // es decorativo, un aviso real (permisos, errores) importa más y debe leerse.
       setTimeout(() => {
-        if (!document.querySelector('.notification')) showNotification('Bienvenido, Administrador', 'success');
+        if (!document.querySelector('.notification')) showNotification(window.WH_ES_JEFE ? 'Bienvenido, Jefe' : 'Bienvenido, Administrador', 'success');
       }, 450);
       if (typeof firebaseAuth !== 'undefined') {
         firebaseAuth.onAuthStateChanged(async (user) => {
@@ -2064,17 +2069,26 @@ async function apiFetch(url, options = {}) {
   const res = await fetch(url, options);
   const ct = res.headers.get('content-type') || '';
   if (!ct.includes('application/json')) {
-    if (res.status === 401 || res.status === 403) {
+    if (res.status === 401) {
       showNotification('Sesión expirada. Recarga la página e inicia sesión.', 'error');
       throw new Error('No autenticado (' + res.status + ')');
+    }
+    if (res.status === 403) {
+      throw new Error('Acceso denegado (403)');
     }
     const txt = await res.text();
     throw new Error('Error del servidor (HTTP ' + res.status + '): ' + txt.substring(0, 300));
   }
   const data = await res.json();
-  if ((res.status === 401 || res.status === 403) && !data.success) {
+  if (res.status === 401 && !data.success) {
     showNotification('Sesión expirada. Recarga la página.', 'error');
     throw new Error(data.error || 'No autenticado');
+  }
+  // 403 = autenticado pero sin permiso para esto (rol distinto) — no es un
+  // problema de sesión, así que no se anuncia como tal. Silencioso: las
+  // llamadas que sí pueden dar 403 por rol ya se filtran antes de pedirse.
+  if (res.status === 403 && !data.success) {
+    throw new Error(data.error || 'Acceso denegado');
   }
   return data;
 }
@@ -2653,6 +2667,14 @@ async function verDetalleCitaAdmin(id) {
     const tipoLabels = { medicion:'Medición 📐',instalacion:'Instalación 🔧',otro:'Otro' };
     const est = c.estado || 'nueva';
 
+    let mapsBtnCita = '';
+    const partesDireccionCita = [c.direccion, c.colonia ? `Col. ${c.colonia}` : '', c.ciudad, c.municipio ? `Mpio. ${c.municipio}` : '', c.cp ? `CP ${c.cp}` : ''].filter(Boolean).join(', ');
+    if (c.lat && c.lng) {
+      mapsBtnCita = `<a href="https://www.google.com/maps/search/?api=1&query=${c.lat},${c.lng}" target="_blank" rel="noopener" style="color:#4285F4;">📍 Ver ubicación en el mapa</a>`;
+    } else if (partesDireccionCita) {
+      mapsBtnCita = `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(partesDireccionCita)}" target="_blank" rel="noopener" style="color:#4285F4;">📍 Ver dirección en el mapa</a>`;
+    }
+
     body.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:18px;">
         <span class="status-badge ${estClass[est]||'status-new'}">${estLabels[est]||est}</span>
@@ -2675,7 +2697,7 @@ async function verDetalleCitaAdmin(id) {
           <div><span style="color:var(--muted);display:block;font-size:10px;">Nombre</span><strong>${escapeHtml(c.nombre_cliente)}</strong></div>
           <div><span style="color:var(--muted);display:block;font-size:10px;">Teléfono</span><strong>${escapeHtml(c.telefono_cliente||'—')}</strong></div>
           <div style="grid-column:1/-1;"><span style="color:var(--muted);display:block;font-size:10px;">Correo</span><strong>${escapeHtml(c.correo_cliente)}</strong></div>
-          <div style="grid-column:1/-1;"><span style="color:var(--muted);display:block;font-size:10px;">📍 Dirección</span><strong>${escapeHtml(c.direccion||'Sin especificar')}</strong></div>
+          <div style="grid-column:1/-1;"><span style="color:var(--muted);display:block;font-size:10px;">📍 Dirección</span><strong>${escapeHtml(c.direccion||'Sin especificar')}</strong>${mapsBtnCita ? ` — ${mapsBtnCita}` : ''}</div>
           ${c.notas?`<div style="grid-column:1/-1;"><span style="color:var(--muted);display:block;font-size:10px;">Notas</span><strong>${escapeHtml(c.notas)}</strong></div>`:''}
           ${c.cliente_id?`<div style="grid-column:1/-1;margin-top:4px;"><span style="background:#2d6a3f20;color:#2d6a3f;border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700;"><i class="fa-solid fa-user-check"></i> Cliente registrado #${c.cliente_id}</span></div>`:''}
         </div>

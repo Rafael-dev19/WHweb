@@ -924,8 +924,11 @@ async function cargarCitasParaCalendario(silencioso = false) {
     const desde = `${anio}-01-01`;
     const hasta  = `${anio + 1}-12-31`;
 
+    // citas.php es exclusivo de jefe/administrador (ver matriz de permisos) —
+    // este panel es de empleado/disenador, así que nunca hay permiso: pedirlo
+    // solo ensucia la consola con 403 sin aportar nada al calendario.
     const [dataCitas, dataPedidos] = await Promise.allSettled([
-      apiFetch(`${API_BASE}/citas.php?limit=500&fecha_desde=${desde}&fecha_hasta=${hasta}`),
+      Promise.resolve({ success: false }),
       apiFetch(`${API_BASE}/pedidos.php?limit=500&fecha_desde=${desde}&fecha_hasta=${hasta}`)
     ]);
 
@@ -979,7 +982,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // No pisar un aviso ya visible (ej. de push-notifications.js) — "Bienvenido"
   // es decorativo, un aviso real (permisos, errores) importa más y debe leerse.
   setTimeout(() => {
-    if (!document.querySelector('.notification')) showNotification('Bienvenido', 'success');
+    if (!document.querySelector('.notification')) showNotification(window.WH_ROL === 'disenador' ? 'Bienvenido, Diseñador' : 'Bienvenido, Empleado', 'success');
   }, 400);
 
   // ── FIX MENSAJE DE DEBUG: Guardar sin iconos en addActivity, el render los pone ──
@@ -1015,7 +1018,8 @@ async function apiFetch(url, options = {}) {
   const res = await fetch(url, options);
   const ct = res.headers.get('content-type') || '';
   if (!ct.includes('application/json')) {
-    if (res.status === 401 || res.status === 403) throw new Error('Sesión expirada. Recarga la página.');
+    if (res.status === 401) throw new Error('Sesión expirada. Recarga la página.');
+    if (res.status === 403) throw new Error('Acceso denegado (403)');
     throw new Error('Error servidor HTTP ' + res.status);
   }
   return res.json();

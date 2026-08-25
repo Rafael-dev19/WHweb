@@ -129,6 +129,8 @@ Options -Indexes -ExecCGI
             https://static.cloudflareinsights.com \
             https://firebaseappcheck.googleapis.com \
             https://content-firebaseappcheck.googleapis.com \
+            https://firebaseinstallations.googleapis.com \
+            https://fcmregistrations.googleapis.com \
             https://www.google.com; \
         frame-src \
             https://js.stripe.com \
@@ -214,6 +216,8 @@ Options -Indexes -ExecCGI
                 https://static.cloudflareinsights.com \
                 https://firebaseappcheck.googleapis.com \
                 https://content-firebaseappcheck.googleapis.com \
+                https://firebaseinstallations.googleapis.com \
+                https://fcmregistrations.googleapis.com \
                 https://www.google.com; \
             frame-src \
                 https://js.stripe.com \

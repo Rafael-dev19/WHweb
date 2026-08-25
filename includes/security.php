@@ -121,16 +121,19 @@ function revocarSesionesCliente(int $clienteId): void {
 function verificarSesionPersonalRevocada(): void {
     if (empty($_SESSION['usuario_id']) || empty($_SESSION['_usuario_login_time'])) return;
     try {
+        // UNIX_TIMESTAMP() convierte usando la zona horaria de MySQL DENTRO de
+        // MySQL — nunca pasar la columna cruda a strtotime() en PHP: PHP corre
+        // en America/Mexico_City (ver config.php) pero el servidor de MySQL
+        // suele estar en UTC, y strtotime() interpretaría "NOW()" de MySQL como
+        // si ya fuera hora de México, adelantando la revocación varias horas y
+        // dejando la cuenta bloqueada como "revocada" mucho después de cerrar sesión.
         $row = dbRow(
-            "SELECT sesiones_revocadas_desde FROM usuarios_personal WHERE id = ? LIMIT 1",
+            "SELECT UNIX_TIMESTAMP(sesiones_revocadas_desde) AS revocado_unix FROM usuarios_personal WHERE id = ? LIMIT 1",
             [$_SESSION['usuario_id']]
         );
-        if (!$row || empty($row['sesiones_revocadas_desde'])) return;
-        // Margen de 3s: el timestamp de revocación viene del reloj de MySQL y el
-        // de login del reloj de PHP — sin margen, un re-login inmediato tras
-        // cerrar sesión puede quedar "antes" de la revocación por desfase de
-        // reloj entre servidores y expulsar al usuario que apenas inició sesión.
-        if (strtotime($row['sesiones_revocadas_desde']) > $_SESSION['_usuario_login_time'] + 3) {
+        if (!$row || empty($row['revocado_unix'])) return;
+        // Margen de 3s para tolerar el redondeo a segundos de UNIX_TIMESTAMP().
+        if ((int)$row['revocado_unix'] > $_SESSION['_usuario_login_time'] + 3) {
             _destruirSesionPersonal();
             jsonError('Sesión revocada. Por favor inicia sesión nuevamente.', 401);
         }
@@ -144,14 +147,16 @@ function verificarSesionPersonalRevocada(): void {
 function verificarSesionClienteRevocada(): void {
     if (empty($_SESSION['cliente_id']) || empty($_SESSION['_cliente_login_time'])) return;
     try {
+        // Ver comentario en verificarSesionPersonalRevocada(): UNIX_TIMESTAMP()
+        // hace la conversión de zona horaria dentro de MySQL en vez de dejar que
+        // PHP (en America/Mexico_City) reinterprete mal la hora de MySQL con strtotime().
         $row = dbRow(
-            "SELECT sesiones_revocadas_desde FROM clientes WHERE id = ? LIMIT 1",
+            "SELECT UNIX_TIMESTAMP(sesiones_revocadas_desde) AS revocado_unix FROM clientes WHERE id = ? LIMIT 1",
             [$_SESSION['cliente_id']]
         );
-        if (!$row || empty($row['sesiones_revocadas_desde'])) return;
-        // Mismo margen que verificarSesionPersonalRevocada() — evita el falso
-        // positivo de "sesión expirada" en un re-login inmediato.
-        if (strtotime($row['sesiones_revocadas_desde']) > $_SESSION['_cliente_login_time'] + 3) {
+        if (!$row || empty($row['revocado_unix'])) return;
+        // Margen de 3s para tolerar el redondeo a segundos de UNIX_TIMESTAMP().
+        if ((int)$row['revocado_unix'] > $_SESSION['_cliente_login_time'] + 3) {
             _destruirSesionCliente();
             jsonError('Sesión revocada. Por favor inicia sesión nuevamente.', 401);
         }

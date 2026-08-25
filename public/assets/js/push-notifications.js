@@ -7,10 +7,12 @@
 // explícito (nunca se pide el permiso del navegador sin que el usuario haya
 // tocado "Activar" primero — pedirlo automáticamente al entrar es confuso y
 // los navegadores lo penalizan). registerPush() hace el registro real.
+//
+// A pedido del jefe, las push son casi obligatorias para el personal: si no
+// están activadas, la tarjeta insiste en CADA inicio de sesión (sin cooldown
+// de días). "Ahora no"/cerrar solo la oculta por esta visita, no la apaga.
 
 const WH_PUSH_LS_REGISTRADO  = 'wh_push_registrado';
-const WH_PUSH_LS_DESCARTADO  = 'wh_push_prompt_descartado_at';
-const WH_PUSH_REPROMPT_DIAS  = 14; // si dice "Ahora no", se le vuelve a preguntar en N días
 
 function _avisoPush(msg, tipo) {
   console.warn('[Push] ' + msg);
@@ -112,15 +114,6 @@ async function registerPush() {
 }
 
 /* ── Tarjeta de opt-in explícita ─────────────────────────────────────── */
-
-function _pushDescartadoRecientemente() {
-  try {
-    const t = parseInt(localStorage.getItem(WH_PUSH_LS_DESCARTADO) || '0', 10);
-    if (!t) return false;
-    const dias = (Date.now() - t) / 86400000;
-    return dias < WH_PUSH_REPROMPT_DIAS;
-  } catch (_) { return false; }
-}
 
 function _crearTarjetaPush() {
   if (document.getElementById('pushPromptCard')) return document.getElementById('pushPromptCard');
@@ -235,7 +228,8 @@ function _mostrarPromptExito(card) {
 }
 
 function _descartarPrompt(card) {
-  try { localStorage.setItem(WH_PUSH_LS_DESCARTADO, String(Date.now())); } catch (_) {}
+  // Sin cooldown a propósito: el jefe pidió que insista en cada inicio de
+  // sesión hasta que el personal las active — esto solo oculta esta visita.
   _cerrarTarjetaPush(card);
 }
 
@@ -243,25 +237,28 @@ function _descartarPrompt(card) {
 async function initPushPrompt() {
   if (!('Notification' in window)) return; // navegador sin soporte, no molestar
 
-  // iOS en Safari normal: si ya descartó el aviso, no insistir cada visita.
   if (_esIOS() && !_esStandalone()) {
-    if (!_pushDescartadoRecientemente()) _mostrarPromptIOS(_crearTarjetaPush());
+    _mostrarPromptIOS(_crearTarjetaPush());
     return;
   }
 
   if (Notification.permission === 'granted') {
-    // Ya autorizado antes — solo (re)registrar el token en silencio, sin UI.
-    registerPush();
+    // Ya autorizado antes — (re)registrar el token en silencio; si falla
+    // (ej. token vencido, CSP, etc.) sí avisar, para no fallar mudo.
+    const res = await registerPush();
+    if (!res.ok && res.status === 'error') {
+      _avisoPush(res.mensaje ? ('No se pudo renovar el registro de notificaciones (' + res.mensaje + ').') : 'No se pudo renovar el registro de notificaciones.', 'warning');
+    }
     return;
   }
 
   if (Notification.permission === 'denied') {
-    if (!_pushDescartadoRecientemente()) _mostrarPromptInstrucciones(_crearTarjetaPush());
+    _mostrarPromptInstrucciones(_crearTarjetaPush());
     return;
   }
 
   // permission === 'default': nunca se ha preguntado — mostrar el opt-in.
-  if (!_pushDescartadoRecientemente()) _mostrarPromptInicial();
+  _mostrarPromptInicial();
 }
 
 window.registerPush   = registerPush;
