@@ -72,7 +72,7 @@ function agregarAlCarrito(producto) {
   guardarCarritoEnStorage();
   actualizarBadgeCarrito();
 
-  showNotification(`<i class="fa-solid fa-circle-check"></i> ${producto.nombre} agregado al carrito`, 'success');
+  showNotification(`<i data-lucide="circle-check"></i> ${producto.nombre} agregado al carrito`, 'success');
 }
 
 function eliminarDelCarrito(productoId) {
@@ -86,7 +86,7 @@ function eliminarDelCarrito(productoId) {
     guardarCarritoEnStorage();
     actualizarBadgeCarrito();
 
-    showNotification(`<i class="fa-solid fa-trash"></i> ${producto.nombre} eliminado del carrito`, 'info');
+    showNotification(`<i data-lucide="trash-2"></i> ${producto.nombre} eliminado del carrito`, 'info');
     return true;
   }
 
@@ -119,7 +119,7 @@ function vaciarCarrito() {
   guardarCarritoEnStorage();
   actualizarBadgeCarrito();
 
-  showNotification('<i class="fa-solid fa-trash"></i> Carrito vaciado', 'info');
+  showNotification('<i data-lucide="trash-2"></i> Carrito vaciado', 'info');
 }
 
 function obtenerCarrito() {
@@ -164,7 +164,7 @@ function cerrarSesion() {
   localStorage.removeItem('wh_token');
   AppState.usuario = null;
 
-  showNotification('<i class="fa-solid fa-hand-wave"></i> Sesión cerrada', 'info');
+  showNotification('<i data-lucide="log-out"></i> Sesión cerrada', 'info');
 
   setTimeout(() => {
     window.location.href = '/login';
@@ -180,7 +180,7 @@ function inicializarMenuMovil() {
   menuToggle.addEventListener('click', () => {
     const isOpen = navLinks.classList.toggle('open');
     menuToggle.setAttribute('aria-expanded', isOpen);
-    menuToggle.innerHTML = isOpen ? '<i class="fa-solid fa-xmark"></i>' : '<i class="fa-solid fa-bars"></i>';
+    menuToggle.innerHTML = isOpen ? '<i data-lucide="x"></i>' : '<i data-lucide="menu"></i>';
   });
 
   navLinks.querySelectorAll('a').forEach(link => {
@@ -188,7 +188,7 @@ function inicializarMenuMovil() {
       if (navLinks.classList.contains('open')) {
         navLinks.classList.remove('open');
         menuToggle.setAttribute('aria-expanded', 'false');
-        menuToggle.innerHTML = '<i class="fa-solid fa-bars"></i>';
+        menuToggle.innerHTML = '<i data-lucide="menu"></i>';
       }
     });
   });

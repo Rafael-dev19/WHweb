@@ -83,6 +83,8 @@ $RECYCLE.BIN/
 # ── SERVIDOR LOCAL DE DESARROLLO (php -S) ─────────────────────────
 # Solo emula localmente el Alias /api que en el VPS define Apache.
 router.php
+# Login directo a los paneles sin Firebase, solo para probar en local.
+public/_dev_login.php
 
 # ── PLAYWRIGHT (verificación visual local, no es parte del sitio) ─
 .playwright-mcp/

@@ -11,6 +11,11 @@
   let _firebaseAuth    = null;
   let _verifPollTimer  = null;
 
+  /* ── Re-renderizar íconos Lucide tras inyectar HTML dinámico ──── */
+  function _refreshIcons() {
+    if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+  }
+
   /* ── Crear estructura HTML del modal ─────────────────────────── */
   function _crearModal() {
     if (document.getElementById('authModalOverlay')) return;
@@ -19,7 +24,7 @@
 <div id="authModalOverlay" class="auth-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
   <div class="auth-modal">
     <button class="auth-modal-close" id="btnAuthClose" aria-label="Cerrar">
-      <i class="fa-solid fa-xmark"></i>
+      <i data-lucide="x"></i>
     </button>
 
     <div class="auth-modal-logo">
@@ -126,10 +131,10 @@
         <div class="auth-user-email" id="authUserEmail">—</div>
         <div class="auth-user-actions">
           <button class="btn-auth-mi-cuenta" id="btnAuthMiCuenta">
-            <i class="fa-solid fa-user-circle"></i> Mi cuenta
+            <i data-lucide="circle-user"></i> Mi cuenta
           </button>
           <button class="btn-auth-logout" id="btnAuthLogout">
-            <i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión
+            <i data-lucide="log-out"></i> Cerrar sesión
           </button>
         </div>
       </div>
@@ -140,6 +145,7 @@
     document.body.insertAdjacentHTML('beforeend', html);
     // El modal no se cierra al hacer clic en el fondo — solo con × o programáticamente
     _initCamposModal();
+    _refreshIcons();
   }
 
   /* ── Sanitización en tiempo real del modal ───────────────────── */
@@ -313,13 +319,14 @@
         <span>${_esc(_cliente.correo || '')}</span>
       </div>
       <a href="/mi-cuenta" class="auth-mini-item">
-        <i class="fa-solid fa-user-circle"></i> Mi cuenta
+        <i data-lucide="circle-user"></i> Mi cuenta
       </a>
       <div class="auth-mini-divider"></div>
       <button class="auth-mini-item auth-mini-logout">
-        <i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión
+        <i data-lucide="log-out"></i> Cerrar sesión
       </button>`;
     btn.appendChild(menu);
+    _refreshIcons();
     const miniLogout = menu.querySelector('.auth-mini-logout');
     if (miniLogout) miniLogout.addEventListener('click', () => window._authLogout());
 
@@ -365,12 +372,12 @@
         btn.innerHTML = `
           <span class="nav-auth-avatar-sm">${iniciales}</span>
           <span class="nav-auth-label-sm">${_esc(primerNombre)}</span>
-          <i class="fa-solid fa-chevron-down nav-auth-chevron-sm"></i>`;
+          <i data-lucide="chevron-down" class="nav-auth-chevron-sm"></i>`;
         btn.title = _cliente.nombre;
         btn.onclick = (e) => { e.stopPropagation(); _toggleAuthMiniMenu(btn); };
       } else {
         btn.classList.remove('autenticado');
-        btn.innerHTML = `<i class="fa-solid fa-user"></i> Iniciar sesión`;
+        btn.innerHTML = `<i data-lucide="user"></i> Iniciar sesión`;
         btn.title = 'Iniciar sesión o crear cuenta';
         btn.onclick = (e) => { e.stopPropagation(); AuthModal.open(); };
       }
@@ -380,17 +387,18 @@
     if (mbnBtn) {
       if (_cliente) {
         const iniciales = _getIniciales(_cliente.nombre);
-        mbnBtn.innerHTML = `<i class="fa-solid fa-user-check"></i><span>${iniciales}</span>`;
+        mbnBtn.innerHTML = `<i data-lucide="user-check"></i><span>${iniciales}</span>`;
         mbnBtn.style.color = '#c9a96e';
         mbnBtn.onclick = () => { window.location.href = '/mi-cuenta'; };
       } else {
-        mbnBtn.innerHTML = `<i class="fa-solid fa-user"></i><span>Iniciar sesión</span>`;
+        mbnBtn.innerHTML = `<i data-lucide="user"></i><span>Iniciar sesión</span>`;
         mbnBtn.style.color = '';
         mbnBtn.onclick = () => { AuthModal.open(); };
       }
     }
 
     _actualizarMbnCartBadge();
+    _refreshIcons();
   }
 
   /* ── Actualizar vista del modal ──────────────────────────────── */
@@ -439,8 +447,9 @@
           document.getElementById('whVerifBanner')?.remove();
           const toast = document.createElement('div');
           toast.className = 'wh-toast-verificado';
-          toast.innerHTML = '<i class="fa-solid fa-circle-check"></i> ¡Correo verificado! Ya puedes completar tus compras.';
+          toast.innerHTML = '<i data-lucide="circle-check"></i> ¡Correo verificado! Ya puedes completar tus compras.';
           document.body.appendChild(toast);
+          _refreshIcons();
           setTimeout(() => toast.remove(), 5000);
           document.dispatchEvent(new CustomEvent('wh:email-verificado', { detail: _cliente }));
         }
@@ -460,14 +469,14 @@
     banner.id        = 'whVerifBanner';
     banner.className = 'wh-verif-banner';
     banner.innerHTML = `
-      <span class="wh-verif-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+      <span class="wh-verif-icon"><i data-lucide="triangle-alert"></i></span>
       <span class="wh-verif-text">
         <strong>Confirma tu correo electrónico</strong> — Enviamos un enlace a <strong>${correo}</strong>.
         Sin confirmar no podrás completar compras.
       </span>
       <div class="wh-verif-actions">
         <button type="button" class="wh-verif-btn" id="btnBannerReenviar">
-          <i class="fa-solid fa-paper-plane"></i> Reenviar
+          <i data-lucide="send"></i> Reenviar
         </button>
         <button type="button" class="wh-verif-btn wh-verif-btn-ok" id="btnBannerYaVerifique">
           Ya verifiqué
@@ -481,24 +490,26 @@
     const btnBannerYaVerif = document.getElementById('btnBannerYaVerifique');
     if (btnBannerYaVerif) btnBannerYaVerif.addEventListener('click', () => window._authYaVerifique());
     _iniciarPollingVerificacion();
+    _refreshIcons();
   }
 
   window._authReenviarBanner = async function(e) {
     const btn = document.getElementById('btnBannerReenviar');
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando…'; }
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="auth-spinner"></span> Enviando…'; }
     try {
       const auth = await _getAuth();
       const user = auth.currentUser;
       if (!user) throw new Error('sin sesión');
       const { sendEmailVerification } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js');
       await sendEmailVerification(user);
-      if (btn) { btn.innerHTML = '<i class="fa-solid fa-check"></i> Enviado'; btn.style.background = '#3d7848'; }
+      if (btn) { btn.innerHTML = '<i data-lucide="check"></i> Enviado'; btn.style.background = '#3d7848'; _refreshIcons(); }
     } catch (err) {
       if (btn) {
         btn.disabled = false;
         btn.innerHTML = err.code === 'auth/too-many-requests'
           ? 'Espera un momento'
-          : '<i class="fa-solid fa-paper-plane"></i> Reenviar';
+          : '<i data-lucide="send"></i> Reenviar';
+        _refreshIcons();
       }
     }
   };

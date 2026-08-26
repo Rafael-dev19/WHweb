@@ -28,6 +28,9 @@ if ($_prodId > 0) {
   <?php if ($_prodId > 0): ?>
   <link rel="canonical" href="<?= APP_URL ?>/detalle/<?= $_prodId ?>">
   <?php endif; ?>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
   <link rel="stylesheet" href="/assets/<?= av('css/variables.css') ?>">
   <link rel="stylesheet" href="/assets/<?= av('css/styles.css') ?>">
@@ -36,6 +39,7 @@ if ($_prodId > 0) {
   <link rel="stylesheet" href="/assets/<?= av('css/animations.css') ?>">
   <link rel="stylesheet" href="/assets/<?= av('css/modal-auth.css') ?>">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous" defer></script>
 </head>
 <body>
@@ -52,7 +56,7 @@ if ($_prodId > 0) {
       <a href="/solicitudes" title="Pedir cotización o agendar una cita de medición">Solicitar</a>
       <a href="/seguimiento" title="Consulta el estado de tu pedido, cita o cotización">Seguimiento</a>
       <a href="/carrito" class="cart-icon" id="cartIcon" title="Ver mi carrito">
-        <i class="fa-solid fa-cart-shopping"></i> <span class="cart-badge" id="cartCount">0</span>
+        <i data-lucide="shopping-cart"></i> <span class="cart-badge" id="cartCount">0</span>
       </a>
     </div>
   </div>
@@ -65,18 +69,18 @@ if ($_prodId > 0) {
   </div>
 
   <div id="errorState" class="container" style="display:none; text-align:center; padding:60px 20px;">
-    <p><i class="fa-solid fa-triangle-exclamation"></i> Producto no encontrado o no disponible.</p>
+    <p><i data-lucide="triangle-alert"></i> Producto no encontrado o no disponible.</p>
     <a href="/catalogo" class="btn-primary" style="display:inline-block;margin-top:15px;">← Volver al catálogo</a>
   </div>
 
   <div id="page" class="container" style="display:none;">
     <a href="/catalogo" class="btn-back" style="margin-bottom:16px;display:inline-flex;">
-      <i class="fa-solid fa-arrow-left"></i> Volver al catálogo
+      <i data-lucide="arrow-left"></i> Volver al catálogo
     </a>
     <div class="row g-4 mb-5 product-detail" id="productDetail">
       <div class="col-md-6 gallery">
         <div class="main-image" id="mainImageBox">
-          <div class="placeholder-img" id="imgPlaceholder"><i class="fa-solid fa-tree"></i></div>
+          <div class="placeholder-img" id="imgPlaceholder"><i data-lucide="tree-pine"></i></div>
           <img id="mainImage" alt="Imagen principal" style="display:none;" data-img-fallback="imgPlaceholder">
         </div>
         <div class="row row-cols-4 g-2 mt-2 thumbnails" id="thumbs"></div>
@@ -92,7 +96,7 @@ if ($_prodId > 0) {
         <div class="price-large" id="pPrecio">$0</div>
 
         <div class="stock-indicator" id="pStockIndicador">
-          <span id="pStockIcon"><i class="fa-solid fa-circle-check"></i></span>
+          <span id="pStockIcon"><i data-lucide="circle-check"></i></span>
           <span id="pStockText"><strong>Disponible</strong> - Fabricación bajo pedido</span>
           <span class="wh-help" data-tip="Nuestros muebles se fabrican a pedido, por lo que siempre están disponibles. El tiempo de fabricación varía entre 2 y 15 días hábiles según el modelo.">?</span>
         </div>
@@ -113,10 +117,10 @@ if ($_prodId > 0) {
             <input type="number" class="quantity-input" id="cantidad" value="1" min="1" max="99">
             <button class="quantity-btn" id="btnPlus" type="button" data-call="cambiarCantidad" data-args="[1]">+</button>
           </div>
-          <button class="btn-add-cart" id="btnAddCart" type="button"><i class="fa-solid fa-cart-shopping"></i> Agregar al Carrito</button>
+          <button class="btn-add-cart" id="btnAddCart" type="button"><i data-lucide="shopping-cart"></i> Agregar al Carrito</button>
           <a href="/carrito" class="btn-ver-carrito" style="display:none;" id="btnVerCarrito">Ver Carrito →</a>
           <div class="shipping-note">
-            <i class="fa-solid fa-truck"></i> Envíos en ZMG · Instalación profesional disponible
+            <i data-lucide="truck"></i> Envíos en ZMG · Instalación profesional disponible
             <span class="wh-help wh-help--left" data-tip="Realizamos entregas dentro de la Zona Metropolitana de Guadalajara. La instalación profesional tiene un costo adicional que se muestra en el carrito.">?</span>
           </div>
         </div>
@@ -125,8 +129,8 @@ if ($_prodId > 0) {
 
     <div class="tabs">
       <div class="tabs-header">
-        <button class="tab-button active" data-tab="tab-especificaciones" type="button"><i class="fa-solid fa-clipboard-list"></i> Especificaciones</button>
-        <button class="tab-button" data-tab="tab-delivery" type="button"><i class="fa-solid fa-truck"></i> Entrega e Instalación</button>
+        <button class="tab-button active" data-tab="tab-especificaciones" type="button"><i data-lucide="clipboard-list"></i> Especificaciones</button>
+        <button class="tab-button" data-tab="tab-delivery" type="button"><i data-lucide="truck"></i> Entrega e Instalación</button>
       </div>
 
       <div id="tab-especificaciones" class="tab-pane active">
@@ -157,11 +161,11 @@ if ($_prodId > 0) {
 
   <nav class="mobile-bottom-nav" aria-label="Navegación rápida">
     <div class="mobile-bottom-nav-inner">
-      <a href="/catalogo" class="mbn-item mbn-item--active"><i class="fa-solid fa-store"></i><span>Catálogo</span></a>
-      <a href="/solicitudes" class="mbn-item"><i class="fa-solid fa-file-invoice"></i><span>Solicitar</span></a>
-      <a href="/seguimiento" class="mbn-item"><i class="fa-solid fa-magnifying-glass"></i><span>Seguimiento</span></a>
-      <a href="/carrito" class="mbn-item"><span class="mbn-icon-wrap"><i class="fa-solid fa-cart-shopping"></i><span class="mbn-cart-badge"></span></span><span>Carrito</span></a>
-      <button class="mbn-item" data-auth-action="openMenuMovil"><i class="fa-solid fa-user"></i><span>Mi cuenta</span></button>
+      <a href="/catalogo" class="mbn-item mbn-item--active"><i data-lucide="store"></i><span>Catálogo</span></a>
+      <a href="/solicitudes" class="mbn-item"><i data-lucide="receipt"></i><span>Solicitar</span></a>
+      <a href="/seguimiento" class="mbn-item"><i data-lucide="search"></i><span>Seguimiento</span></a>
+      <a href="/carrito" class="mbn-item"><span class="mbn-icon-wrap"><i data-lucide="shopping-cart"></i><span class="mbn-cart-badge"></span></span><span>Carrito</span></a>
+      <button class="mbn-item" data-auth-action="openMenuMovil"><i data-lucide="user"></i><span>Mi cuenta</span></button>
     </div>
   </nav>
 
@@ -171,5 +175,10 @@ if ($_prodId > 0) {
   <script src="/assets/<?= av('js/detalle_producto.js') ?>"></script>
   <script src="/assets/<?= av('js/event-delegation.js') ?>"></script>
   <script src="/assets/<?= av('js/animations.js') ?>"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      if (window.lucide) window.lucide.createIcons();
+    });
+  </script>
 </body>
 </html>

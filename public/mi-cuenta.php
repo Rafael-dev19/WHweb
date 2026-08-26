@@ -23,6 +23,9 @@ header('Content-Type: text/html; charset=utf-8');
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Mi Cuenta – Wooden House</title>
   <meta name="description" content="Gestiona tu cuenta en Wooden House. Consulta tu historial de pedidos, cotizaciones y actualiza tus datos personales.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
   <link rel="stylesheet" href="./assets/<?= av('css/variables.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/styles.css') ?>">
@@ -31,6 +34,7 @@ header('Content-Type: text/html; charset=utf-8');
   <link rel="stylesheet" href="./assets/<?= av('css/locked-field.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/theme-toggle.css') ?>">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous" defer></script>
 </head>
 <body>
@@ -48,10 +52,10 @@ header('Content-Type: text/html; charset=utf-8');
     <a href="/solicitudes" title="Pedir cotización o agendar una cita de medición">Solicitar</a>
     <a href="/seguimiento" title="Consulta el estado de tu pedido, cita o cotización">Seguimiento</a>
     <a href="/carrito" class="cart-icon" aria-label="Ver carrito" title="Ver mi carrito">
-      <i class="fa-solid fa-cart-shopping"></i>
+      <i data-lucide="shopping-cart"></i>
     </a>
     <button class="btn-cuenta-nav autenticado" title="Ver mi cuenta">
-      <i class="fa-solid fa-user-circle"></i> Mi cuenta
+      <i data-lucide="circle-user"></i> Mi cuenta
     </button>
   </div>
 </div>
@@ -66,11 +70,11 @@ header('Content-Type: text/html; charset=utf-8');
   </div>
 
   <div id="mcNoAuth" style="display:none;" class="mc-noauth">
-    <div class="mc-noauth-icon"><i class="fa-solid fa-user-lock"></i></div>
+    <div class="mc-noauth-icon"><i data-lucide="lock"></i></div>
     <h1>Inicia sesión para ver tu cuenta</h1>
     <p>Accede a tu historial de pedidos, cotizaciones y datos personales.</p>
     <button class="btn-mc-primary" data-auth-action="openAndReload">
-      <i class="fa-solid fa-right-to-bracket"></i> Iniciar sesión
+      <i data-lucide="log-in"></i> Iniciar sesión
     </button>
   </div>
 
@@ -84,22 +88,22 @@ header('Content-Type: text/html; charset=utf-8');
         <span class="mc-badge">Cliente registrado</span>
       </div>
       <button class="mc-logout-btn" data-auth-action="logout" title="Cerrar sesión">
-        <i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión
+        <i data-lucide="log-out"></i> Cerrar sesión
       </button>
     </div>
 
     <div class="mc-tabs">
       <button class="mc-tab active" data-tab="pedidos" data-call="mcShowTab" data-args='["pedidos"]'>
-        <i class="fa-solid fa-box"></i> Mis pedidos
+        <i data-lucide="package"></i> Mis pedidos
       </button>
       <button class="mc-tab" data-tab="perfil" data-call="mcShowTab" data-args='["perfil"]'>
-        <i class="fa-solid fa-user-pen"></i> Mi perfil
+        <i data-lucide="user-pen"></i> Mi perfil
       </button>
     </div>
 
     <div id="mcTabPedidos" class="mc-tab-content active">
       <div class="mc-section-title">
-        <i class="fa-solid fa-box"></i> Historial de pedidos
+        <i data-lucide="package"></i> Historial de pedidos
       </div>
       <div id="mcPedidosList">
         <div class="mc-loading-inline"><div class="mc-spinner-sm"></div> Cargando pedidos…</div>
@@ -108,16 +112,16 @@ header('Content-Type: text/html; charset=utf-8');
 
     <div id="mcTabPerfil" class="mc-tab-content" style="display:none;">
       <div class="mc-section-title">
-        <i class="fa-solid fa-user-pen"></i> Editar perfil
+        <i data-lucide="user-pen"></i> Editar perfil
       </div>
       <div id="mcPerfilAlert" class="mc-alert"></div>
-      <p class="mc-form-hint"><i class="fa-solid fa-circle-info"></i> Completa tu dirección para agilizar cotizaciones y pedidos — no tendrás que escribirla de nuevo.</p>
+      <p class="mc-form-hint"><i data-lucide="info"></i> Completa tu dirección para agilizar cotizaciones y pedidos — no tendrás que escribirla de nuevo.</p>
       <form id="mcPerfilForm" class="mc-form">
         <div class="row g-3">
           <div class="col-md-6 mc-form-group">
             <label>Nombre completo <span class="mc-req">*</span>
               <span class="mc-tooltip" title="Este nombre aparecerá en tus cotizaciones y pedidos.">
-                <i class="fa-solid fa-circle-question"></i>
+                <i data-lucide="circle-help"></i>
               </span>
             </label>
             <input type="text" id="pfNombre" name="nombre" required minlength="2" maxlength="120">
@@ -125,7 +129,7 @@ header('Content-Type: text/html; charset=utf-8');
           <div class="col-md-6 mc-form-group">
             <label>Teléfono
               <span class="mc-tooltip" title="Te contactaremos aquí para coordinar entregas o instalación.">
-                <i class="fa-solid fa-circle-question"></i>
+                <i data-lucide="circle-help"></i>
               </span>
             </label>
             <input type="tel" id="pfTelefono" name="telefono" maxlength="20" placeholder="10 dígitos">
@@ -133,15 +137,15 @@ header('Content-Type: text/html; charset=utf-8');
         </div>
         <div class="mc-form-actions">
           <button type="submit" class="btn-mc-primary" id="btnGuardarPerfil">
-            <i class="fa-solid fa-floppy-disk"></i> Guardar cambios
+            <i data-lucide="save"></i> Guardar cambios
           </button>
         </div>
       </form>
 
       <div class="mc-section-title" style="margin-top:28px;">
-        <i class="fa-solid fa-location-dot"></i> Dirección
+        <i data-lucide="map-pin"></i> Dirección
       </div>
-      <p class="mc-form-hint"><i class="fa-solid fa-circle-info"></i> Guárdala una vez y la usaremos para tus próximas cotizaciones y pedidos, sin volver a pedírtela.</p>
+      <p class="mc-form-hint"><i data-lucide="info"></i> Guárdala una vez y la usaremos para tus próximas cotizaciones y pedidos, sin volver a pedírtela.</p>
       <div id="mcDireccionWrap"></div>
     </div>
 
@@ -165,11 +169,11 @@ header('Content-Type: text/html; charset=utf-8');
 
 <nav class="mobile-bottom-nav" aria-label="Navegación rápida">
   <div class="mobile-bottom-nav-inner">
-    <a href="/catalogo" class="mbn-item"><i class="fa-solid fa-store"></i><span>Catálogo</span></a>
-    <a href="/solicitudes" class="mbn-item"><i class="fa-solid fa-file-invoice"></i><span>Solicitar</span></a>
-    <a href="/seguimiento" class="mbn-item"><i class="fa-solid fa-magnifying-glass"></i><span>Seguimiento</span></a>
-    <a href="/carrito" class="mbn-item"><span class="mbn-icon-wrap"><i class="fa-solid fa-cart-shopping"></i><span class="mbn-cart-badge"></span></span><span>Carrito</span></a>
-    <button class="mbn-item mbn-item--active" data-auth-action="openMenuMovil"><i class="fa-solid fa-user"></i><span>Mi cuenta</span></button>
+    <a href="/catalogo" class="mbn-item"><i data-lucide="store"></i><span>Catálogo</span></a>
+    <a href="/solicitudes" class="mbn-item"><i data-lucide="receipt"></i><span>Solicitar</span></a>
+    <a href="/seguimiento" class="mbn-item"><i data-lucide="search"></i><span>Seguimiento</span></a>
+    <a href="/carrito" class="mbn-item"><span class="mbn-icon-wrap"><i data-lucide="shopping-cart"></i><span class="mbn-cart-badge"></span></span><span>Carrito</span></a>
+    <button class="mbn-item mbn-item--active" data-auth-action="openMenuMovil"><i data-lucide="user"></i><span>Mi cuenta</span></button>
   </div>
 </nav>
 <script src="./assets/<?= av('js/theme-toggle.js') ?>"></script>
@@ -183,5 +187,10 @@ header('Content-Type: text/html; charset=utf-8');
 <?php if (defined('GOOGLE_MAPS_API_KEY') && GOOGLE_MAPS_API_KEY): ?>
 <script src="https://maps.googleapis.com/maps/api/js?key=<?= htmlspecialchars(GOOGLE_MAPS_API_KEY) ?>&libraries=places&callback=initMapsPickerReady&loading=async" async defer></script>
 <?php endif; ?>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (window.lucide) window.lucide.createIcons();
+  });
+</script>
 </body>
 </html>

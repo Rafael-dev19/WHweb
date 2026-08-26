@@ -17,7 +17,7 @@ const WH_PUSH_LS_REGISTRADO  = 'wh_push_registrado';
 function _avisoPush(msg, tipo) {
   console.warn('[Push] ' + msg);
   if (typeof showNotification === 'function') {
-    showNotification('<i class="fa-solid fa-bell-slash"></i> ' + msg, tipo || 'info');
+    showNotification('<i data-lucide="bell-off"></i> ' + msg, tipo || 'info');
   }
 }
 
@@ -102,7 +102,7 @@ async function registerPush() {
       const titulo = payload.notification?.title || payload.data?.title || 'Wooden House';
       const cuerpo = payload.notification?.body  || payload.data?.body  || 'Ingresa al sitio para ver los detalles.';
       if (typeof showNotification === 'function') {
-        showNotification(`<i class="fa-solid fa-bell"></i> <strong>${titulo}</strong> — ${cuerpo}`, 'info');
+        showNotification(`<i data-lucide="bell"></i> <strong>${titulo}</strong> — ${cuerpo}`, 'info');
       }
     });
 
@@ -115,26 +115,50 @@ async function registerPush() {
 
 /* ── Tarjeta de opt-in explícita ─────────────────────────────────────── */
 
+function _crearFondoPush() {
+  if (document.getElementById('pushPromptBackdrop')) return document.getElementById('pushPromptBackdrop');
+  const backdrop = document.createElement('div');
+  backdrop.id = 'pushPromptBackdrop';
+  backdrop.className = 'push-prompt-backdrop';
+  document.body.appendChild(backdrop);
+  return backdrop;
+}
+
 function _crearTarjetaPush() {
-  if (document.getElementById('pushPromptCard')) return document.getElementById('pushPromptCard');
+  const backdrop = _crearFondoPush();
+  const existente = document.getElementById('pushPromptCard');
+  if (existente) return existente;
   const card = document.createElement('div');
   card.id = 'pushPromptCard';
   card.className = 'push-prompt-card';
   document.body.appendChild(card);
+  // Nueva tarjeta: dispara la transición de aparición aquí (una sola vez,
+  // sin importar qué vista se renderice después) para que también se vea
+  // en los casos que entran directo a una vista distinta a la inicial
+  // (iOS sin instalar, permiso ya bloqueado) — antes el fondo/tarjeta se
+  // quedaban en opacity:0 para esos casos porque nadie agregaba .visible.
+  requestAnimationFrame(() => {
+    card.classList.add('visible');
+    backdrop.classList.add('visible');
+  });
   return card;
 }
 
 function _cerrarTarjetaPush(card) {
   if (!card) return;
   card.classList.remove('visible');
-  setTimeout(() => card.remove(), 250);
+  document.getElementById('pushPromptBackdrop')?.classList.remove('visible');
+  setTimeout(() => {
+    card.remove();
+    document.getElementById('pushPromptBackdrop')?.remove();
+  }, 250);
 }
 
 /* Vista 1: pedir permiso explícito (permission === 'default') */
 function _mostrarPromptInicial() {
   const card = _crearTarjetaPush();
   card.innerHTML = `
-    <div class="push-prompt-icon"><i class="fa-solid fa-bell"></i></div>
+    <div class="push-prompt-icon"><i data-lucide="bell"></i></div>
     <div class="push-prompt-body">
       <strong>¿Recibir notificaciones del sitio?</strong>
       <p>Te avisamos al instante de pedidos, cotizaciones y citas nuevas, aunque no tengas el panel abierto.</p>
@@ -144,12 +168,11 @@ function _mostrarPromptInicial() {
       <button type="button" class="push-prompt-btn push-prompt-btn-ghost" id="btnPushAhoraNo">Ahora no</button>
     </div>
     <button type="button" class="push-prompt-close" id="btnPushCerrar" aria-label="Cerrar">×</button>`;
-  requestAnimationFrame(() => card.classList.add('visible'));
 
   document.getElementById('btnPushActivar').addEventListener('click', async () => {
     const btn = document.getElementById('btnPushActivar');
     btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Activando…';
+    btn.innerHTML = '<i class="wh-icon-spin" data-lucide="loader-circle"></i> Activando…';
     const res = await registerPush();
     if (res.ok) {
       _mostrarPromptExito(card);
@@ -176,7 +199,7 @@ function _mostrarPromptInstrucciones(card) {
     : 'Toca el candado 🔒 o el ícono "i" junto a la dirección del sitio → Notificaciones → Permitir, y recarga la página.';
 
   card.innerHTML = `
-    <div class="push-prompt-icon push-prompt-icon-warn"><i class="fa-solid fa-triangle-exclamation"></i></div>
+    <div class="push-prompt-icon push-prompt-icon-warn"><i data-lucide="triangle-alert"></i></div>
     <div class="push-prompt-body">
       <strong>Las notificaciones están bloqueadas</strong>
       <p>Tu navegador ya no deja que el sitio vuelva a preguntar. ${pasos}</p>
@@ -204,10 +227,10 @@ function _mostrarPromptInstrucciones(card) {
 /* Vista 3: iOS/iPadOS en Safari normal (no instalado a pantalla de inicio) */
 function _mostrarPromptIOS(card) {
   card.innerHTML = `
-    <div class="push-prompt-icon"><i class="fa-solid fa-mobile-screen-button"></i></div>
+    <div class="push-prompt-icon"><i data-lucide="smartphone"></i></div>
     <div class="push-prompt-body">
       <strong>Instala el panel para recibir notificaciones</strong>
-      <p>En iPhone/iPad: toca <i class="fa-solid fa-arrow-up-from-bracket"></i> Compartir → "Agregar a pantalla de inicio", y vuelve a abrir el panel desde ese ícono (no desde Safari).</p>
+      <p>En iPhone/iPad: toca <i data-lucide="share"></i> Compartir → "Agregar a pantalla de inicio", y vuelve a abrir el panel desde ese ícono (no desde Safari).</p>
     </div>
     <div class="push-prompt-actions">
       <button type="button" class="push-prompt-btn push-prompt-btn-primary" id="btnPushEntendido">Entendido</button>
@@ -219,7 +242,7 @@ function _mostrarPromptIOS(card) {
 
 function _mostrarPromptExito(card) {
   card.innerHTML = `
-    <div class="push-prompt-icon push-prompt-icon-ok"><i class="fa-solid fa-circle-check"></i></div>
+    <div class="push-prompt-icon push-prompt-icon-ok"><i data-lucide="circle-check"></i></div>
     <div class="push-prompt-body">
       <strong>¡Notificaciones activadas!</strong>
       <p>Ya vas a recibir avisos de este dispositivo.</p>

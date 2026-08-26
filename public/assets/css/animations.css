@@ -212,7 +212,7 @@
 
 /* ── Sidebar item hover ──────────────────────────────────────────── */
 .sidebar-item {
-  transition: background 0.18s ease, border-left-color 0.18s ease, padding-left 0.18s ease;
+  transition: background 0.18s ease;
 }
 
 /* ── Badge entrada ───────────────────────────────────────────────── */

@@ -35,8 +35,14 @@
   --color-info:       #4a8bc4;
   --color-info-bg:    rgba(74, 139, 196, 0.15);
 
-  /* === TIPOGRAFÍA === */
-  --font-main: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  /* === TIPOGRAFÍA ===
+     --font-body: texto y UI en todo el sitio (marketing + paneles).
+     --font-display: solo para títulos en superficies de cara al cliente
+     (home, catálogo, checkout) — los paneles internos se quedan con
+     --font-body también en títulos, ver DESIGN.md. */
+  --font-body: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  --font-display: 'Fraunces', 'Georgia', 'Segoe UI', serif;
+  --font-main: var(--font-body);
   --font-size-base: 16px;
   --font-size-xs:   12px;
   --font-size-sm:   14px;
@@ -75,6 +81,16 @@
   --transition-fast:   0.15s ease;
   --transition-normal: 0.3s ease;
   --transition-slow:   0.5s ease;
+
+  /* === ICONOS LUCIDE ===
+     Lucide agrega la clase "lucide" a cada <svg> que genera (además de las
+     clases que ya tuviera el <i data-lucide> original). Con 1em, el ícono
+     hereda el font-size de su contenedor tal como lo hacía Font Awesome por
+     defecto — así paneles con cientos de íconos no necesitan una regla de
+     tamaño por componente; solo los casos especiales (vacíos, hero) llevan
+     su propio ancho/alto explícito que gana por especificidad o por venir
+     después en la cascada. */
+  --icon-stroke-width: 1.75;
 
   /* === Z-INDEX === */
   --z-header:       1000;

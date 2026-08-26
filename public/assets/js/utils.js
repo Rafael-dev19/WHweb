@@ -156,12 +156,13 @@ function showLoader(message = 'Cargando...') {
   // Construir con DOM API en lugar de innerHTML para evitar XSS en el mensaje
   const icon = document.createElement('div');
   icon.style.cssText = 'font-size: 48px; margin-bottom: 20px; color: #8b7355;';
-  icon.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+  icon.innerHTML = '<i class="wh-icon-spin" data-lucide="loader-circle"></i>';
   const texto = document.createElement('div');
   texto.style.fontSize = '18px';
   texto.textContent = message;   // textContent no interpreta HTML
   loader.append(icon, texto);
   document.body.appendChild(loader);
+  window.lucide?.createIcons();
   return loader;
 }
 
@@ -181,6 +182,7 @@ function showNotification(message, type = 'info', duration = 4000) {
   };
 
   const notification = document.createElement('div');
+  notification.className = 'wh-notification';
   notification.style.cssText = `
     position: fixed;
     top: 20px;
@@ -193,11 +195,14 @@ function showNotification(message, type = 'info', duration = 4000) {
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     animation: slideInRight 0.3s ease;
     max-width: 400px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   `;
-  notification.textContent = message;
-  
+  notification.innerHTML = message; // los llamadores incluyen su propio ícono <i data-lucide="...">
   document.body.appendChild(notification);
-  
+  if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+
   setTimeout(() => {
     notification.style.animation = 'slideOutRight 0.3s ease';
     setTimeout(() => notification.remove(), 300);

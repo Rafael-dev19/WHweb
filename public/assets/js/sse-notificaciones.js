@@ -47,7 +47,7 @@
     toast.className = 'wh-toast';
     Object.assign(toast.style, {
       background:   'var(--card, #fff)',
-      borderLeft:   `4px solid ${color}`,
+      border:       '1px solid var(--border, #3c3c3c)',
       color:        'var(--text, #1a1a1a)',
     });
     toast.innerHTML =

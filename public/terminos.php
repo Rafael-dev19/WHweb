@@ -12,6 +12,9 @@ require_once dirname(__DIR__) . '/includes/env.php';
   <title>Términos y Condiciones – Wooden House</title>
   <meta name="description" content="Términos y condiciones de Wooden House. Conoce nuestras políticas de compra, envíos, devoluciones, garantías y aviso de privacidad.">
   <link rel="canonical" href="<?= APP_URL ?>/terminos">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
   <link rel="stylesheet" href="./assets/<?= av('css/variables.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/styles.css') ?>">
@@ -19,6 +22,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
   <link rel="stylesheet" href="./assets/<?= av('css/theme-toggle.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/modal-auth.css') ?>">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
 </head>
 <body>
 
@@ -30,7 +34,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
     </a>
   </div>
   <div class="nav-links">
-    <a href="/inicio"><i class="fa-solid fa-house"></i> Inicio</a>
+    <a href="/inicio"><i data-lucide="house"></i> Inicio</a>
     <a href="/catalogo">Catálogo</a>
     <a href="/solicitudes" title="Pedir cotización o agendar una cita de medición">Solicitar</a>
     <a href="/seguimiento" title="Consulta el estado de tu pedido, cita o cotización">Seguimiento</a>
@@ -42,14 +46,14 @@ require_once dirname(__DIR__) . '/includes/env.php';
 <div class="page-wrap">
 
   <div class="page-header">
-    <h1><i class="fa-solid fa-file-contract"></i> Términos y Condiciones</h1>
+    <h1><i data-lucide="file-text"></i> Términos y Condiciones</h1>
     <p>Wooden House &nbsp;·&nbsp; Fecha de elaboración: agosto de 2026 &nbsp;·&nbsp; Guadalajara, Jalisco</p>
     <p style="margin-top:6px;font-size:13px;color:var(--color-text-muted);">Estos Términos y Condiciones constituyen un contrato válido conforme a la normativa mexicana vigente. Al usar este sitio, el usuario acepta todas las condiciones aquí establecidas.</p>
   </div>
 
   <!-- 1. Datos de la empresa -->
   <div class="section">
-    <h2><i class="fa-solid fa-building"></i> 1. Datos de la empresa</h2>
+    <h2><i data-lucide="building-2"></i> 1. Datos de la empresa</h2>
     <p>
       <strong>Wooden House</strong> es una empresa mexicana dedicada a la fabricación y comercialización
       de muebles de madera a medida — cocinas integrales, clósets y muebles de baño —, con domicilio en Guadalajara, Jalisco.
@@ -59,7 +63,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
 
   <!-- 2. Uso del sitio -->
   <div class="section">
-    <h2><i class="fa-solid fa-globe"></i> 2. Uso del sitio</h2>
+    <h2><i data-lucide="globe"></i> 2. Uso del sitio</h2>
     <p>
       El usuario se compromete a utilizar este sitio web únicamente para fines legales y respetuosos, conforme
       a la legislación mexicana aplicable y a los presentes Términos y Condiciones.
@@ -80,7 +84,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
 
   <!-- 3. Registro y cuentas -->
   <div class="section">
-    <h2><i class="fa-solid fa-user-lock"></i> 3. Registro y cuentas de usuario</h2>
+    <h2><i data-lucide="user-lock"></i> 3. Registro y cuentas de usuario</h2>
     <p>
       Para realizar pedidos, cotizaciones o citas a través de este sitio, el usuario debe crear una cuenta
       gratuita proporcionando información veraz, completa y actualizada.
@@ -108,7 +112,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
 
   <!-- 4. Propiedad intelectual -->
   <div class="section">
-    <h2><i class="fa-solid fa-copyright"></i> 4. Propiedad intelectual</h2>
+    <h2><i data-lucide="copyright"></i> 4. Propiedad intelectual</h2>
     <p>
       Todos los elementos que conforman este sitio web — incluyendo, sin limitarse a: logotipos, marcas,
       fotografías de productos, descripciones, textos, diseños, videos e interfaz gráfica — son propiedad
@@ -128,7 +132,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
 
   <!-- 5. Proceso de compra -->
   <div class="section">
-    <h2><i class="fa-solid fa-cart-shopping"></i> 5. Proceso de compra</h2>
+    <h2><i data-lucide="shopping-cart"></i> 5. Proceso de compra</h2>
     <p>Todos nuestros muebles son <strong>fabricados bajo pedido</strong> con las especificaciones indicadas por el cliente al momento de la compra.</p>
     <ol>
       <li>El cliente selecciona el producto en el catálogo y lo agrega al carrito.</li>
@@ -145,7 +149,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
 
   <!-- 6. Precios y promociones -->
   <div class="section">
-    <h2><i class="fa-solid fa-tag"></i> 6. Precios y promociones</h2>
+    <h2><i data-lucide="tag"></i> 6. Precios y promociones</h2>
     <p>Todos los precios se expresan en <strong>pesos mexicanos (MXN)</strong> e incluyen el Impuesto al Valor Agregado (IVA) conforme a las disposiciones del <strong>SAT</strong>.</p>
     <p>Aceptamos los siguientes métodos de pago:</p>
     <ul>
@@ -168,7 +172,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
 
   <!-- 7. Envíos y entregas -->
   <div class="section">
-    <h2><i class="fa-solid fa-truck"></i> 7. Envíos y entregas</h2>
+    <h2><i data-lucide="truck"></i> 7. Envíos y entregas</h2>
     <ul>
       <li><strong>Recoger en sucursal:</strong> sin costo adicional en nuestras instalaciones en Guadalajara, Jalisco. El cliente será notificado cuando su pedido esté listo.</li>
       <li><strong>Envío a domicilio:</strong> disponible en Guadalajara y Zona Metropolitana. Costo de envío: <strong>$<?= number_format(COSTO_ENVIO, 0) ?> MXN</strong>. El tiempo estimado de entrega es de <strong>2 a 5 días hábiles</strong> a partir del pago confirmado.</li>
@@ -187,7 +191,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
 
   <!-- 8. Devoluciones y reembolsos -->
   <div class="section">
-    <h2><i class="fa-solid fa-rotate-left"></i> 8. Devoluciones y reembolsos</h2>
+    <h2><i data-lucide="rotate-ccw"></i> 8. Devoluciones y reembolsos</h2>
     <p>
       Conforme a lo establecido en la <strong>Ley Federal de Protección al Consumidor (LFPC)</strong>,
       el cliente tiene derecho a cancelar su pedido bajo las siguientes condiciones:
@@ -207,7 +211,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
 
   <!-- 9. Garantías -->
   <div class="section">
-    <h2><i class="fa-solid fa-shield-halved"></i> 9. Garantías</h2>
+    <h2><i data-lucide="shield-check"></i> 9. Garantías</h2>
     <p>Nuestros muebles cuentan con <strong>garantía de 6 meses</strong> contra defectos de fabricación, que cubre:</p>
     <ul>
       <li>Fallas en herrajes, bisagras y correderas por defecto de fabricación.</li>
@@ -219,7 +223,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
 
   <!-- 10. Responsabilidad y limitaciones -->
   <div class="section">
-    <h2><i class="fa-solid fa-triangle-exclamation"></i> 10. Responsabilidad y limitaciones</h2>
+    <h2><i data-lucide="triangle-alert"></i> 10. Responsabilidad y limitaciones</h2>
     <p>Wooden House no será responsable por:</p>
     <ul>
       <li>Retrasos causados por fuerza mayor (desastres naturales, huelgas, contingencias sanitarias, restricciones gubernamentales, etc.).</li>
@@ -236,7 +240,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
 
   <!-- 11. Privacidad y datos personales -->
   <div class="section" id="privacidad">
-    <h2><i class="fa-solid fa-user-shield"></i> 11. Aviso de Privacidad y datos personales</h2>
+    <h2><i data-lucide="shield-user"></i> 11. Aviso de Privacidad y datos personales</h2>
     <p>
       En cumplimiento de la <strong>Ley Federal de Protección de Datos Personales en Posesión de los
       Particulares (LFPDPPP)</strong>, Wooden House informa que recopila los siguientes datos personales:
@@ -263,7 +267,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
 
   <!-- 12. Cumplimiento legal y normativo -->
   <div class="section">
-    <h2><i class="fa-solid fa-scale-balanced"></i> 12. Cumplimiento legal y normativo</h2>
+    <h2><i data-lucide="scale"></i> 12. Cumplimiento legal y normativo</h2>
     <p>
       Este sitio web y sus operaciones comerciales cumplen con la legislación mexicana aplicable en materia
       de comercio electrónico, incluyendo:
@@ -284,7 +288,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
 
   <!-- 13. Modificaciones y vigencia -->
   <div class="section">
-    <h2><i class="fa-solid fa-pen-to-square"></i> 13. Modificaciones y vigencia</h2>
+    <h2><i data-lucide="square-pen"></i> 13. Modificaciones y vigencia</h2>
     <p>
       Wooden House se reserva el derecho de modificar estos Términos y Condiciones en cualquier momento
       y sin necesidad de notificación previa. Los cambios entrarán en vigor desde su publicación en esta
@@ -315,11 +319,11 @@ require_once dirname(__DIR__) . '/includes/env.php';
 <!-- Barra de navegación fija móvil -->
 <nav class="mobile-bottom-nav" aria-label="Navegación rápida">
   <div class="mobile-bottom-nav-inner">
-    <a href="/catalogo"    class="mbn-item"><i class="fa-solid fa-store"></i><span>Catálogo</span></a>
-    <a href="/solicitudes" class="mbn-item"><i class="fa-solid fa-file-invoice"></i><span>Solicitar</span></a>
-    <a href="/seguimiento" class="mbn-item"><i class="fa-solid fa-magnifying-glass"></i><span>Seguimiento</span></a>
-    <a href="/carrito"     class="mbn-item"><span class="mbn-icon-wrap"><i class="fa-solid fa-cart-shopping"></i><span class="mbn-cart-badge"></span></span><span>Carrito</span></a>
-    <button class="mbn-item" data-auth-action="openMenuMovil"><i class="fa-solid fa-user"></i><span>Mi cuenta</span></button>
+    <a href="/catalogo"    class="mbn-item"><i data-lucide="store"></i><span>Catálogo</span></a>
+    <a href="/solicitudes" class="mbn-item"><i data-lucide="receipt"></i><span>Solicitar</span></a>
+    <a href="/seguimiento" class="mbn-item"><i data-lucide="search"></i><span>Seguimiento</span></a>
+    <a href="/carrito"     class="mbn-item"><span class="mbn-icon-wrap"><i data-lucide="shopping-cart"></i><span class="mbn-cart-badge"></span></span><span>Carrito</span></a>
+    <button class="mbn-item" data-auth-action="openMenuMovil"><i data-lucide="user"></i><span>Mi cuenta</span></button>
   </div>
 </nav>
 <script src="/assets/<?= av('js/theme-toggle.js') ?>"></script>
@@ -327,5 +331,10 @@ require_once dirname(__DIR__) . '/includes/env.php';
 <script src="/assets/<?= av('js/modal-auth.js') ?>"></script>
 <script src="/assets/<?= av('js/event-delegation.js') ?>"></script>
 <script src="/assets/<?= av('js/animations.js') ?>"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (window.lucide) window.lucide.createIcons();
+  });
+</script>
 </body>
 </html>

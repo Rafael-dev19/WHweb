@@ -26,8 +26,8 @@
 
   function _icon(theme) {
     return theme === 'light'
-      ? '<i class="fa-solid fa-moon"></i>'
-      : '<i class="fa-solid fa-sun"></i>';
+      ? '<i data-lucide="moon"></i>'
+      : '<i data-lucide="sun"></i>';
   }
 
   function _apply(theme, userChosen) {
@@ -38,6 +38,7 @@
       btn.innerHTML = _icon(theme);
       btn.setAttribute('aria-label', theme === 'light' ? 'Cambiar a tema oscuro' : 'Cambiar a tema claro');
       btn.setAttribute('title', theme === 'light' ? 'Cambiar a tema oscuro' : 'Cambiar a tema claro');
+      window.lucide?.createIcons();
     }
   }
 
@@ -71,6 +72,7 @@
     // en cualquier dispositivo, no solo en escritorio.
     btn.className = 'theme-toggle-btn theme-toggle-btn--float';
     document.body.appendChild(btn);
+    window.lucide?.createIcons();
   }
 
   document.addEventListener('DOMContentLoaded', _mountButton);

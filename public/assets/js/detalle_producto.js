@@ -6,6 +6,10 @@ const API_BASE = '/api';
 let productoActual = null;
 let imagenIndex    = 0;
 
+function _refreshIcons() {
+  if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initNavHamburger();
   initCartBadge();
@@ -116,7 +120,7 @@ function mostrarProducto() {
   const iconEl = document.getElementById('pStockIcon');
   const textEl = document.getElementById('pStockText');
   const btnAdd = document.getElementById('btnAddCart');
-  if (iconEl) { iconEl.innerHTML = '<i class="fa-solid fa-circle-check"></i>'; iconEl.style.color = '#4caf50'; }
+  if (iconEl) { iconEl.innerHTML = '<i data-lucide="circle-check"></i>'; iconEl.style.color = '#4caf50'; _refreshIcons(); }
   if (textEl) textEl.innerHTML = '<strong>Disponible</strong> · Fabricación bajo pedido';
   if (btnAdd) { btnAdd.disabled = false; btnAdd.addEventListener('click', agregarAlCarrito); }
 
@@ -140,20 +144,21 @@ function mostrarProducto() {
     const espejo = getSpec('espejo');
 
     const feats = [
-      tipo  ? { icon: 'fa-house',       label: 'Instalación',  val: tipo  } : null,
-      largo ? { icon: 'fa-ruler-horizontal', label: 'Dimensiones', val: `${largo} × ${alto || '?'} × ${fondo || '?'}` } : null,
-      ovalin ? { icon: 'fa-sink',        label: 'Ovalín',       val: ovalin } : null,
-      espejo && espejo !== 'No incluye' ? { icon: 'fa-sun', label: 'Espejo opcional', val: 'Disponible' } : null,
+      tipo  ? { icon: 'house',       label: 'Instalación',  val: tipo  } : null,
+      largo ? { icon: 'ruler', label: 'Dimensiones', val: `${largo} × ${alto || '?'} × ${fondo || '?'}` } : null,
+      ovalin ? { icon: 'droplets',        label: 'Ovalín',       val: ovalin } : null,
+      espejo && espejo !== 'No incluye' ? { icon: 'sun', label: 'Espejo opcional', val: 'Disponible' } : null,
     ].filter(Boolean);
 
     if (feats.length) {
       featuresBox.style.display = 'block';
       pFeatures.innerHTML = feats.map(f => `
         <div class="feature-item">
-          <span class="feature-key"><i class="fa-solid ${f.icon}"></i> ${escHtml(f.label)}</span>
+          <span class="feature-key"><i data-lucide="${f.icon}"></i> ${escHtml(f.label)}</span>
           <span class="feature-val">${escHtml(f.val)}</span>
         </div>
       `).join('');
+      _refreshIcons();
     }
   }
 
@@ -173,7 +178,7 @@ function mostrarProducto() {
 
       specTable.innerHTML = `
         <!-- Sección 1: Dimensiones -->
-        <div class="spec-section-title"><i class="fa-solid fa-ruler-combined"></i> Dimensiones del mueble</div>
+        <div class="spec-section-title"><i data-lucide="ruler"></i> Dimensiones del mueble</div>
         <div class="spec-row">
           <span class="spec-key">Tipo de instalación</span>
           <span class="spec-val">${escHtml(tipo || '—')}</span>
@@ -192,7 +197,7 @@ function mostrarProducto() {
         </div>
 
         <!-- Sección 2: Accesorios incluidos -->
-        <div class="spec-section-title" style="margin-top:18px;"><i class="fa-solid fa-faucet"></i> Accesorios incluidos</div>
+        <div class="spec-section-title" style="margin-top:18px;"><i data-lucide="droplets"></i> Accesorios incluidos</div>
         <div class="spec-row">
           <span class="spec-key">Ovalín</span>
           <span class="spec-val">${escHtml(ovalin || '—')}</span>
@@ -208,7 +213,7 @@ function mostrarProducto() {
 
         <!-- Sección 3: Espejo opcional (solo si aplica) -->
         ${espejo && espejo !== 'No incluye' ? `
-        <div class="spec-section-title" style="margin-top:18px;"><i class="fa-solid fa-sun"></i> Espejo opcional</div>
+        <div class="spec-section-title" style="margin-top:18px;"><i data-lucide="sun"></i> Espejo opcional</div>
         <div class="spec-row spec-row-highlight">
           <span class="spec-key">Espejo LED/Touch</span>
           <span class="spec-val">${escHtml(espejo)}</span>
@@ -216,7 +221,7 @@ function mostrarProducto() {
         ` : ''}
 
         <!-- Fabricación -->
-        <div class="spec-section-title" style="margin-top:18px;"><i class="fa-solid fa-screwdriver-wrench"></i> Fabricación</div>
+        <div class="spec-section-title" style="margin-top:18px;"><i data-lucide="wrench"></i> Fabricación</div>
         <div class="spec-row">
           <span class="spec-key">Producción</span>
           <span class="spec-val">Bajo pedido · 10-15 días hábiles</span>
@@ -226,6 +231,7 @@ function mostrarProducto() {
           <span class="spec-val">1 año en defectos de fabricación</span>
         </div>
       `;
+      _refreshIcons();
     }
   }
 
@@ -307,7 +313,7 @@ function agregarAlCarrito() {
   const btn = document.getElementById('btnVerCarrito');
   if (btn) btn.style.display = 'inline-block';
 
-  showToast(`✓ ${cantidad}x ${productoActual.nombre} agregado al carrito`);
+  showToast(`${cantidad}x ${escHtml(productoActual.nombre)} agregado al carrito`);
 }
 
 // ---- Cargar productos relacionados ----
@@ -323,7 +329,7 @@ async function cargarRelacionados(catId, excludeId) {
     if (!items.length) { container.closest('.related-section').style.display = 'none'; return; }
 
     container.innerHTML = items.map(p => {
-      const img = p.imagen_principal ? `<img src="${escHtml(p.imagen_principal)}" alt="${escHtml(p.nombre)}" loading="lazy">` : '<div class="placeholder-img-small"><i class="fa-solid fa-tree"></i></div>';
+      const img = p.imagen_principal ? `<img src="${escHtml(p.imagen_principal)}" alt="${escHtml(p.nombre)}" loading="lazy">` : '<div class="placeholder-img-small"><i data-lucide="tree-pine"></i></div>';
       return `
         <a href="/detalle/${p.id}" class="related-card">
           <div class="related-img">${img}</div>
@@ -334,6 +340,7 @@ async function cargarRelacionados(catId, excludeId) {
         </a>
       `;
     }).join('');
+    _refreshIcons();
   } catch (e) { console.warn('Relacionados no disponibles:', e); }
 }
 
@@ -358,9 +365,10 @@ function formatCurrency(n) {
 
 function showToast(msg, type = 'success') {
   const toast = document.createElement('div');
-  toast.style.cssText = `position:fixed;top:90px;right:20px;padding:14px 20px;background:${type==='success'?'#22c55e':'#ef4444'};color:#fff;border-radius:8px;z-index:10000;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,.25);pointer-events:none;`;
-  toast.textContent = msg;
+  toast.style.cssText = `position:fixed;top:90px;right:20px;padding:14px 20px;background:${type==='success'?'#22c55e':'#ef4444'};color:#fff;border-radius:8px;z-index:10000;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,.25);pointer-events:none;display:flex;align-items:center;gap:8px;`;
+  toast.innerHTML = `<i data-lucide="${type === 'success' ? 'circle-check' : 'triangle-alert'}" style="width:18px;height:18px;stroke-width:1.75;flex-shrink:0;"></i><span>${msg}</span>`;
   document.body.appendChild(toast);
+  _refreshIcons();
   setTimeout(() => toast.remove(), 3000);
 }
 

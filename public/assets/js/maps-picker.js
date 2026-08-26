@@ -46,9 +46,9 @@
              color:var(--color-text-main);line-height:1.7;">
         </div>
 
-        <p style="font-size:11px;color:var(--color-text-muted);margin:0;">
-          <i class="fa-solid fa-circle-info"></i>
-          Puedes arrastrar el marcador para ajustar la ubicación exacta.
+        <p style="font-size:11px;color:var(--color-text-muted);margin:0;display:flex;align-items:flex-start;gap:5px;">
+          <i data-lucide="info" style="width:12px;height:12px;stroke-width:1.75;flex-shrink:0;margin-top:2px;"></i>
+          <span>Puedes arrastrar el marcador para ajustar la ubicación exacta.</span>
         </p>
       </div>`;
   }
@@ -83,6 +83,7 @@
     let _map, _marker, _autocomplete, _vals = {};
 
     container.innerHTML = _template(uid);
+    if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 
     function _initMap(lat, lng) {
       const canvas = document.getElementById(`mpMapCanvas-${uid}`);

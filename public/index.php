@@ -16,7 +16,9 @@ if (!empty($_SESSION['_flash'])) {
   <title>Wooden House - Muebles de Madera a Medida en Guadalajara</title>
   <meta name="description" content="Wooden House — muebles de madera a medida en Guadalajara, Jalisco. Cocinas integrales, clósets, muebles de baño y más. Calidad artesanal con entrega en toda la ZMG.">
   <link rel="canonical" href="<?= APP_URL ?>/">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
   <link rel="stylesheet" href="./assets/<?= av('css/variables.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/styles.css') ?>">
@@ -25,13 +27,14 @@ if (!empty($_SESSION['_flash'])) {
   <link rel="stylesheet" href="./assets/<?= av('css/animations.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/theme-toggle.css') ?>">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous" defer></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
 </head>
 
 <body>
 
 <?php if ($_flash): ?>
   <div class="wh-alerta" id="whAlerta" role="alert">
-    <i class="fa-solid fa-triangle-exclamation"></i>
+    <i data-lucide="triangle-alert"></i>
     <span><?= htmlspecialchars($_flash['msg'], ENT_QUOTES, 'UTF-8') ?></span>
     <button class="wh-alerta-cerrar" data-close-parent aria-label="Cerrar">×</button>
   </div>
@@ -51,17 +54,17 @@ if (!empty($_SESSION['_flash'])) {
         <button class="nav-dropdown-btn" id="dropdownBtn"
                 aria-haspopup="true" aria-expanded="false"
                 aria-controls="dropdownMenu">
-          Inicio <i class="fa-solid fa-chevron-down nav-chevron"></i>
+          Inicio <i data-lucide="chevron-down" class="nav-chevron"></i>
         </button>
         <div class="dropdown-menu" id="dropdownMenu" role="menu">
           <a href="#servicios" class="dropdown-item" role="menuitem">
-            <i class="fa-solid fa-screwdriver-wrench"></i> Servicios
+            <i data-lucide="wrench"></i> Servicios
           </a>
           <a href="#proyectos" class="dropdown-item" role="menuitem">
-            <i class="fa-solid fa-images"></i> Proyectos
+            <i data-lucide="images"></i> Proyectos
           </a>
           <a href="#contacto" class="dropdown-item" role="menuitem">
-            <i class="fa-solid fa-phone"></i> Contacto
+            <i data-lucide="phone"></i> Contacto
           </a>
         </div>
       </div>
@@ -71,13 +74,13 @@ if (!empty($_SESSION['_flash'])) {
       <a href="/seguimiento" title="Consulta el estado de tu pedido, cita o cotización">Seguimiento</a>
 
       <a href="/carrito" class="cart-icon" id="cartIcon" aria-label="Ver carrito">
-        <i class="fa-solid fa-cart-shopping"></i>
+        <i data-lucide="shopping-cart"></i>
         <span class="cart-badge" id="cartCount">0</span>
       </a>
 
       <!-- Botón de cuenta — modal-auth.js actualiza su estado automáticamente -->
       <button class="btn-cuenta-nav" id="cuentaDropdownBtn" title="Iniciar sesión o ver mi cuenta">
-        <i class="fa-solid fa-user"></i> Iniciar sesión
+        <i data-lucide="user"></i> Iniciar sesión
       </button>
 
     </nav>
@@ -88,16 +91,20 @@ if (!empty($_SESSION['_flash'])) {
   <div class="hero" id="inicio">
     <h1>WOODEN HOUSE</h1>
     <p class="tagline">Muebles de Madera a Medida | Calidad Artesanal en Guadalajara</p>
-    <p style="color:#888; font-size:15px; margin-top:10px;">
-      <i class="fa-solid fa-location-dot"></i> Guadalajara, Jalisco · Entregas en toda la ZMG
+    <p class="hero-location">
+      <i data-lucide="map-pin"></i> Guadalajara, Jalisco · Entregas en toda la ZMG
     </p>
+    <div class="hero-buttons">
+      <a href="/catalogo" class="btn-primary"><i data-lucide="store"></i> Ver Catálogo</a>
+      <a href="/solicitudes" class="btn-secondary"><i data-lucide="receipt"></i> Pedir Cotización Gratis</a>
+    </div>
   </div>
 
   <!-- ── Acciones rápidas ──────────────────────────────────────── -->
   <div class="quick-actions-section">
     <p class="quick-actions-label">¿Qué deseas hacer?</p>
     <div class="wh-info-box" style="margin: 0 auto 16px; max-width:780px;">
-      <i class="fa-solid fa-lightbulb"></i>
+      <i data-lucide="lightbulb"></i>
       <span>
         <strong>¿Primera vez aquí?</strong> — Explora el <strong>Catálogo</strong> para ver modelos y precios.
         Si ya sabes lo que quieres, pide una <strong>Cotización</strong>.
@@ -107,42 +114,42 @@ if (!empty($_SESSION['_flash'])) {
     <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3 quick-actions-grid">
       <div class="col">
         <a href="/catalogo" class="quick-action-card h-100">
-          <div class="qa-icon"><i class="fa-solid fa-store"></i></div>
+          <div class="qa-icon"><i data-lucide="store"></i></div>
           <div class="qa-info">
             <div class="qa-title">Ver Catálogo</div>
             <div class="qa-sub">Explora nuestros muebles y precios</div>
           </div>
-          <i class="fa-solid fa-chevron-right qa-arrow"></i>
+          <i data-lucide="chevron-right" class="qa-arrow"></i>
         </a>
       </div>
       <div class="col">
         <a href="/solicitudes" class="quick-action-card h-100">
-          <div class="qa-icon qa-icon--cot"><i class="fa-solid fa-file-invoice"></i></div>
+          <div class="qa-icon qa-icon--cot"><i data-lucide="receipt"></i></div>
           <div class="qa-info">
             <div class="qa-title">Pedir Cotización</div>
             <div class="qa-sub">Cuéntanos qué necesitas y te respondemos</div>
           </div>
-          <i class="fa-solid fa-chevron-right qa-arrow"></i>
+          <i data-lucide="chevron-right" class="qa-arrow"></i>
         </a>
       </div>
       <div class="col">
         <a href="/solicitudes#cita" class="quick-action-card h-100">
-          <div class="qa-icon qa-icon--cita"><i class="fa-solid fa-calendar-check"></i></div>
+          <div class="qa-icon qa-icon--cita"><i data-lucide="calendar-check"></i></div>
           <div class="qa-info">
             <div class="qa-title">Agendar Cita</div>
             <div class="qa-sub">Visítanos o agendamos medición en tu casa</div>
           </div>
-          <i class="fa-solid fa-chevron-right qa-arrow"></i>
+          <i data-lucide="chevron-right" class="qa-arrow"></i>
         </a>
       </div>
       <div class="col">
         <a href="/seguimiento" class="quick-action-card h-100">
-          <div class="qa-icon qa-icon--seg"><i class="fa-solid fa-magnifying-glass"></i></div>
+          <div class="qa-icon qa-icon--seg"><i data-lucide="search"></i></div>
           <div class="qa-info">
             <div class="qa-title">Seguimiento de Pedido</div>
             <div class="qa-sub">Consulta el estado de tu pedido o cita</div>
           </div>
-          <i class="fa-solid fa-chevron-right qa-arrow"></i>
+          <i data-lucide="chevron-right" class="qa-arrow"></i>
         </a>
       </div>
     </div>
@@ -166,7 +173,7 @@ if (!empty($_SESSION['_flash'])) {
 
     <!-- ── Sección: Plataforma y acceso con Google ──────────────────── -->
     <div class="about-box" id="plataforma-digital" style="margin-top:24px;">
-      <h2><i class="fa-solid fa-user-shield" style="color:#c9a96e;"></i> Plataforma Digital de Wooden House</h2>
+      <h2><i data-lucide="shield-check"></i> Plataforma Digital de Wooden House</h2>
       <p>
         <strong>Wooden House</strong> es una plataforma integral de gestión comercial y operativa para la compra de muebles
         de madera a medida. A través de este sitio los clientes pueden:
@@ -177,24 +184,27 @@ if (!empty($_SESSION['_flash'])) {
         <li>Realizar compras en línea y dar seguimiento al estado de producción de su pedido</li>
         <li>Acceder a su historial de cotizaciones, pedidos y documentos desde un portal privado</li>
       </ul>
-      <p style="padding:14px 18px; background:rgba(201,169,110,0.08); border-left:3px solid #c9a96e; border-radius:6px; font-size:14px; color:#ccc; line-height:1.8;">
-        <strong style="color:#c9a96e;"><i class="fa-brands fa-google"></i> Inicio de sesión con Google:</strong>
+      <p class="wh-callout">
+        <strong class="wh-callout-lead">
+          <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.52 12.27c0-.85-.08-1.67-.22-2.45H12v4.64h6.47a5.53 5.53 0 01-2.4 3.63v3h3.87c2.27-2.09 3.58-5.17 3.58-8.82z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.07 7.94-2.91l-3.87-3c-1.08.72-2.45 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.96H1.28v3.11A12 12 0 0012 24z"/><path fill="#FBBC05" d="M5.27 14.28A7.2 7.2 0 014.9 12c0-.79.14-1.56.37-2.28V6.61H1.28A12 12 0 000 12c0 1.94.46 3.77 1.28 5.39l3.99-3.11z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.94 1.19 15.24 0 12 0A12 12 0 001.28 6.61l3.99 3.11C6.22 6.86 8.87 4.75 12 4.75z"/></svg>
+          Inicio de sesión con Google:
+        </strong>
         La aplicación <strong>Wooden House</strong> utiliza Google Sign-In para que los clientes puedan crear
         su cuenta o iniciar sesión de forma segura. Al autenticarse con Google, únicamente accedemos a tu
         <strong>nombre</strong> y <strong>dirección de correo electrónico</strong> de tu perfil básico de Google,
         con el fin de identificarte como usuario y autocompletar tus datos de contacto.
         No accedemos a tu historial de búsqueda, agenda, contactos, correos, archivos de Drive
         ni ningún otro dato personal fuera del perfil básico de Google.
-        Consulta nuestra <a href="/privacidad" style="color:#c9a96e;">Política de Privacidad</a> para más información sobre el manejo de tus datos.
+        Consulta nuestra <a href="/privacidad" class="wh-callout-link">Política de Privacidad</a> para más información sobre el manejo de tus datos.
       </p>
     </div>
 
     <div id="servicios">
-      <h2 class="section-title"><i class="fa-solid fa-screwdriver-wrench"></i> Nuestros Servicios</h2>
+      <h2 class="section-title"><i data-lucide="wrench"></i> Nuestros Servicios</h2>
       <div class="row row-cols-1 row-cols-md-3 g-4 mb-5">
         <div class="col">
           <a href="/catalogo?categoria=cocinas" class="service-card h-100 d-block">
-            <div class="service-icon"><i class="fa-solid fa-utensils"></i></div>
+            <div class="service-icon"><i data-lucide="cooking-pot"></i></div>
             <h3>Cocinas Integrales</h3>
             <p>Diseño y fabricación de cocinas funcionales y elegantes, adaptadas a tu espacio y necesidades. Incluye gabinetes, barras y acabados personalizados.</p>
             <span class="service-card-link">Ver en catálogo →</span>
@@ -202,7 +212,7 @@ if (!empty($_SESSION['_flash'])) {
         </div>
         <div class="col">
           <a href="/catalogo?categoria=closets" class="service-card h-100 d-block">
-            <div class="service-icon"><i class="fa-solid fa-shirt"></i></div>
+            <div class="service-icon"><i data-lucide="shirt"></i></div>
             <h3>Clósets a Medida</h3>
             <p>Maximiza tu espacio con clósets diseñados específicamente para ti. Múltiples compartimentos, cajones y opciones de organización.</p>
             <span class="service-card-link">Ver en catálogo →</span>
@@ -210,7 +220,7 @@ if (!empty($_SESSION['_flash'])) {
         </div>
         <div class="col">
           <a href="/catalogo?categoria=bano" class="service-card h-100 d-block">
-            <div class="service-icon"><i class="fa-solid fa-bath"></i></div>
+            <div class="service-icon"><i data-lucide="bath"></i></div>
             <h3>Muebles de Baño</h3>
             <p>Muebles resistentes a la humedad con diseños modernos y clásicos. Incluye lavabo, espejo y almacenamiento optimizado.</p>
             <span class="service-card-link">Ver en catálogo →</span>
@@ -220,23 +230,26 @@ if (!empty($_SESSION['_flash'])) {
     </div>
 
     <div>
-      <h2 class="section-title"><i class="fa-solid fa-star"></i> ¿Por Qué Elegirnos?</h2>
-      <div class="row row-cols-1 row-cols-sm-3 g-4 mb-5">
-        <div class="col">
-          <div class="reason-card h-100">
-            <h4><i class="fa-solid fa-palette"></i> Diseño a tu medida</h4>
+      <h2 class="section-title"><i data-lucide="star"></i> ¿Por Qué Elegirnos?</h2>
+      <div class="why-us-panel mb-5">
+        <div class="why-us-row">
+          <div class="why-us-icon"><i data-lucide="pencil-ruler"></i></div>
+          <div class="why-us-body">
+            <h4>Diseño a tu medida</h4>
             <p>Cada mueble es único. Diseñamos y fabricamos desde el concepto hasta la instalación según tus espacios exactos.</p>
           </div>
         </div>
-        <div class="col">
-          <div class="reason-card h-100">
-            <h4><i class="fa-solid fa-tree"></i> Materiales nobles</h4>
+        <div class="why-us-row">
+          <div class="why-us-icon"><i data-lucide="tree-pine"></i></div>
+          <div class="why-us-body">
+            <h4>Materiales nobles</h4>
             <p>Maderas de primera calidad — pino, cedro, encino, MDF. Durabilidad y belleza garantizada durante años.</p>
           </div>
         </div>
-        <div class="col">
-          <div class="reason-card h-100">
-            <h4><i class="fa-solid fa-shield-halved"></i> Garantía + entrega puntual</h4>
+        <div class="why-us-row">
+          <div class="why-us-icon"><i data-lucide="shield-check"></i></div>
+          <div class="why-us-body">
+            <h4>Garantía + entrega puntual</h4>
             <p>1 año de garantía contra defectos. Cumplimos los plazos acordados y dejamos todo instalado y limpio.</p>
           </div>
         </div>
@@ -244,7 +257,7 @@ if (!empty($_SESSION['_flash'])) {
     </div>
 
     <div class="about-box">
-      <h2><i class="fa-solid fa-truck-fast" style="color:#c9a96e;"></i> Cobertura en todo Jalisco</h2>
+      <h2><i data-lucide="truck"></i> Cobertura en todo Jalisco</h2>
       <p>
         Fabricamos e instalamos muebles a medida para toda la <strong>Zona Metropolitana de Guadalajara</strong>
         (Guadalajara, Zapopan, Tlaquepaque, Tonalá, El Salto y Tlajomulco) sin costo adicional de traslado.
@@ -256,7 +269,7 @@ if (!empty($_SESSION['_flash'])) {
     </div>
 
     <div id="proyectos">
-      <h2 class="section-title"><i class="fa-solid fa-sparkles"></i> Proyectos Realizados</h2>
+      <h2 class="section-title"><i data-lucide="sparkles"></i> Proyectos Realizados</h2>
 
       <div class="row row-cols-2 row-cols-md-3 g-3 mb-5">
 
@@ -312,99 +325,91 @@ if (!empty($_SESSION['_flash'])) {
     </div>
 
     <div class="cta-section">
-      <h2><i class="fa-solid fa-house"></i> ¿Listo para Transformar tu Espacio?</h2>
+      <h2><i data-lucide="house"></i> ¿Listo para Transformar tu Espacio?</h2>
       <p>Contáctanos hoy y recibe una cotización personalizada sin compromiso</p>
       <div class="d-flex flex-wrap gap-3 justify-content-center cta-buttons">
-        <a href="/solicitudes" class="btn-primary"><i class="fa-solid fa-tag"></i> Solicitar Cotización Gratis</a>
-        <a href="#contacto" class="btn-secondary"><i class="fa-solid fa-phone"></i> Contactar Ahora</a>
+        <a href="/solicitudes" class="btn-primary"><i data-lucide="tag"></i> Solicitar Cotización Gratis</a>
+        <a href="#contacto" class="btn-secondary"><i data-lucide="phone"></i> Contactar Ahora</a>
       </div>
     </div>
 
     <div class="faq-section">
-      <h2 class="section-title"><i class="fa-solid fa-circle-question"></i> Preguntas Frecuentes</h2>
+      <h2 class="section-title"><i data-lucide="circle-help"></i> Preguntas Frecuentes</h2>
 
       <div class="faq-item">
-        <div class="faq-question">¿Hacen entregas a domicilio?<span class="faq-icon"><i class="fa-solid fa-chevron-down"></i></span></div>
+        <div class="faq-question">¿Hacen entregas a domicilio?<span class="faq-icon"><i data-lucide="chevron-down"></i></span></div>
         <div class="faq-answer">Sí, realizamos entregas en toda la Zona Metropolitana de Guadalajara. El costo de envío varía según la ubicación y tamaño del mueble. El tiempo de entrega es de 5-7 días hábiles después de la confirmación del pedido.</div>
       </div>
 
       <div class="faq-item">
-        <div class="faq-question">¿Incluyen instalación profesional?<span class="faq-icon"><i class="fa-solid fa-chevron-down"></i></span></div>
+        <div class="faq-question">¿Incluyen instalación profesional?<span class="faq-icon"><i data-lucide="chevron-down"></i></span></div>
         <div class="faq-answer">Sí, todos nuestros proyectos incluyen instalación profesional. Nuestro equipo técnico especializado se encargará de instalar tu mueble de manera segura, profesional y dejando todo limpio.</div>
       </div>
 
       <div class="faq-item">
-        <div class="faq-question">¿Qué garantía tienen los muebles?<span class="faq-icon"><i class="fa-solid fa-chevron-down"></i></span></div>
+        <div class="faq-question">¿Qué garantía tienen los muebles?<span class="faq-icon"><i data-lucide="chevron-down"></i></span></div>
         <div class="faq-answer">Todos nuestros muebles cuentan con garantía de 1 año contra defectos de fabricación. Además, ofrecemos 30 días de garantía de satisfacción: si no estás conforme con tu compra, trabajaremos contigo para resolver cualquier inconformidad.</div>
       </div>
 
       <div class="faq-item">
-        <div class="faq-question">¿Puedo ver ejemplos antes de decidir?<span class="faq-icon"><i class="fa-solid fa-chevron-down"></i></span></div>
+        <div class="faq-question">¿Puedo ver ejemplos antes de decidir?<span class="faq-icon"><i data-lucide="chevron-down"></i></span></div>
         <div class="faq-answer">Sí, puedes agendar una cita para visitar nuestro showroom o solicitar que uno de nuestros asesores visite tu hogar con muestras de materiales, acabados y fotos de proyectos anteriores.</div>
       </div>
 
       <div class="faq-item">
-        <div class="faq-question">¿Cuánto tiempo tarda la fabricación?<span class="faq-icon"><i class="fa-solid fa-chevron-down"></i></span></div>
+        <div class="faq-question">¿Cuánto tiempo tarda la fabricación?<span class="faq-icon"><i data-lucide="chevron-down"></i></span></div>
         <div class="faq-answer">Los tiempos varían según la complejidad del proyecto. Generalmente, los muebles personalizados tienen un tiempo de fabricación de 2-4 semanas. Te proporcionaremos un cronograma específico en tu cotización.</div>
       </div>
 
       <div class="faq-item">
-        <div class="faq-question">¿Aceptan pagos en parcialidades?<span class="faq-icon"><i class="fa-solid fa-chevron-down"></i></span></div>
+        <div class="faq-question">¿Aceptan pagos en parcialidades?<span class="faq-icon"><i data-lucide="chevron-down"></i></span></div>
         <div class="faq-answer">Sí, aceptamos pagos a meses sin intereses con tarjetas de crédito participantes: 3, 6, 9 y 12 meses sin intereses en compras mayores a $5,000. También manejamos esquemas de pago: 50% anticipo y 50% al recibir.</div>
       </div>
 
       <div class="faq-item">
-        <div class="faq-question">¿Qué tipo de maderas utilizan?<span class="faq-icon"><i class="fa-solid fa-chevron-down"></i></span></div>
+        <div class="faq-question">¿Qué tipo de maderas utilizan?<span class="faq-icon"><i data-lucide="chevron-down"></i></span></div>
         <div class="faq-answer">Trabajamos con diversas maderas de calidad: pino, encino, cedro, MDF, triplay y melamina. Durante la consulta inicial te asesoraremos sobre el mejor material para tu proyecto según uso, presupuesto y estilo.</div>
       </div>
 
       <div class="faq-item">
-        <div class="faq-question">¿La cotización tiene costo?<span class="faq-icon"><i class="fa-solid fa-chevron-down"></i></span></div>
+        <div class="faq-question">¿La cotización tiene costo?<span class="faq-icon"><i data-lucide="chevron-down"></i></span></div>
         <div class="faq-answer">No, la cotización es completamente gratuita y sin compromiso. Incluye visita a domicilio, toma de medidas, diseño preliminar y propuesta detallada con precios transparentes.</div>
       </div>
 
     </div>
 
     <div id="contacto">
-      <h2 class="section-title"><i class="fa-solid fa-phone"></i> Información de Contacto</h2>
-      <div class="row row-cols-1 row-cols-sm-2 g-4 mb-5">
-        <div class="col">
-          <div class="contact-card h-100">
-            <div class="contact-icon"><i class="fa-solid fa-mobile-screen"></i></div>
-            <h4>WhatsApp</h4>
-            <p><a href="<?= siteWhatsappUrl() ?>" target="_blank"><?= SITE_PHONE ?></a></p>
-            <small>Lun - Sáb: 9:00 AM - 7:00 PM</small>
-          </div>
+      <h2 class="section-title"><i data-lucide="phone"></i> Información de Contacto</h2>
+      <div class="contact-strip mb-5">
+        <div class="contact-strip-item">
+          <div class="contact-icon"><i data-lucide="smartphone"></i></div>
+          <h4>WhatsApp</h4>
+          <p><a href="<?= siteWhatsappUrl() ?>" target="_blank"><?= SITE_PHONE ?></a></p>
+          <small>Lun - Sáb: 9:00 AM - 7:00 PM</small>
         </div>
-        <div class="col">
-          <div class="contact-card h-100">
-            <div class="contact-icon"><i class="fa-solid fa-envelope"></i></div>
-            <h4>Email</h4>
-            <p><a href="mailto:<?= SITE_EMAIL ?>"><?= SITE_EMAIL ?></a></p>
-            <small>Respuesta en 24 hrs</small>
-          </div>
+        <div class="contact-strip-item">
+          <div class="contact-icon"><i data-lucide="mail"></i></div>
+          <h4>Email</h4>
+          <p><a href="mailto:<?= SITE_EMAIL ?>"><?= SITE_EMAIL ?></a></p>
+          <small>Respuesta en 24 hrs</small>
         </div>
-        <div class="col">
-          <div class="contact-card h-100">
-            <div class="contact-icon"><i class="fa-solid fa-location-dot"></i></div>
-            <h4>Ubicación</h4>
-            <p>Guadalajara, Jalisco</p>
-            <small>Servicio en toda la ZMG</small>
-          </div>
+        <div class="contact-strip-item">
+          <div class="contact-icon"><i data-lucide="map-pin"></i></div>
+          <h4>Ubicación</h4>
+          <p>Guadalajara, Jalisco</p>
+          <small>Servicio en toda la ZMG</small>
         </div>
-        <div class="col">
-          <div class="contact-card h-100">
-            <div class="contact-icon"><i class="fa-solid fa-clock"></i></div>
-            <h4>Horario</h4>
-            <p>Lunes a Sábado</p>
-            <small>9:00 AM - 7:00 PM</small>
-          </div>
+        <div class="contact-strip-item">
+          <div class="contact-icon"><i data-lucide="clock"></i></div>
+          <h4>Horario</h4>
+          <p>Lunes a Sábado</p>
+          <small>9:00 AM - 7:00 PM</small>
         </div>
       </div>
     </div>
 
     <div class="map-section">
-      <h2><i class="fa-solid fa-location-dot"></i> Nuestra Ubicación</h2>
+      <h2><i data-lucide="map-pin"></i> Nuestra Ubicación</h2>
       <p>Servicio de entrega e instalación en toda la Zona Metropolitana de Guadalajara</p>
       <div style="width:100%; height:450px; border-radius:15px; overflow:hidden; margin-top:20px;">
         <iframe
@@ -417,7 +422,7 @@ if (!empty($_SESSION['_flash'])) {
     </div>
 
     <div class="social-section">
-      <h3><i class="fa-solid fa-globe"></i> Síguenos en Redes Sociales</h3>
+      <h3><i data-lucide="globe"></i> Síguenos en Redes Sociales</h3>
       <p style="color:#a0a0a0; margin-bottom:20px;">Mantente al día con nuestros proyectos más recientes</p>
       <div class="d-flex flex-wrap gap-4 justify-content-center social-links">
         <a href="https://www.facebook.com/wh020" class="social-link facebook" title="Facebook" target="_blank">
@@ -462,29 +467,29 @@ if (!empty($_SESSION['_flash'])) {
   <!-- ── Barra de navegación fija móvil ──────────────────────────── -->
   <nav class="mobile-bottom-nav" aria-label="Navegación rápida">
     <div class="mobile-bottom-nav-inner">
-      <a href="/catalogo" class="mbn-item"><i class="fa-solid fa-store"></i><span>Catálogo</span></a>
-      <a href="/solicitudes" class="mbn-item"><i class="fa-solid fa-file-invoice"></i><span>Solicitar</span></a>
-      <a href="/seguimiento" class="mbn-item"><i class="fa-solid fa-magnifying-glass"></i><span>Seguimiento</span></a>
-      <a href="/carrito" class="mbn-item"><span class="mbn-icon-wrap"><i class="fa-solid fa-cart-shopping"></i><span class="mbn-cart-badge"></span></span><span>Carrito</span></a>
-      <button class="mbn-item" data-auth-action="openMenuMovil"><i class="fa-solid fa-user"></i><span>Mi cuenta</span></button>
+      <a href="/catalogo" class="mbn-item"><i data-lucide="store"></i><span>Catálogo</span></a>
+      <a href="/solicitudes" class="mbn-item"><i data-lucide="receipt"></i><span>Solicitar</span></a>
+      <a href="/seguimiento" class="mbn-item"><i data-lucide="search"></i><span>Seguimiento</span></a>
+      <a href="/carrito" class="mbn-item"><span class="mbn-icon-wrap"><i data-lucide="shopping-cart"></i><span class="mbn-cart-badge"></span></span><span>Carrito</span></a>
+      <button class="mbn-item" data-auth-action="openMenuMovil"><i data-lucide="user"></i><span>Mi cuenta</span></button>
     </div>
   </nav>
 
   <!-- ══ GUÍA FLOTANTE "¿Cómo comprar?" ══════════════════════════════ -->
   <button class="wh-guide-btn" id="whGuideBtn" aria-label="¿Cómo comprar?" data-open-modal="whGuideModal">
-    <i class="fa-solid fa-circle-question"></i>
+    <i data-lucide="circle-help"></i>
     <span class="wh-guide-btn-label">¿Cómo comprar?</span>
   </button>
 
   <div class="wh-guide-modal" id="whGuideModal">
     <div class="wh-guide-content" role="dialog" aria-modal="true" aria-labelledby="whGuideHeading">
       <button class="wh-guide-close" data-close-modal="whGuideModal" aria-label="Cerrar">×</button>
-      <h2 class="wh-guide-title" id="whGuideHeading"><i class="fa-solid fa-cart-shopping"></i> ¿Cómo comprar?</h2>
+      <h2 class="wh-guide-title" id="whGuideHeading"><i data-lucide="shopping-cart"></i> ¿Cómo comprar?</h2>
       <p class="wh-guide-subtitle">Es muy fácil, sigue estos 4 pasos:</p>
       <div class="wh-guide-steps">
         <div class="wh-guide-step">
           <div class="wh-step-num">1</div>
-          <div class="wh-step-icon"><i class="fa-solid fa-store"></i></div>
+          <div class="wh-step-icon"><i data-lucide="store"></i></div>
           <div class="wh-step-info">
             <strong>Explora el catálogo</strong>
             <span>Ve fotos, medidas y precios de todos nuestros muebles</span>
@@ -492,7 +497,7 @@ if (!empty($_SESSION['_flash'])) {
         </div>
         <div class="wh-guide-step">
           <div class="wh-step-num">2</div>
-          <div class="wh-step-icon"><i class="fa-solid fa-user-plus"></i></div>
+          <div class="wh-step-icon"><i data-lucide="user-plus"></i></div>
           <div class="wh-step-info">
             <strong>Crea tu cuenta gratis</strong>
             <span>Solo necesitas tu correo y una contraseña. ¡Tarda menos de 1 minuto!</span>
@@ -500,7 +505,7 @@ if (!empty($_SESSION['_flash'])) {
         </div>
         <div class="wh-guide-step">
           <div class="wh-step-num">3</div>
-          <div class="wh-step-icon"><i class="fa-solid fa-cart-plus"></i></div>
+          <div class="wh-step-icon"><i data-lucide="shopping-cart"></i></div>
           <div class="wh-step-info">
             <strong>Agrega al carrito y pide tu fecha</strong>
             <span>Elige si quieres recoger o envío a domicilio, y si quieres instalación</span>
@@ -508,7 +513,7 @@ if (!empty($_SESSION['_flash'])) {
         </div>
         <div class="wh-guide-step">
           <div class="wh-step-num">4</div>
-          <div class="wh-step-icon"><i class="fa-solid fa-credit-card"></i></div>
+          <div class="wh-step-icon"><i data-lucide="credit-card"></i></div>
           <div class="wh-step-info">
             <strong>Paga seguro y recibe tu folio</strong>
             <span>Tarjeta o PayPal. Te mandamos confirmación por correo al instante</span>
@@ -517,13 +522,13 @@ if (!empty($_SESSION['_flash'])) {
       </div>
       <div class="wh-guide-actions">
         <a href="/catalogo" class="wh-guide-cta" data-close-modal="whGuideModal">
-          <i class="fa-solid fa-store"></i> Ver Catálogo
+          <i data-lucide="store"></i> Ver Catálogo
         </a>
         <a href="/solicitudes" class="wh-guide-cta wh-guide-cta--alt" data-close-modal="whGuideModal">
-          <i class="fa-solid fa-file-invoice"></i> Pedir Cotización
+          <i data-lucide="receipt"></i> Pedir Cotización
         </a>
       </div>
-      <p class="wh-guide-note"><i class="fa-solid fa-headset"></i> ¿Tienes dudas? Escríbenos por WhatsApp o correo y te ayudamos</p>
+      <p class="wh-guide-note"><i data-lucide="headphones"></i> ¿Tienes dudas? Escríbenos por WhatsApp o correo y te ayudamos</p>
     </div>
   </div>
 
@@ -534,6 +539,11 @@ if (!empty($_SESSION['_flash'])) {
   <script src="./assets/<?= av('js/page-init.js') ?>"></script>
   <script src="./assets/<?= av('js/animations.js') ?>"></script>
   <script src="./assets/<?= av('js/theme-toggle.js') ?>"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      if (window.lucide) window.lucide.createIcons();
+    });
+  </script>
 
 </body>
 </html>

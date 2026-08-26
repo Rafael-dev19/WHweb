@@ -22,6 +22,9 @@ if (empty($_SESSION['cliente_email_verified'])) {
   <title>Solicitudes - Wooden House</title>
   <meta name="description" content="Solicita una cotización personalizada o agenda una visita técnica con Wooden House. Asesoría gratuita para tu proyecto de muebles a medida.">
   
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
   <link rel="stylesheet" href="./assets/<?= av('css/variables.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/solicitudes.css') ?>">
@@ -29,6 +32,7 @@ if (empty($_SESSION['cliente_email_verified'])) {
   <link rel="stylesheet" href="./assets/<?= av('css/animations.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/modal-auth.css') ?>">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous" defer></script>
 </head>
 <body>
@@ -45,17 +49,17 @@ if (empty($_SESSION['cliente_email_verified'])) {
       <a href="/catalogo" title="Ver todos los muebles y precios">Catálogo</a>
       <a href="/seguimiento" title="Consulta el estado de tu pedido, cita o cotización">Seguimiento</a>
       <a href="/carrito" class="cart-icon" aria-label="Ver carrito" title="Ver mi carrito de compras">
-        <i class="fa-solid fa-cart-shopping"></i> <span class="cart-badge" id="cartCount">0</span>
+        <i data-lucide="shopping-cart"></i> <span class="cart-badge" id="cartCount">0</span>
       </a>
       <button class="btn-cuenta-nav" title="Iniciar sesión o ver mi cuenta">
-        <i class="fa-solid fa-user"></i> Iniciar sesión
+        <i data-lucide="user"></i> Iniciar sesión
       </button>
     </div>
   </div>
 
   <main id="contenido-principal">
   <div class="container">
-    <h1 class="page-title"><i class="fa-solid fa-clipboard-list"></i> Centro de Solicitudes</h1>
+    <h1 class="page-title"><i data-lucide="clipboard-list"></i> Centro de Solicitudes</h1>
     <p class="page-subtitle">
       ¿No sabes qué opción elegir? Usa la guía rápida de abajo.
     </p>
@@ -65,25 +69,25 @@ if (empty($_SESSION['cliente_email_verified'])) {
     <!-- ── Decisor visual: ¿qué necesitas hoy? ───────────────────── -->
     <div class="sol-decision-grid wh-reveal">
       <div class="sol-decision-card sol-decision-card--cot" data-tab-goto="cotizacion">
-        <div class="sol-dec-icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+        <div class="sol-dec-icon"><i data-lucide="file-text"></i></div>
         <div class="sol-dec-info">
           <strong>Ya sé lo que quiero</strong>
           <span>Tengo medidas o ideas y quiero un precio</span>
         </div>
         <div class="sol-dec-badge">Cotización →</div>
         <div class="sol-dec-detail">
-          <i class="fa-solid fa-clock"></i> Respuesta en 24 horas por correo
+          <i data-lucide="clock"></i> Respuesta en 24 horas por correo
         </div>
       </div>
       <div class="sol-decision-card sol-decision-card--cita" data-tab-goto="cita">
-        <div class="sol-dec-icon"><i class="fa-solid fa-house-chimney-user"></i></div>
+        <div class="sol-dec-icon"><i data-lucide="home"></i></div>
         <div class="sol-dec-info">
           <strong>Necesito asesoría presencial</strong>
           <span>Quiero que vayan a medir y aconsejarme a mi domicilio</span>
         </div>
         <div class="sol-dec-badge">Agendar Cita →</div>
         <div class="sol-dec-detail">
-          <i class="fa-solid fa-location-dot"></i> Vamos a tu domicilio · ZMG
+          <i data-lucide="map-pin"></i> Vamos a tu domicilio · ZMG
         </div>
       </div>
     </div>
@@ -91,18 +95,18 @@ if (empty($_SESSION['cliente_email_verified'])) {
     <!-- TAB 1: COTIZACIÓN -->
     <div id="tab-cotizacion" class="tab-content active">
       <div class="info-box">
-        <h4><i class="fa-solid fa-file-invoice-dollar"></i> Cotizador rápido — respuesta en 24 horas</h4>
+        <h4><i data-lucide="file-text"></i> Cotizador rápido — respuesta en 24 horas</h4>
         <p><strong>¿Cuándo usar esta opción?</strong> Cuando quieres una idea rápida de tu proyecto antes de comprometerte.</p>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
-          <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><i class="fa-solid fa-check" style="color:#8b7355;"></i> No requiere visita</div>
-          <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><i class="fa-solid fa-check" style="color:#8b7355;"></i> Respuesta en 24 hrs</div>
-          <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><i class="fa-solid fa-check" style="color:#8b7355;"></i> Sin compromiso</div>
-          <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><i class="fa-solid fa-check" style="color:#8b7355;"></i> 100% gratis</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><i data-lucide="check" style="color:#8b7355;width:14px;height:14px;stroke-width:2;"></i> No requiere visita</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><i data-lucide="check" style="color:#8b7355;width:14px;height:14px;stroke-width:2;"></i> Respuesta en 24 hrs</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><i data-lucide="check" style="color:#8b7355;width:14px;height:14px;stroke-width:2;"></i> Sin compromiso</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><i data-lucide="check" style="color:#8b7355;width:14px;height:14px;stroke-width:2;"></i> 100% gratis</div>
         </div>
-        <p style="margin-top:12px;font-size:13px;color:#e0b060;background:#3a2f1a;border-radius:8px;padding:10px 12px;">
-          <i class="fa-solid fa-triangle-exclamation"></i> <strong>Este cotizador es solo un estimado rápido, no un precio final.</strong>
+        <p style="margin-top:12px;font-size:13px;color:#e0b060;background:#3a2f1a;border-radius:8px;padding:10px 12px;display:flex;align-items:flex-start;gap:8px;">
+          <i data-lucide="triangle-alert" style="width:16px;height:16px;stroke-width:1.75;flex-shrink:0;margin-top:2px;"></i> <span><strong>Este cotizador es solo un estimado rápido, no un precio final.</strong>
           Si necesitas la información ya, envíala así. Si la quieres exacta, genera tu cotización y espera nuestra respuesta:
-          el jefe la revisará, te la responderá por correo y agendaremos una visita para confirmar medidas y darte un precio real.
+          el jefe la revisará, te la responderá por correo y agendaremos una visita para confirmar medidas y darte un precio real.</span>
         </p>
       </div>
 
@@ -112,7 +116,7 @@ if (empty($_SESSION['cliente_email_verified'])) {
           <label>No llenar este campo <input type="text" name="website" tabindex="-1" autocomplete="off"></label>
         </div>
         <div class="form-section">
-          <h2 class="section-title"><i class="fa-solid fa-phone"></i> Información de Contacto</h2>
+          <h2 class="section-title"><i data-lucide="phone"></i> Información de Contacto</h2>
           <div class="row g-3">
             <div class="col-12 form-group">
               <label>Nombre Completo <span class="required">*</span></label>
@@ -135,7 +139,7 @@ if (empty($_SESSION['cliente_email_verified'])) {
             </div>
             <div class="col-12 form-group">
               <div class="wh-info-box" style="margin-bottom:10px;">
-                <i class="fa-solid fa-location-dot"></i>
+                <i data-lucide="map-pin"></i>
                 <span>Busca tu dirección y confirma la ubicación en el mapa — así llegamos exacto el día de la visita o instalación.</span>
               </div>
               <div id="cotMapPickerContainer" class="form-group"></div>
@@ -153,7 +157,7 @@ if (empty($_SESSION['cliente_email_verified'])) {
               <input type="hidden" name="lat"       id="cotLat">
               <input type="hidden" name="lng"       id="cotLng">
               <div id="cotDireccionDetalleEdit" style="display:none;margin-top:6px;">
-                <p style="font-size:12px;color:var(--muted);margin-bottom:8px;"><i class="fa-solid fa-pen-to-square"></i> Ingresa o corrige tu dirección:</p>
+                <p style="font-size:12px;color:var(--muted);margin-bottom:8px;"><i data-lucide="square-pen"></i> Ingresa o corrige tu dirección:</p>
                 <div class="row g-2">
                   <div class="col-md-8 form-group" style="margin-bottom:8px;">
                     <label style="font-size:12px;">Calle y número</label>
@@ -184,7 +188,7 @@ if (empty($_SESSION['cliente_email_verified'])) {
         </div>
 
         <div class="form-section">
-          <h2 class="section-title"><i class="fa-solid fa-ruler-combined"></i> Especificaciones del Proyecto</h2>
+          <h2 class="section-title"><i data-lucide="ruler"></i> Especificaciones del Proyecto</h2>
           <div class="row g-3">
             <div class="col-md-6 form-group">
               <label>Tipo de proyecto <span class="required">*</span></label>
@@ -253,30 +257,30 @@ if (empty($_SESSION['cliente_email_verified'])) {
         </div>
 
         <div class="info-box success">
-          <h4><i class="fa-solid fa-circle-check"></i> Asesoría personalizada en 24 horas</h4>
+          <h4><i data-lucide="circle-check"></i> Asesoría personalizada en 24 horas</h4>
           <p>Revisaremos tu solicitud y nos pondremos en contacto contigo dentro de las próximas 24 horas con una cotización personalizada.</p>
         </div>
 
-        <button type="submit" class="btn-submit"><i class="fa-solid fa-clipboard-list"></i> Solicitar Asesoría y Cotización</button>
+        <button type="submit" class="btn-submit"><i data-lucide="clipboard-list"></i> Solicitar Asesoría y Cotización</button>
       </form>
       <div class="tab-nav-bottom">
-        <a href="/inicio" class="btn-tab-nav btn-tab-back"><i class="fa-solid fa-arrow-left"></i> Volver al inicio</a>
-        <button type="button" class="btn-tab-nav btn-tab-next" data-tab-goto="cita">Agendar Cita <i class="fa-solid fa-arrow-right"></i></button>
+        <a href="/inicio" class="btn-tab-nav btn-tab-back"><i data-lucide="arrow-left"></i> Volver al inicio</a>
+        <button type="button" class="btn-tab-nav btn-tab-next" data-tab-goto="cita">Agendar Cita <i data-lucide="arrow-right"></i></button>
       </div>
     </div>
 
     <!-- TAB 2: AGENDAR CITA -->
     <div id="tab-cita" class="tab-content">
-      <div class="info-box" style="border-left-color:#5b9aad;">
-        <h4 style="color:#7ec4d8;"><i class="fa-solid fa-house-chimney-user"></i> Visita a tu domicilio — asesoría completa en persona</h4>
+      <div class="info-box">
+        <h4 style="color:#7ec4d8;"><i data-lucide="home"></i> Visita a tu domicilio — asesoría completa en persona</h4>
         <p><strong>¿Cuándo usar esta opción?</strong> Cuando prefieres que vayamos a tu casa a medir, evaluar el espacio y darte recomendaciones de diseño en persona.</p>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
-          <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><i class="fa-solid fa-check" style="color:#5b9aad;"></i> Medición profesional</div>
-          <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><i class="fa-solid fa-check" style="color:#5b9aad;"></i> Asesoría en persona</div>
-          <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><i class="fa-solid fa-check" style="color:#5b9aad;"></i> Evaluación del espacio</div>
-          <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><i class="fa-solid fa-check" style="color:#5b9aad;"></i> Cotización después</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><i data-lucide="check" style="color:#5b9aad;width:14px;height:14px;stroke-width:2;"></i> Medición profesional</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><i data-lucide="check" style="color:#5b9aad;width:14px;height:14px;stroke-width:2;"></i> Asesoría en persona</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><i data-lucide="check" style="color:#5b9aad;width:14px;height:14px;stroke-width:2;"></i> Evaluación del espacio</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><i data-lucide="check" style="color:#5b9aad;width:14px;height:14px;stroke-width:2;"></i> Cotización después</div>
         </div>
-        <p style="margin-top:10px;font-size:13px;color:#888;"><i class="fa-solid fa-location-dot"></i> Atendemos toda la Zona Metropolitana de Guadalajara (ZMG).</p>
+        <p style="margin-top:10px;font-size:13px;color:#888;display:flex;align-items:center;gap:6px;"><i data-lucide="map-pin" style="width:14px;height:14px;stroke-width:1.75;"></i> Atendemos toda la Zona Metropolitana de Guadalajara (ZMG).</p>
       </div>
 
       <form id="formCita" autocomplete="off">
@@ -285,7 +289,7 @@ if (empty($_SESSION['cliente_email_verified'])) {
           <label>No llenar este campo <input type="text" name="website" tabindex="-1" autocomplete="off"></label>
         </div>
         <div class="form-section">
-          <h2 class="section-title"><i class="fa-solid fa-user"></i> Información de Contacto</h2>
+          <h2 class="section-title"><i data-lucide="user"></i> Información de Contacto</h2>
           <div class="row g-3">
             <div class="col-md-6 form-group">
               <label>Nombre Completo <span class="required">*</span></label>
@@ -307,7 +311,7 @@ if (empty($_SESSION['cliente_email_verified'])) {
 
             <div class="col-12 form-group">
               <div class="wh-info-box" style="margin-bottom:10px;">
-                <i class="fa-solid fa-location-dot"></i>
+                <i data-lucide="map-pin"></i>
                 <span>Busca tu dirección y confirma la ubicación en el mapa — así llegamos exacto el día de la visita.</span>
               </div>
               <div id="citMapPickerContainer" class="form-group"></div>
@@ -325,7 +329,7 @@ if (empty($_SESSION['cliente_email_verified'])) {
               <input type="hidden" name="lat"       id="citLat">
               <input type="hidden" name="lng"       id="citLng">
               <div id="citDireccionDetalleEdit" style="display:none;margin-top:6px;">
-                <p style="font-size:12px;color:var(--muted);margin-bottom:8px;"><i class="fa-solid fa-pen-to-square"></i> Ingresa o corrige tu dirección:</p>
+                <p style="font-size:12px;color:var(--muted);margin-bottom:8px;"><i data-lucide="square-pen"></i> Ingresa o corrige tu dirección:</p>
                 <div class="row g-2">
                   <div class="col-md-8 form-group" style="margin-bottom:8px;">
                     <label style="font-size:12px;">Calle y número</label>
@@ -356,7 +360,7 @@ if (empty($_SESSION['cliente_email_verified'])) {
         </div>
 
         <div class="form-section">
-          <h2 class="section-title"><i class="fa-solid fa-calendar-days"></i> Fecha y Hora</h2>
+          <h2 class="section-title"><i data-lucide="calendar-days"></i> Fecha y Hora</h2>
           <div class="row g-3">
             <div class="col-md-6 form-group">
               <label>Fecha Preferida <span class="required">*</span>
@@ -380,20 +384,20 @@ if (empty($_SESSION['cliente_email_verified'])) {
         </div>
 
         <div class="info-box success">
-          <h4><i class="fa-solid fa-circle-check"></i> Confirmación y Preparación</h4>
+          <h4><i data-lucide="circle-check"></i> Confirmación y Preparación</h4>
           <p>Recibirás confirmación inmediata por correo electrónico.</p>
         </div>
 
         <div class="info-box warning">
-          <h4><i class="fa-solid fa-clipboard-list"></i> Después de la Visita</h4>
+          <h4><i data-lucide="clipboard-list"></i> Después de la Visita</h4>
           <p>En 2-3 días hábiles recibirás: cotización, renders 3D, especificaciones, y timeline.</p>
         </div>
 
-        <button type="submit" class="btn-submit"><i class="fa-solid fa-calendar-days"></i> Agendar Visita Técnica</button>
+        <button type="submit" class="btn-submit"><i data-lucide="calendar-days"></i> Agendar Visita Técnica</button>
       </form>
       <div class="tab-nav-bottom">
-        <button type="button" class="btn-tab-nav btn-tab-back" data-tab-goto="cotizacion"><i class="fa-solid fa-arrow-left"></i> Cotización</button>
-        <a href="/seguimiento" class="btn-tab-nav btn-tab-next">Ver Seguimiento <i class="fa-solid fa-arrow-right"></i></a>
+        <button type="button" class="btn-tab-nav btn-tab-back" data-tab-goto="cotizacion"><i data-lucide="arrow-left"></i> Cotización</button>
+        <a href="/seguimiento" class="btn-tab-nav btn-tab-next">Ver Seguimiento <i data-lucide="arrow-right"></i></a>
       </div>
     </div>
   </div>
@@ -416,11 +420,11 @@ if (empty($_SESSION['cliente_email_verified'])) {
 
   <nav class="mobile-bottom-nav" aria-label="Navegación rápida">
     <div class="mobile-bottom-nav-inner">
-      <a href="/catalogo" class="mbn-item"><i class="fa-solid fa-store"></i><span>Catálogo</span></a>
-      <a href="/solicitudes" class="mbn-item mbn-item--active"><i class="fa-solid fa-file-invoice"></i><span>Solicitar</span></a>
-      <a href="/seguimiento" class="mbn-item"><i class="fa-solid fa-magnifying-glass"></i><span>Seguimiento</span></a>
-      <a href="/carrito" class="mbn-item"><span class="mbn-icon-wrap"><i class="fa-solid fa-cart-shopping"></i><span class="mbn-cart-badge"></span></span><span>Carrito</span></a>
-      <button class="mbn-item" data-auth-action="openMenuMovil"><i class="fa-solid fa-user"></i><span>Mi cuenta</span></button>
+      <a href="/catalogo" class="mbn-item"><i data-lucide="store"></i><span>Catálogo</span></a>
+      <a href="/solicitudes" class="mbn-item mbn-item--active"><i data-lucide="receipt"></i><span>Solicitar</span></a>
+      <a href="/seguimiento" class="mbn-item"><i data-lucide="search"></i><span>Seguimiento</span></a>
+      <a href="/carrito" class="mbn-item"><span class="mbn-icon-wrap"><i data-lucide="shopping-cart"></i><span class="mbn-cart-badge"></span></span><span>Carrito</span></a>
+      <button class="mbn-item" data-auth-action="openMenuMovil"><i data-lucide="user"></i><span>Mi cuenta</span></button>
     </div>
   </nav>
 
@@ -434,5 +438,10 @@ if (empty($_SESSION['cliente_email_verified'])) {
   <?php if (defined('GOOGLE_MAPS_API_KEY') && GOOGLE_MAPS_API_KEY): ?>
   <script src="https://maps.googleapis.com/maps/api/js?key=<?= htmlspecialchars(GOOGLE_MAPS_API_KEY) ?>&libraries=places&callback=initMapsPickerReady&loading=async" async defer></script>
   <?php endif; ?>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      if (window.lucide) window.lucide.createIcons();
+    });
+  </script>
 </body>
 </html>

@@ -6,6 +6,10 @@ const API_URL = '/api';
 
 let selectedTime = null;
 
+function _refreshIcons() {
+  if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+}
+
 document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('formCotizacion')?.reset();
   document.getElementById('formCita')?.reset();
@@ -270,7 +274,7 @@ function initFormCotizacion() {
 
     const btn = form.querySelector('button[type="submit"]');
     btn.disabled    = true;
-    btn.innerHTML   = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando...';
+    btn.innerHTML   = '<span class="auth-spinner" style="border-top-color:#fff;border-color:rgba(255,255,255,.35);"></span> Enviando...';
 
     try {
       const res  = await fetch(`${API_URL}/cotizaciones.php`, {
@@ -287,13 +291,13 @@ function initFormCotizacion() {
       // Subir fotos/boceto (opcional) — ya con el id de la cotización recién creada.
       const cotId = data.cotizacion_id;
       if (cotId) {
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Subiendo fotos...';
+        btn.innerHTML = '<span class="auth-spinner" style="border-top-color:#fff;border-color:rgba(255,255,255,.35);"></span> Subiendo fotos...';
         await subirImagenesCotizacionCliente(cotId, document.getElementById('cotFotosEspacio')?.files, 'cliente_espacio');
         await subirImagenesCotizacionCliente(cotId, document.getElementById('cotBoceto')?.files, 'cliente_boceto');
       }
 
       showAlert(
-        `<i class="fa-solid fa-circle-check"></i> ¡Cotización enviada! Tu número de seguimiento es <strong>${data.numero_cotizacion}</strong>. Recuerda: es un estimado rápido — el jefe la revisará y te responderá por correo con el siguiente paso.`,
+        `<i data-lucide="circle-check"></i> ¡Cotización enviada! Tu número de seguimiento es <strong>${data.numero_cotizacion}</strong>. Recuerda: es un estimado rápido — el jefe la revisará y te responderá por correo con el siguiente paso.`,
         'success'
       );
       form.reset();
@@ -306,7 +310,8 @@ function initFormCotizacion() {
       showAlert(err.message || 'Error al enviar cotización. Intenta nuevamente.', 'error');
     } finally {
       btn.disabled  = false;
-      btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Enviar Solicitud de Cotización';
+      btn.innerHTML = '<i data-lucide="send"></i> Enviar Solicitud de Cotización';
+      _refreshIcons();
     }
   });
 }
@@ -353,8 +358,9 @@ function _initMapPickerGenerico(prefix, setHandle) {
       if (editSection) editSection.style.display = 'block';
       container.innerHTML =
         '<p style="text-align:center;padding:20px 12px;color: var(--color-text-muted);font-size:13px;">' +
-        '<i class="fa-solid fa-map-location-dot" style="font-size:28px;display:block;margin-bottom:8px;"></i>' +
+        '<i data-lucide="map-pinned" style="width:28px;height:28px;stroke-width:1.5;display:block;margin:0 auto 8px;"></i>' +
         'Mapa no disponible. Ingresa tu dirección en los campos de abajo.</p>';
+      _refreshIcons();
     }
   }, 4000);
   document.addEventListener('maps-picker-ready', () => clearTimeout(_mapsLoadTimer), { once: true });
@@ -507,7 +513,7 @@ function initFormCita() {
 
     const btn = form.querySelector('button[type="submit"]');
     btn.disabled    = true;
-    btn.innerHTML   = '<i class="fa-solid fa-spinner fa-spin"></i> Agendando...';
+    btn.innerHTML   = '<span class="auth-spinner" style="border-top-color:#fff;border-color:rgba(255,255,255,.35);"></span> Agendando...';
 
     try {
       const res  = await fetch(`${API_URL}/citas.php`, {
@@ -522,7 +528,7 @@ function initFormCita() {
       if (!data.success) throw new Error(data.error || 'Error al agendar cita');
 
       showAlert(
-        `<i class="fa-solid fa-calendar-check"></i> ¡Cita agendada! Tu número de cita es <strong>${data.numero_cita}</strong>. Recibirás confirmación en tu correo.`,
+        `<i data-lucide="calendar-check"></i> ¡Cita agendada! Tu número de cita es <strong>${data.numero_cita}</strong>. Recibirás confirmación en tu correo.`,
         'success'
       );
       form.reset();
@@ -533,7 +539,8 @@ function initFormCita() {
       showAlert(err.message || 'Error al agendar. Intenta nuevamente.', 'error');
     } finally {
       btn.disabled  = false;
-      btn.innerHTML = '<i class="fa-solid fa-calendar-check"></i> Confirmar Cita';
+      btn.innerHTML = '<i data-lucide="calendar-check"></i> Confirmar Cita';
+      _refreshIcons();
     }
   });
 }
@@ -549,7 +556,7 @@ async function cargarSlotsDisponibles(fecha) {
   if (!container || !fecha) return;
 
   selectedTime = null;
-  container.innerHTML = '<div style="color: var(--color-text-muted);font-size:14px;padding:12px;grid-column:1/-1;"><i class="fa-solid fa-spinner fa-spin"></i> Verificando disponibilidad...</div>';
+  container.innerHTML = '<div style="color: var(--color-text-muted);font-size:14px;padding:12px;grid-column:1/-1;display:flex;align-items:center;gap:8px;"><span class="auth-spinner" style="border-top-color:var(--color-primary);border-color:rgba(139,115,85,.25);"></span> Verificando disponibilidad...</div>';
 
   try {
     const res   = await fetch(`${API_URL}/citas.php?fecha=${encodeURIComponent(fecha)}&limit=50`);
@@ -580,7 +587,8 @@ async function cargarSlotsDisponibles(fecha) {
     }).join('');
 
     if (HORARIOS_NEGOCIO.length === ocupados.size) {
-      container.innerHTML += '<div style="color:#c62828;font-size:13px;padding:6px;grid-column:1/-1;"><i class="fa-solid fa-circle-exclamation"></i> Sin horarios para este día.</div>';
+      container.innerHTML += '<div style="color:#c62828;font-size:13px;padding:6px;grid-column:1/-1;display:flex;align-items:center;gap:6px;"><i data-lucide="circle-alert" style="width:14px;height:14px;stroke-width:1.75;"></i> Sin horarios para este día.</div>';
+      _refreshIcons();
     }
   } catch (e) {
     console.warn('Error cargando slots:', e);
@@ -616,6 +624,7 @@ function showAlert(message, type = 'info') {
     alertDiv.className = 'alert ' + type + ' show';
     alertDiv.style.display = 'block';
     alertDiv.innerHTML = message;
+    _refreshIcons();
     alertDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     if (type === 'success' || type === 'warning') {
       setTimeout(() => {
@@ -631,7 +640,7 @@ function showAlert(message, type = 'info') {
   toast.style.cssText = `position:fixed;top:24px;right:24px;z-index:10000;padding:14px 22px;
     background:${colors[type]||colors.info};color:#fff;border-radius:10px;font-size:14px;
     font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.4);max-width:380px;line-height:1.5;
-    font-family:'Segoe UI',Tahoma,sans-serif;border-left:4px solid rgba(255,255,255,.4);`;
+    font-family:'Segoe UI',Tahoma,sans-serif;`;
   document.body.appendChild(toast);
   setTimeout(() => toast.remove(), 6000);
 }
@@ -779,7 +788,7 @@ async function prefillContactoSiLogueado() {
         </div>
         <button type="button" class="sesion-card-editar"
                 data-call="mostrarCamposContacto" data-args='["${formId}"]'>
-          <i class="fa-solid fa-pen-to-square"></i> Editar datos
+          <i data-lucide="square-pen"></i> Editar datos
         </button>
       </div>`;
 
@@ -792,10 +801,11 @@ async function prefillContactoSiLogueado() {
       if (card) {
         const info = card.querySelector('.sesion-card-info');
         if (info) info.insertAdjacentHTML('beforeend',
-          '<div class="sesion-card-aviso"><i class="fa-solid fa-circle-exclamation"></i> Completa tus datos abajo</div>');
+          '<div class="sesion-card-aviso"><i data-lucide="circle-alert"></i> Completa tus datos abajo</div>');
       }
     }
   });
+  _refreshIcons();
 }
 
 function mostrarCamposContacto(formId) {
@@ -819,7 +829,7 @@ function _mostrarSugerenciaLogin() {
     if (!seccion || document.getElementById(`loginSuggest_${formId}`)) return;
     const html = `
       <div class="login-suggest-card" id="loginSuggest_${formId}">
-        <div class="login-suggest-icon"><i class="fa-solid fa-bolt"></i></div>
+        <div class="login-suggest-icon"><i data-lucide="zap"></i></div>
         <div class="login-suggest-text">
           <strong>¿Ya tienes cuenta?</strong>
           Inicia sesión y llenamos tus datos automáticamente.
@@ -829,11 +839,12 @@ function _mostrarSugerenciaLogin() {
         <button type="button" class="login-suggest-close"
                 data-remove-id="loginSuggest_${formId}"
                 aria-label="Cerrar sugerencia">
-          <i class="fa-solid fa-xmark"></i>
+          <i data-lucide="x"></i>
         </button>
       </div>`;
     seccion.insertAdjacentHTML('beforebegin', html);
   });
+  _refreshIcons();
 }
 
 window.selectTime             = selectTime;

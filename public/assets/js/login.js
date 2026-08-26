@@ -11,6 +11,7 @@ function showAlert(msg, type = 'error') {
   alertBox.innerHTML  = msg;
   alertBox.className  = `alert alert-${type}`;
   alertBox.style.display = 'block';
+  window.lucide?.createIcons();
 }
 
 // ── Toggle ver/ocultar contraseña ──────────────────────────
@@ -19,8 +20,9 @@ togglePass?.addEventListener('click', () => {
   const isVisible = pwd.type === 'text';
   pwd.type = isVisible ? 'password' : 'text';
   togglePass.innerHTML = isVisible
-    ? '<i class="fa-solid fa-eye"></i>'
-    : '<i class="fa-solid fa-eye-slash"></i>';
+    ? '<i data-lucide="eye"></i>'
+    : '<i data-lucide="eye-off"></i>';
+  window.lucide?.createIcons();
 });
 
 // ── Recuperar contraseña ───────────────────────────────────
@@ -84,7 +86,7 @@ loginForm?.addEventListener('submit', async (e) => {
       sessionStorage.setItem('wh_firebase_token', idToken);
       sessionStorage.setItem('wh_usuario', JSON.stringify(data.usuario));
       sessionStorage.removeItem('wh_just_logged_out');
-      showAlert('<i class="fa-solid fa-circle-check"></i> Bienvenido, redirigiendo...', 'success');
+      showAlert('<i data-lucide="circle-check"></i> Bienvenido, redirigiendo...', 'success');
       setTimeout(() => { window.location.href = data.redirect; }, 800);
     } else {
       // Backend rechazó → también cerrar sesión Firebase para no quedar a medias
@@ -100,7 +102,7 @@ loginForm?.addEventListener('submit', async (e) => {
     else if (err.code === 'auth/invalid-credential')   msg = 'Credenciales incorrectas';
     else if (err.code === 'auth/too-many-requests')    msg = 'Demasiados intentos. Espera un momento.';
     else if (err.message)                              msg = err.message;
-    showAlert('<i class="fa-solid fa-xmark"></i> ' + msg, 'error');
+    showAlert('<i data-lucide="x"></i> ' + msg, 'error');
 
   } finally {
     btnLogin.disabled    = false;

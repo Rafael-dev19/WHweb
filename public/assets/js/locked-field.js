@@ -32,7 +32,7 @@
     btn.type = 'button';
     btn.className = 'locked-field-pencil';
     btn.setAttribute('aria-label', 'Editar');
-    btn.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Editar';
+    btn.innerHTML = '<i data-lucide="square-pen"></i> Editar';
     return btn;
   }
 
@@ -40,7 +40,7 @@
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'locked-field-save btn btn-secondary btn-small';
-    btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Guardar cambios';
+    btn.innerHTML = '<i data-lucide="save"></i> Guardar cambios';
     return btn;
   }
 
@@ -99,11 +99,13 @@
 
       this.wrapper.classList.toggle('locked-field-is-locked', this.locked);
       this.wrapper.classList.toggle('locked-field-is-unlocked', !this.locked);
+      window.lucide?.createIcons();
     }
 
     async _save(btn) {
       btn.disabled  = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
+      btn.innerHTML = '<i class="wh-icon-spin" data-lucide="loader-circle"></i> Guardando...';
+      window.lucide?.createIcons();
       let ok = false;
       try {
         ok = this.opts.onSave ? await this.opts.onSave() : true;
@@ -112,7 +114,8 @@
         ok = false;
       }
       btn.disabled  = false;
-      btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Guardar cambios';
+      btn.innerHTML = '<i data-lucide="save"></i> Guardar cambios';
+      window.lucide?.createIcons();
       if (ok) this.lock();
     }
 

@@ -12,6 +12,9 @@ require_once dirname(__DIR__) . '/includes/env.php';
   <title>Política de Privacidad – Wooden House</title>
   <meta name="description" content="Política de privacidad de Wooden House. Conoce cómo recopilamos, usamos y protegemos tus datos personales conforme a la LFPDPPP.">
   <link rel="canonical" href="<?= APP_URL ?>/privacidad">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
   <link rel="stylesheet" href="./assets/<?= av('css/variables.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/styles.css') ?>">
@@ -19,6 +22,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
   <link rel="stylesheet" href="./assets/<?= av('css/theme-toggle.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/modal-auth.css') ?>">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
 </head>
 <body>
 
@@ -30,7 +34,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
     </a>
   </div>
   <div class="nav-links">
-    <a href="/inicio"><i class="fa-solid fa-house"></i> Inicio</a>
+    <a href="/inicio"><i data-lucide="house"></i> Inicio</a>
     <a href="/catalogo">Catálogo</a>
     <a href="/solicitudes" title="Pedir cotización o agendar una cita de medición">Solicitar</a>
     <a href="/seguimiento" title="Consulta el estado de tu pedido, cita o cotización">Seguimiento</a>
@@ -42,7 +46,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
 <div class="page-wrap">
 
   <div class="page-header">
-    <h1><i class="fa-solid fa-shield-halved"></i> Política de Privacidad</h1>
+    <h1><i data-lucide="shield-check"></i> Política de Privacidad</h1>
     <p>Wooden House &nbsp;·&nbsp; Última actualización: agosto de 2026 &nbsp;·&nbsp; Guadalajara, Jalisco</p>
     <p style="margin-top:6px;font-size:13px;color:var(--color-text-muted);">
       En cumplimiento de la <strong style="color:var(--color-accent);">Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP)</strong>,
@@ -52,7 +56,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
 
   <!-- 1. Responsable -->
   <div class="section">
-    <h2><i class="fa-solid fa-building"></i> 1. Responsable del tratamiento de datos</h2>
+    <h2><i data-lucide="building-2"></i> 1. Responsable del tratamiento de datos</h2>
     <p>
       <strong>Wooden House</strong> es una empresa mexicana con domicilio en Guadalajara, Jalisco,
       dedicada a la fabricación y comercialización de muebles de madera a medida.
@@ -65,7 +69,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
 
   <!-- 2. Datos que recopilamos -->
   <div class="section">
-    <h2><i class="fa-solid fa-database"></i> 2. Datos personales que recopilamos</h2>
+    <h2><i data-lucide="database"></i> 2. Datos personales que recopilamos</h2>
     <p>Wooden House recopila los siguientes datos personales cuando usas nuestro sitio:</p>
     <ul>
       <li><strong>Datos de identificación:</strong> nombre completo.</li>
@@ -83,7 +87,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
 
   <!-- 3. Finalidad del tratamiento -->
   <div class="section">
-    <h2><i class="fa-solid fa-bullseye"></i> 3. Finalidad del tratamiento</h2>
+    <h2><i data-lucide="target"></i> 3. Finalidad del tratamiento</h2>
     <p>Los datos personales que recopilamos se utilizan exclusivamente para las siguientes finalidades <strong>primarias</strong>:</p>
     <ul>
       <li>Procesar y gestionar tus pedidos, cotizaciones y citas de medición.</li>
@@ -101,7 +105,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
 
   <!-- 4. Transferencia de datos -->
   <div class="section">
-    <h2><i class="fa-solid fa-share-nodes"></i> 4. Transferencia de datos a terceros</h2>
+    <h2><i data-lucide="share-2"></i> 4. Transferencia de datos a terceros</h2>
     <p>
       Wooden House <strong>no vende ni comparte</strong> tus datos personales con terceros con fines comerciales.
       Únicamente los compartimos con los proveedores necesarios para operar el servicio:
@@ -155,7 +159,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
 
   <!-- 5. Derechos ARCO -->
   <div class="section" id="arco">
-    <h2><i class="fa-solid fa-user-shield"></i> 5. Derechos ARCO</h2>
+    <h2><i data-lucide="shield-user"></i> 5. Derechos ARCO</h2>
     <p>
       Conforme a la LFPDPPP, tienes derecho a <strong>Acceder, Rectificar, Cancelar u Oponerte</strong>
       al uso de tus datos personales en cualquier momento.
@@ -174,7 +178,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
 
   <!-- 6. Cookies y consentimiento -->
   <div class="section">
-    <h2><i class="fa-solid fa-cookie-bite"></i> 6. Cookies, tecnologías similares y tu consentimiento</h2>
+    <h2><i data-lucide="cookie"></i> 6. Cookies, tecnologías similares y tu consentimiento</h2>
     <p>El sitio utiliza las siguientes cookies y tecnologías similares:</p>
     <ul>
       <li><strong>Cookies de sesión:</strong> necesarias para mantener tu sesión activa. Se eliminan al cerrar el navegador.</li>
@@ -201,7 +205,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
 
   <!-- 7. Seguridad -->
   <div class="section">
-    <h2><i class="fa-solid fa-lock"></i> 7. Seguridad de los datos</h2>
+    <h2><i data-lucide="lock"></i> 7. Seguridad de los datos</h2>
     <ul>
       <li>Todas las comunicaciones se realizan mediante <strong>HTTPS con TLS</strong>.</li>
       <li>Las contraseñas se gestionan a través de Firebase Authentication — Wooden House <strong>no almacena contraseñas</strong> en texto plano.</li>
@@ -213,7 +217,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
 
   <!-- 8. Conservación de datos -->
   <div class="section">
-    <h2><i class="fa-solid fa-clock-rotate-left"></i> 8. Conservación de datos</h2>
+    <h2><i data-lucide="history"></i> 8. Conservación de datos</h2>
     <p>
       Tus datos personales se conservan mientras mantengas una cuenta activa en el sitio o mientras
       sean necesarios para los fines descritos en esta política. Una vez concluida la relación comercial
@@ -224,7 +228,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
 
   <!-- 9. Menores de edad -->
   <div class="section">
-    <h2><i class="fa-solid fa-child"></i> 9. Menores de edad</h2>
+    <h2><i data-lucide="baby"></i> 9. Menores de edad</h2>
     <p>
       Este sitio no está dirigido a menores de 18 años. No recopilamos intencionalmente datos
       personales de menores. Si detectamos que un menor proporcionó sus datos sin consentimiento
@@ -234,7 +238,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
 
   <!-- 10. Cambios a esta política -->
   <div class="section">
-    <h2><i class="fa-solid fa-pen-to-square"></i> 10. Cambios a esta política</h2>
+    <h2><i data-lucide="square-pen"></i> 10. Cambios a esta política</h2>
     <p>
       Wooden House se reserva el derecho de actualizar esta Política de Privacidad en cualquier momento.
       Los cambios entrarán en vigor desde su publicación en esta página. Te recomendamos revisarla periódicamente.
@@ -265,11 +269,11 @@ require_once dirname(__DIR__) . '/includes/env.php';
 <!-- Barra de navegación fija móvil -->
 <nav class="mobile-bottom-nav" aria-label="Navegación rápida">
   <div class="mobile-bottom-nav-inner">
-    <a href="/catalogo"    class="mbn-item"><i class="fa-solid fa-store"></i><span>Catálogo</span></a>
-    <a href="/solicitudes" class="mbn-item"><i class="fa-solid fa-file-invoice"></i><span>Solicitar</span></a>
-    <a href="/seguimiento" class="mbn-item"><i class="fa-solid fa-magnifying-glass"></i><span>Seguimiento</span></a>
-    <a href="/carrito"     class="mbn-item"><span class="mbn-icon-wrap"><i class="fa-solid fa-cart-shopping"></i><span class="mbn-cart-badge"></span></span><span>Carrito</span></a>
-    <button class="mbn-item" data-auth-action="openMenuMovil"><i class="fa-solid fa-user"></i><span>Mi cuenta</span></button>
+    <a href="/catalogo"    class="mbn-item"><i data-lucide="store"></i><span>Catálogo</span></a>
+    <a href="/solicitudes" class="mbn-item"><i data-lucide="receipt"></i><span>Solicitar</span></a>
+    <a href="/seguimiento" class="mbn-item"><i data-lucide="search"></i><span>Seguimiento</span></a>
+    <a href="/carrito"     class="mbn-item"><span class="mbn-icon-wrap"><i data-lucide="shopping-cart"></i><span class="mbn-cart-badge"></span></span><span>Carrito</span></a>
+    <button class="mbn-item" data-auth-action="openMenuMovil"><i data-lucide="user"></i><span>Mi cuenta</span></button>
   </div>
 </nav>
 <script src="/assets/<?= av('js/theme-toggle.js') ?>"></script>
@@ -277,5 +281,10 @@ require_once dirname(__DIR__) . '/includes/env.php';
 <script src="/assets/<?= av('js/modal-auth.js') ?>"></script>
 <script src="/assets/<?= av('js/event-delegation.js') ?>"></script>
 <script src="/assets/<?= av('js/animations.js') ?>"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (window.lucide) window.lucide.createIcons();
+  });
+</script>
 </body>
 </html>

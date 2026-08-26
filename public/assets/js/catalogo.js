@@ -1,5 +1,9 @@
 const API_BASE = '/api';
 
+function _refreshIcons() {
+  if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+}
+
 let state = {
   productos: [],
   allProducts: [],
@@ -100,10 +104,11 @@ function seleccionarCategoriaPrincipal(cat, btnEl) {
   if (grid) {
     grid.innerHTML = `
       <div class="no-productos" style="grid-column:1/-1; text-align:center; padding:50px 20px;">
-        <i class="fa-solid fa-hammer" style="font-size:32px;color:var(--color-primary);margin-bottom:14px;display:block;"></i>
+        <i data-lucide="hammer" style="width:32px;height:32px;stroke-width:1.5;color:var(--color-primary);margin-bottom:14px;display:block;margin-left:auto;margin-right:auto;"></i>
         <p style="font-size:18px;font-weight:600;color: var(--color-text-muted);">¡Línea de ${escHtml(nombre)} próximamente!</p>
         <p style="color: var(--color-text-muted);margin-top:6px;">Estamos preparando nuestro catálogo de ${escHtml(nombre.toLowerCase())} a la medida. Vuelve pronto.</p>
       </div>`;
+    _refreshIcons();
   }
 
   const contador = document.getElementById('productos-count');
@@ -147,9 +152,10 @@ async function cargarProductos(resetPage = false) {
   } catch (e) {
     console.error('Error cargando productos:', e);
     grid.innerHTML = `<div class="error-state">
-      <p><i class="fa-solid fa-triangle-exclamation"></i> No se pudieron cargar los productos.</p>
+      <p><i data-lucide="triangle-alert"></i> No se pudieron cargar los productos.</p>
       <button data-call="cargarProductos" class="btn-reload">Reintentar</button>
     </div>`;
+    _refreshIcons();
   } finally {
     state.loading = false;
   }
@@ -163,9 +169,10 @@ function renderProductos() {
   if (!state.allProducts.length) {
     grid.innerHTML = `
       <div class="no-productos" style="grid-column:1/-1; text-align:center; padding:40px;">
-        <p><i class="fa-solid fa-box"></i> No se encontraron productos</p>
+        <p><i data-lucide="package-search"></i> No se encontraron productos</p>
         <button data-call="limpiarFiltros" class="btn-secondary" style="margin-top:10px;">Limpiar filtros</button>
       </div>`;
+    _refreshIcons();
     return;
   }
 
@@ -173,7 +180,7 @@ function renderProductos() {
     const imgSrc = p.imagen_principal
       ? `<img src="${escHtml(p.imagen_principal)}" alt="${escHtml(p.nombre)}" loading="lazy" data-lightbox data-img-fallback="ph-${p.id}" class="wh-img-zoom">`
       : '';
-    const imgPlaceholder = `<div class="placeholder-imagen" id="ph-${p.id}" ${p.imagen_principal ? 'style="display:none"' : ''}><i class="fa-solid fa-tree"></i></div>`;
+    const imgPlaceholder = `<div class="placeholder-imagen" id="ph-${p.id}" ${p.imagen_principal ? 'style="display:none"' : ''}><i data-lucide="tree-pine"></i></div>`;
     const badge = p.etiqueta ? `<div class="product-badge">${escHtml(p.etiqueta)}</div>` : '';
     const precio = formatCurrency(p.precio);
 
@@ -195,7 +202,7 @@ function renderProductos() {
               data-nombre="${escHtml(p.nombre)}"
               data-precio="${p.precio}"
               data-imagen="${escHtml(p.imagen_principal || '')}">
-              <i class="fa-solid fa-cart-shopping"></i> Agregar al carrito
+              <i data-lucide="shopping-cart"></i> Agregar al carrito
             </button>
             <a href="/detalle/${p.id}" class="btn-details">Ver detalles</a>
           </div>
@@ -208,6 +215,7 @@ function renderProductos() {
   document.querySelectorAll('.btn-add-cart[data-id]').forEach(btn => {
     btn.addEventListener('click', function () { agregarAlCarritoBtn(this); });
   });
+  _refreshIcons();
 }
 
 // ---- Paginación ----
@@ -218,10 +226,11 @@ function renderPaginacion(pag) {
     return;
   }
   let btns = '';
-  if (pag.hay_anterior) btns += `<button data-call="irAPagina" data-args="[${state.page - 1}]"><i class="fa-solid fa-chevron-left"></i> Anterior</button>`;
+  if (pag.hay_anterior) btns += `<button data-call="irAPagina" data-args="[${state.page - 1}]"><i data-lucide="chevron-left"></i> Anterior</button>`;
   btns += `<span class="pag-info">Página ${pag.pagina} de ${pag.total_paginas}</span>`;
-  if (pag.hay_siguiente) btns += `<button data-call="irAPagina" data-args="[${state.page + 1}]">Siguiente <i class="fa-solid fa-chevron-right"></i></button>`;
+  if (pag.hay_siguiente) btns += `<button data-call="irAPagina" data-args="[${state.page + 1}]">Siguiente <i data-lucide="chevron-right"></i></button>`;
   container.innerHTML = `<div class="paginacion-btns">${btns}</div>`;
+  _refreshIcons();
 }
 
 function irAPagina(n) {
@@ -302,7 +311,7 @@ function agregarAlCarritoBtn(btn) {
 function agregarAlCarrito(id, nombre, precio, imagen) {
   // Bloquear si el cliente está autenticado pero su correo no está verificado
   if (typeof AuthModal !== 'undefined' && AuthModal.isAuthenticated() && !AuthModal.isEmailVerified()) {
-    showToast('<i class="fa-solid fa-triangle-exclamation"></i> Confirma tu correo antes de agregar al carrito', 'error');
+    showToast('<i data-lucide="triangle-alert"></i> Confirma tu correo antes de agregar al carrito', 'error');
     return;
   }
 
@@ -320,7 +329,7 @@ function agregarAlCarrito(id, nombre, precio, imagen) {
     badge.textContent = total;
     badge.style.display = 'inline-block';
   }
-  showToast(`<i class="fa-solid fa-circle-check"></i> ${nombre} agregado al carrito`);
+  showToast(`<i data-lucide="circle-check"></i> ${nombre} agregado al carrito`);
 }
 
 // ---- Utilidades ----
@@ -340,8 +349,9 @@ function debounce(fn, delay) {
 function showToast(msg, type = 'success') {
   const toast = document.createElement('div');
   toast.className = `wh-toast ${type}`;
-  toast.innerHTML = msg;  // innerHTML para que rendericen los íconos de Font Awesome
+  toast.innerHTML = msg;  // innerHTML para que rendericen los íconos Lucide (data-lucide)
   document.body.appendChild(toast);
+  _refreshIcons();
   setTimeout(() => {
     toast.style.opacity = '0';
     toast.style.transition = 'opacity 0.3s';

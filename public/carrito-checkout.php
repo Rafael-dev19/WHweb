@@ -23,6 +23,9 @@ header('Content-Type: text/html; charset=utf-8');
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Carrito – Wooden House</title>
     <meta name="description" content="Revisa tu carrito de compras en Wooden House. Elige tu método de entrega, fecha y completa tu pedido de muebles a medida.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
     <link rel="stylesheet" href="./assets/<?= av('css/variables.css') ?>">
     <link rel="stylesheet" href="./assets/<?= av('css/carrito.css') ?>">
@@ -30,6 +33,7 @@ header('Content-Type: text/html; charset=utf-8');
     <link rel="stylesheet" href="./assets/<?= av('css/animations.css') ?>">
     <link rel="stylesheet" href="./assets/<?= av('css/modal-auth.css') ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous" defer></script>
 </head>
 <body>
@@ -45,7 +49,7 @@ header('Content-Type: text/html; charset=utf-8');
         <a href="/inicio" title="Volver al inicio">Inicio</a>
         <a href="/catalogo" title="Seguir comprando en el catálogo">← Seguir comprando</a>
         <button class="btn-cuenta-nav" title="Iniciar sesión o ver mi cuenta">
-            <i class="fa-solid fa-user"></i> Iniciar sesión
+            <i data-lucide="user"></i> Iniciar sesión
         </button>
     </div>
 </div>
@@ -70,9 +74,9 @@ header('Content-Type: text/html; charset=utf-8');
 <main id="contenido-principal">
 <div class="container">
     <div class="page-header">
-        <h1 class="page-title"><i class="fa-solid fa-cart-shopping"></i> Tu Carrito de Compras</h1>
+        <h1 class="page-title"><i data-lucide="shopping-cart"></i> Tu Carrito de Compras</h1>
         <p class="page-subtitle">Revisa tu pedido, elige opciones de entrega y selecciona tu fecha</p>
-        <a href="/catalogo" class="btn-volver-catalogo"><i class="fa-solid fa-arrow-left"></i> Volver al Catálogo</a>
+        <a href="/catalogo" class="btn-volver-catalogo"><i data-lucide="arrow-left"></i> Volver al Catálogo</a>
     </div>
 
     <div class="row g-4 cart-container">
@@ -80,7 +84,7 @@ header('Content-Type: text/html; charset=utf-8');
         <div class="col-lg-8 cart-items">
 
             <div class="section-card">
-                <h2 class="section-title"><span class="section-icon"><i class="fa-solid fa-bath"></i></span> Productos en tu carrito</h2>
+                <h2 class="section-title"><span class="section-icon"><i data-lucide="shopping-basket"></i></span> Productos en tu carrito</h2>
                 <div id="carritoItems">
                     <div class="fecha-loading">Cargando carrito</div>
                 </div>
@@ -88,7 +92,7 @@ header('Content-Type: text/html; charset=utf-8');
 
             <div class="section-card">
                 <h2 class="section-title">
-                  <span class="section-icon"><i class="fa-solid fa-truck"></i></span> Tipo de entrega
+                  <span class="section-icon"><i data-lucide="truck"></i></span> Tipo de entrega
                   <span class="wh-help" data-tip="Elige cómo quieres recibir tus muebles. Puedes recogerlos gratis en nuestra sucursal o solicitar envío a domicilio dentro del área metropolitana de Guadalajara.">?</span>
                 </h2>
                 <div class="delivery-options">
@@ -100,7 +104,7 @@ header('Content-Type: text/html; charset=utf-8');
                                 <span class="option-price">GRATIS</span>
                             </div>
                             <div class="option-description">
-                                <i class="fa-solid fa-location-dot"></i> <?= htmlspecialchars(SITE_ADDRESS) ?>
+                                <i data-lucide="map-pin"></i> <?= htmlspecialchars(SITE_ADDRESS) ?>
                             </div>
                         </div>
                     </div>
@@ -122,7 +126,7 @@ header('Content-Type: text/html; charset=utf-8');
 
             <div class="section-card">
                 <h2 class="section-title">
-                  <span class="section-icon"><i class="fa-solid fa-wrench"></i></span> Servicios adicionales
+                  <span class="section-icon"><i data-lucide="wrench"></i></span> Servicios adicionales
                   <span class="wh-help" data-tip="La instalación profesional incluye colocación del mueble, conexión hidráulica del lavabo y ajustes finales. Se aplica un cargo de $<?= number_format(COSTO_INSTALACION, 0) ?> por mueble instalado.">?</span>
                 </h2>
                 <div class="delivery-options">
@@ -150,7 +154,7 @@ header('Content-Type: text/html; charset=utf-8');
                             <div class="option-description">
                                 Instalación por expertos, incluye conexión de lavabo y ajustes finales.
                                 <span id="notaInstalacion" style="display:block;margin-top:6px;color:#8b7355;font-size:12px;font-weight:600;">
-                                    <i class="fa-solid fa-circle-info"></i> $<?= number_format(COSTO_INSTALACION, 0) ?> por mueble
+                                    <i data-lucide="info"></i> $<?= number_format(COSTO_INSTALACION, 0) ?> por mueble
                                 </span>
                             </div>
                         </div>
@@ -161,7 +165,7 @@ header('Content-Type: text/html; charset=utf-8');
 
             <div class="section-card">
                 <h2 class="section-title">
-                  <span class="section-icon"><i class="fa-solid fa-money-bill-wave"></i></span> Forma de pago
+                  <span class="section-icon"><i data-lucide="banknote"></i></span> Forma de pago
                   <span class="wh-help" data-tip="Puedes pagar tu pedido completo ahora, o solo el 50% de anticipo para iniciar la fabricación y liquidar el resto después (en línea o al recibir tu pedido).">?</span>
                 </h2>
                 <div class="delivery-options">
@@ -198,12 +202,12 @@ header('Content-Type: text/html; charset=utf-8');
             <!-- ── SELECTOR DE FECHA ──────────────────────────── -->
             <div class="section-card">
                 <h2 class="section-title">
-                  <span class="section-icon"><i class="fa-solid fa-calendar-days"></i></span> Fecha de entrega
+                  <span class="section-icon"><i data-lucide="calendar-days"></i></span> Fecha de entrega
                   <span class="wh-help" data-tip="Selecciona el día preferido para recibir tu pedido. Solo aparecen los días disponibles según la capacidad del taller. Si la fecha que necesitas no aparece, contáctanos.">?</span>
                 </h2>
 
                 <div class="date-info">
-                    <strong><i class="fa-solid fa-clock"></i> Fabricación bajo pedido — entrega estimada en 2 días hábiles</strong>
+                    <strong><i data-lucide="clock"></i> Fabricación bajo pedido — entrega estimada en 2 días hábiles</strong>
                     <p>
                         Selecciona el día que prefieres recibir tu mueble.
                         La disponibilidad se actualiza en tiempo real según la carga del taller.
@@ -225,7 +229,7 @@ header('Content-Type: text/html; charset=utf-8');
 
                 <div class="info-box">
                     <p>
-                        <i class="fa-solid fa-lightbulb"></i> <strong>Nota:</strong> La fecha seleccionada es tu día de entrega estimado.
+                        <i data-lucide="lightbulb"></i> <strong>Nota:</strong> La fecha seleccionada es tu día de entrega estimado.
                         Recibirás confirmación por correo electrónico.
                     </p>
                 </div>
@@ -233,7 +237,7 @@ header('Content-Type: text/html; charset=utf-8');
 
             <div class="section-card">
                 <h2 class="section-title">
-                  <span class="section-icon"><i class="fa-solid fa-user"></i></span> Datos de contacto
+                  <span class="section-icon"><i data-lucide="user"></i></span> Datos de contacto
                   <span class="wh-help" data-tip="Usamos estos datos para confirmar tu pedido y coordinar la entrega. Si ya tienes cuenta, tus datos se rellenan automáticamente.">?</span>
                 </h2>
                 <form id="formularioCliente" novalidate>
@@ -275,7 +279,7 @@ header('Content-Type: text/html; charset=utf-8');
 
                     <div id="seccionDireccion">
                         <div class="wh-info-box" style="margin-bottom:14px;">
-                          <i class="fa-solid fa-location-dot"></i>
+                          <i data-lucide="map-pin"></i>
                           <span>Busca tu dirección y confirma la ubicación en el mapa. <strong>Es donde entregaremos tu pedido.</strong></span>
                         </div>
 
@@ -301,7 +305,7 @@ header('Content-Type: text/html; charset=utf-8');
                         <!-- Detalle editable (se muestra tras confirmar en el mapa o al hacer clic en "ingresar manualmente") -->
                         <div id="direccionDetalleEdit" style="display:none;margin-top:6px;">
                           <p style="font-size:12px;color:var(--muted);margin-bottom:8px;">
-                            <i class="fa-solid fa-pen-to-square"></i> Ingresa o corrige tu dirección:
+                            <i data-lucide="square-pen"></i> Ingresa o corrige tu dirección:
                           </p>
                           <div class="row g-2">
                             <div class="col-md-8 form-group" style="margin-bottom:8px;">
@@ -345,7 +349,7 @@ header('Content-Type: text/html; charset=utf-8');
         <!-- ── Columna derecha: resumen ───────────────────────── -->
         <div class="col-lg-4 cart-summary-col">
         <div class="cart-summary">
-            <h3 class="summary-title"><i class="fa-solid fa-clipboard-list"></i> Resumen del pedido</h2>
+            <h3 class="summary-title"><i data-lucide="clipboard-list"></i> Resumen del pedido</h2>
 
             <div id="resumenItems"></div>
 
@@ -362,7 +366,7 @@ header('Content-Type: text/html; charset=utf-8');
                 <span id="totalFinal">$0</span>
             </div>
             <div class="summary-item" id="lineaAnticipo" style="display:none">
-                <span><i class="fa-solid fa-circle-info" style="color:#8b7355;"></i> Anticipo (50%)</span>
+                <span><i data-lucide="info" style="color:#8b7355;"></i> Anticipo (50%)</span>
                 <span id="montoAnticipo">$0</span>
             </div>
             <div class="summary-item" id="lineaSaldoPendiente" style="display:none">
@@ -371,21 +375,21 @@ header('Content-Type: text/html; charset=utf-8');
             </div>
 
             <div class="fecha-resumen-box" id="fechaResumenBox">
-                <strong><i class="fa-solid fa-calendar-days"></i> Semana de entrega elegida</strong>
+                <strong><i data-lucide="calendar-days"></i> Semana de entrega elegida</strong>
                 <span id="fechaResumenTexto">—</span>
             </div>
 
             <button class="btn-checkout" id="btnCheckout" data-call="procederAlPago">
-                Proceder al pago <i class="fa-solid fa-credit-card"></i>
+                Proceder al pago <i data-lucide="credit-card"></i>
             </button>
 
             <button class="btn-vaciar-carrito" id="btnVaciarCarrito" data-call="confirmarVaciarCarrito">
-                <i class="fa-solid fa-trash"></i> Vaciar carrito
+                <i data-lucide="trash-2"></i> Vaciar carrito
             </button>
 
             <p class="secure-note">
-                <i class="fa-solid fa-lock"></i> Pago 100% seguro · Stripe &amp; PayPal<br>
-                <i class="fa-solid fa-box"></i> Garantía de satisfacción incluida
+                <i data-lucide="lock"></i> Pago 100% seguro · Stripe &amp; PayPal<br>
+                <i data-lucide="package"></i> Garantía de satisfacción incluida
             </p>
         </div>
         </div>
@@ -409,11 +413,11 @@ header('Content-Type: text/html; charset=utf-8');
 
 <nav class="mobile-bottom-nav" aria-label="Navegación rápida">
   <div class="mobile-bottom-nav-inner">
-    <a href="/catalogo" class="mbn-item"><i class="fa-solid fa-store"></i><span>Catálogo</span></a>
-    <a href="/solicitudes" class="mbn-item"><i class="fa-solid fa-file-invoice"></i><span>Solicitar</span></a>
-    <a href="/seguimiento" class="mbn-item"><i class="fa-solid fa-magnifying-glass"></i><span>Seguimiento</span></a>
-    <a href="/carrito" class="mbn-item mbn-item--active"><span class="mbn-icon-wrap"><i class="fa-solid fa-cart-shopping"></i><span class="mbn-cart-badge"></span></span><span>Carrito</span></a>
-    <button class="mbn-item" data-auth-action="openMenuMovil"><i class="fa-solid fa-user"></i><span>Mi cuenta</span></button>
+    <a href="/catalogo" class="mbn-item"><i data-lucide="store"></i><span>Catálogo</span></a>
+    <a href="/solicitudes" class="mbn-item"><i data-lucide="receipt"></i><span>Solicitar</span></a>
+    <a href="/seguimiento" class="mbn-item"><i data-lucide="search"></i><span>Seguimiento</span></a>
+    <a href="/carrito" class="mbn-item mbn-item--active"><span class="mbn-icon-wrap"><i data-lucide="shopping-cart"></i><span class="mbn-cart-badge"></span></span><span>Carrito</span></a>
+    <button class="mbn-item" data-auth-action="openMenuMovil"><i data-lucide="user"></i><span>Mi cuenta</span></button>
   </div>
 </nav>
 <script src="./assets/<?= av('js/utils.js') ?>"></script>
@@ -428,5 +432,10 @@ header('Content-Type: text/html; charset=utf-8');
 <?php if (defined('GOOGLE_MAPS_API_KEY') && GOOGLE_MAPS_API_KEY): ?>
 <script src="https://maps.googleapis.com/maps/api/js?key=<?= htmlspecialchars(GOOGLE_MAPS_API_KEY) ?>&libraries=places&callback=initMapsPickerReady&loading=async" async defer></script>
 <?php endif; ?>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+      if (window.lucide) window.lucide.createIcons();
+    });
+</script>
 </body>
 </html>

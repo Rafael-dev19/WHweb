@@ -10,6 +10,10 @@ const estado = {
 
 const FORM_KEY = 'wh_checkout_form';
 
+function _refreshIcons() {
+  if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+}
+
 // ── Sanitización de campos de usuario ────────────────────────────
 function escHtml(str) {
   return String(str ?? '')
@@ -318,7 +322,7 @@ function _mostrarSesionCardCarrito(cliente) {
     const btnEditar = document.createElement('button');
     btnEditar.type      = 'button';
     btnEditar.className = 'sesion-card-editar';
-    btnEditar.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Editar datos';
+    btnEditar.innerHTML = '<i data-lucide="square-pen"></i> Editar datos';
     btnEditar.onclick   = _restaurarFormCarrito;
 
     card.appendChild(avatarEl);
@@ -345,9 +349,10 @@ function _mostrarSesionCardCarrito(cliente) {
         // sin teléfono: card como banner, formulario completo sigue visible
         const aviso = document.createElement('div');
         aviso.className = 'sesion-card-aviso';
-        aviso.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Completa tus datos para continuar';
+        aviso.innerHTML = '<i data-lucide="circle-alert"></i> Completa tus datos para continuar';
         infoEl.appendChild(aviso);
     }
+    _refreshIcons();
 }
 
 function _restaurarFormCarrito() {
@@ -380,12 +385,13 @@ function renderizarItems() {
     if (estado.items.length === 0) {
         cont.innerHTML = `
             <div style="text-align:center;padding:40px;color: var(--color-text-muted);">
-                <div style="font-size:48px;margin-bottom:16px;"><i class="fa-solid fa-cart-shopping"></i></div>
+                <div style="width:48px;height:48px;margin:0 auto 16px;"><i data-lucide="shopping-cart" style="width:100%;height:100%;stroke-width:1.25;"></i></div>
                 <p>Tu carrito está vacío.</p>
                 <a href="/catalogo" class="btn-checkout" style="display:inline-block;margin-top:16px;text-decoration:none;">Ver catálogo</a>
             </div>`;
         if (resum) resum.innerHTML = '';
         document.getElementById('btnCheckout')?.setAttribute('disabled', 'disabled');
+        _refreshIcons();
         return;
     }
 
@@ -394,7 +400,7 @@ function renderizarItems() {
             <div class="cart-item-image">
                 ${item.imagen
                     ? `<img src="${item.imagen}" alt="${esc(item.nombre)}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">`
-                    : '<i class="fa-solid fa-couch"></i>'}
+                    : '<i data-lucide="armchair"></i>'}
             </div>
             <div class="cart-item-details">
                 <div class="cart-item-name">${esc(item.nombre)}</div>
@@ -411,7 +417,7 @@ function renderizarItems() {
                             <button class="btn-remove" style="padding:4px 10px;font-size:16px;" data-call="cambiarCantidadItem" data-args="[${i},1]">+</button>
                         </div>
                         <button class="btn-remove" data-call="eliminarItemCarrito" data-args="[${i}]" title="Eliminar">
-                            <i class="fa-solid fa-trash"></i>
+                            <i data-lucide="trash-2"></i>
                         </button>
                     </div>
                 </div>
@@ -428,6 +434,7 @@ function renderizarItems() {
                 <span>${fmt(item.precio * item.cantidad)}</span>
             </div>`).join('');
     }
+    _refreshIcons();
 }
 
 function cambiarCantidadItem(idx, delta) {
@@ -535,8 +542,9 @@ function _initMapPickerCheckout() {
             const canvas = document.getElementById('mpMapCanvas');
             if (canvas) canvas.innerHTML =
                 '<p style="text-align:center;padding:20px 12px;color: var(--color-text-muted);font-size:13px;">' +
-                '<i class="fa-solid fa-map-location-dot" style="font-size:28px;display:block;margin-bottom:8px;"></i>' +
+                '<i data-lucide="map-pinned" style="width:28px;height:28px;stroke-width:1.5;display:block;margin:0 auto 8px;"></i>' +
                 'Mapa no disponible. Ingresa tu dirección en los campos de abajo.</p>';
+            _refreshIcons();
         }
     }, 4000);
     document.addEventListener('maps-picker-ready', () => clearTimeout(_mapsLoadTimer), { once: true });
@@ -712,8 +720,9 @@ function actualizarTotales() {
     }
     if (elNota) {
         elNota.innerHTML = totalMuebles > 1
-            ? `<i class="fa-solid fa-circle-info"></i> ${fmt(costoInstUnit)} por mueble · ${totalMuebles} muebles = <strong style="color:var(--color-primary);">${fmt(costoInst)}</strong>`
-            : `<i class="fa-solid fa-circle-info"></i> ${fmt(costoInstUnit)} por mueble`;
+            ? `<i data-lucide="info"></i> ${fmt(costoInstUnit)} por mueble · ${totalMuebles} muebles = <strong style="color:var(--color-primary);">${fmt(costoInst)}</strong>`
+            : `<i data-lucide="info"></i> ${fmt(costoInstUnit)} por mueble`;
+        _refreshIcons();
     }
 }
 
@@ -722,7 +731,7 @@ async function cargarFechasDisponibles() {
     const grid = document.getElementById('semanasGrid');
     if (!grid) return;
 
-    grid.innerHTML = '<div class="fecha-loading"><i class="fa-solid fa-spinner fa-spin"></i> Consultando disponibilidad...</div>';
+    grid.innerHTML = '<div class="fecha-loading"><span class="auth-spinner" style="border-top-color:var(--color-primary);border-color:rgba(139,115,85,.25);"></span> Consultando disponibilidad...</div>';
 
     try {
         const cp          = document.getElementById('clienteCP')?.value.trim() || '';
@@ -988,7 +997,7 @@ function _mostrarSugerenciaLoginCheckout() {
     div.id = 'loginSuggestCheckout';
     div.className = 'login-suggest-card';
     div.innerHTML = `
-      <div class="login-suggest-icon"><i class="fa-solid fa-bolt"></i></div>
+      <div class="login-suggest-icon"><i data-lucide="zap"></i></div>
       <div class="login-suggest-text">
         <strong>¿Ya tienes cuenta?</strong>
         Inicia sesión y llenamos tus datos automáticamente.
@@ -998,9 +1007,10 @@ function _mostrarSugerenciaLoginCheckout() {
       <button type="button" class="login-suggest-close"
               data-remove-closest=".login-suggest-card"
               aria-label="Cerrar sugerencia">
-        <i class="fa-solid fa-xmark"></i>
+        <i data-lucide="x"></i>
       </button>`;
     ancla.parentNode.insertBefore(div, ancla);
+    _refreshIcons();
 }
 
 // ── Exports ───────────────────────────────────────────────────────

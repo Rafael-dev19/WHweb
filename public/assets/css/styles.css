@@ -137,9 +137,12 @@ select:focus-visible,
 
 .cart-icon {
   position: relative;
-  font-size: 24px;
   color: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
+.cart-icon svg { width: 22px; height: 22px; stroke-width: 1.75; }
 
 .cart-badge {
   position: absolute;
@@ -169,6 +172,11 @@ select:focus-visible,
   transition: background var(--transition-fast, 0.15s), color var(--transition-fast, 0.15s);
   white-space: nowrap;
   font-family: inherit;
+}
+.btn-cuenta-nav svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2;
 }
 .btn-cuenta-nav:hover, .btn-cuenta-nav.autenticado {
   background: var(--color-primary, #8b7355);
@@ -240,7 +248,7 @@ select:focus-visible,
   font-family: inherit;
 }
 .btn-back:hover { color: var(--color-primary, #8b7355); }
-.btn-back i { font-size: 11px; }
+.btn-back svg { width: 13px; height: 13px; stroke-width: 2; }
 
 @media (max-width: 576px) {
   .breadcrumb { padding: 10px 16px; }
@@ -385,13 +393,42 @@ select:focus-visible,
   line-height: 1.55;
   margin: 10px 0;
 }
-.wh-info-box i { color: var(--color-accent, #c9a96e); margin-top: 1px; flex-shrink: 0; }
+.wh-info-box svg { color: var(--color-accent, #c9a96e); margin-top: 1px; flex-shrink: 0; width: 18px; height: 18px; stroke-width: 1.75; }
 .wh-info-box strong { color: var(--color-accent, #d4b98a); }
 
 /* Soporte touch (móvil) — JS activa/desactiva .wh-help--open */
 @media (hover: none) {
   .wh-help { cursor: pointer; }
 }
+
+/* Toast/notificación global (creada por showNotification() en utils.js) */
+.wh-notification svg { width: 18px; height: 18px; stroke-width: 1.75; flex-shrink: 0; }
+
+/* Ícono girando (loader de pantalla completa, botones "Guardando...", etc.)
+   Autocontenido con su propio tamaño y keyframe — no depende de que la
+   página cargue animations.css. */
+.wh-icon-spin { display: inline-flex; }
+.wh-icon-spin svg { width: 1em; height: 1em; stroke-width: 1.75; animation: wh-icon-spin-kf .8s linear infinite; }
+@keyframes wh-icon-spin-kf { to { transform: rotate(360deg); } }
+
+/* Callout tintado (sin border-left de color) para notas destacadas dentro
+   de texto largo — p.ej. el aviso de Google Sign-In en la home. */
+.wh-callout {
+  padding: 16px 20px;
+  background: var(--color-primary-light, rgba(139,115,85,0.1));
+  border-radius: var(--border-radius-md, 10px);
+  font-size: 14px;
+  color: var(--color-text-muted, #ccc);
+  line-height: 1.8;
+}
+.wh-callout-lead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-accent, #c9a96e);
+  margin-bottom: 4px;
+}
+.wh-callout-link { color: var(--color-accent, #c9a96e); }
 
 
 /* ── Alerta de redirección (flash message) ─────────────────────── */
@@ -416,7 +453,7 @@ select:focus-visible,
   gap: 12px;
   animation: whAlertaIn .3s ease;
 }
-.wh-alerta i { color: var(--color-accent, #c9a96e); font-size: 20px; flex-shrink: 0; }
+.wh-alerta svg { color: var(--color-accent, #c9a96e); width: 20px; height: 20px; stroke-width: 1.75; flex-shrink: 0; }
 .wh-alerta-cerrar {
   position: absolute;
   top: 8px; right: 10px;
@@ -461,7 +498,7 @@ select:focus-visible,
   transform: translateY(-2px) scale(1.04);
   box-shadow: 0 6px 28px rgba(0,0,0,0.5);
 }
-.wh-guide-btn i { font-size: 18px; }
+.wh-guide-btn svg { width: 18px; height: 18px; stroke-width: 1.75; }
 
 @keyframes whGuidePop {
   from { opacity: 0; transform: translateY(20px); }
@@ -510,14 +547,16 @@ select:focus-visible,
 .wh-guide-close:hover { color: #fff; }
 
 .wh-guide-title {
-  font-size: 22px;
-  font-weight: 800;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 600;
   color: var(--color-accent, #c9a96e);
   margin-bottom: 6px;
   display: flex;
   align-items: center;
   gap: 10px;
 }
+.wh-guide-title svg { width: 22px; height: 22px; stroke-width: 1.75; }
 .wh-guide-subtitle {
   font-size: 15px;
   color: var(--color-text-muted);
@@ -553,12 +592,14 @@ select:focus-visible,
   flex-shrink: 0;
 }
 .wh-step-icon {
-  font-size: 22px;
   color: var(--color-accent, #c9a96e);
   flex-shrink: 0;
   width: 28px;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+.wh-step-icon svg { width: 22px; height: 22px; stroke-width: 1.75; }
 .wh-step-info {
   display: flex;
   flex-direction: column;
@@ -597,6 +638,7 @@ select:focus-visible,
   transition: background 0.2s;
   min-width: 130px;
 }
+.wh-guide-cta svg { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
 .wh-guide-cta:hover { background: var(--color-primary-hover, #a0865f); color: #fff; }
 .wh-guide-cta--alt {
   background: transparent;
@@ -610,7 +652,12 @@ select:focus-visible,
   color: #666;
   text-align: center;
   margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
+.wh-guide-note svg { width: 14px; height: 14px; stroke-width: 1.75; }
 
 /* Etiqueta de navegación con subtítulo */
 .nav-link-desc {

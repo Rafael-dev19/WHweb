@@ -1,88 +1,138 @@
 /* push-prompt.css — Tarjeta de opt-in explícito para notificaciones push.
    Usa los tokens locales del panel (--panel/--border/--text/... definidos
-   en panel_administrador.css / panel_empleado.css), no variables.css. */
+   en panel_administrador.css / panel_empleado.css), no variables.css.
+
+   A pedido del jefe, el personal debe quedar alcanzable por push casi de
+   forma obligatoria — la tarjeta insiste en cada inicio de sesión hasta que
+   se activan (ver push-notifications.js). Centrada + fondo oscurecido a
+   propósito: un toast pequeño en la esquina es demasiado fácil de ignorar
+   para un requisito que el negocio trata como no negociable. Sigue siendo
+   descartable ("Ahora no" / ×) — la insistencia es en el tiempo (reaparece
+   en el siguiente login), no en bloquear la sesión actual. */
+
+.push-prompt-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: rgba(10, 8, 6, 0.6);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .3s ease;
+}
+.push-prompt-backdrop.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
 
 .push-prompt-card {
   position: fixed;
-  right: 20px;
-  bottom: 20px;
+  left: 50%;
+  top: 50%;
   z-index: 9999;
-  width: min(360px, calc(100vw - 40px));
+  width: min(420px, calc(100vw - 32px));
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 14px;
-  box-shadow: var(--shadow, 0 14px 34px rgba(0,0,0,.45));
-  padding: 18px 18px 16px;
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(0,0,0,.5);
+  padding: 26px 24px 22px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
   opacity: 0;
-  transform: translateY(16px);
-  transition: opacity .25s ease, transform .25s ease;
+  transform: translate(-50%, -50%) scale(.94);
+  transition: opacity .3s ease, transform .3s ease;
 }
 .push-prompt-card.visible {
   opacity: 1;
-  transform: translateY(0);
+  transform: translate(-50%, -50%) scale(1);
 }
 .push-prompt-card.push-prompt-shake {
   animation: push-prompt-shake .4s ease;
 }
 @keyframes push-prompt-shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-6px); }
-  75% { transform: translateX(6px); }
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  25% { transform: translate(calc(-50% - 8px), -50%) scale(1); }
+  75% { transform: translate(calc(-50% + 8px), -50%) scale(1); }
 }
 
 .push-prompt-icon {
-  width: 40px;
-  height: 40px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   background: rgba(139, 115, 85, 0.15);
   color: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 17px;
+  font-size: 26px;
   flex-shrink: 0;
+  position: relative;
+}
+.push-prompt-icon::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1px solid var(--accent);
+  opacity: .35;
+  animation: push-prompt-pulse 2.2s ease-out infinite;
 }
 .push-prompt-icon-warn { background: rgba(139, 105, 20, 0.15); color: var(--warn); }
+.push-prompt-icon-warn::before { border-color: var(--warn); }
 .push-prompt-icon-ok   { background: rgba(74, 139, 90, 0.15);  color: var(--ok); }
+.push-prompt-icon-ok::before { border-color: var(--ok); }
+@keyframes push-prompt-pulse {
+  0%   { transform: scale(1);   opacity: .45; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
 
 .push-prompt-body strong {
   display: block;
   color: var(--text);
-  font-size: 14.5px;
-  margin-bottom: 4px;
+  font-size: 17px;
+  font-weight: 700;
+  margin-bottom: 6px;
 }
 .push-prompt-body p {
   color: var(--muted);
-  font-size: 12.5px;
-  line-height: 1.55;
+  font-size: 13.5px;
+  line-height: 1.6;
   margin: 0;
 }
 
 .push-prompt-actions {
   display: flex;
-  gap: 8px;
-  margin-top: 4px;
+  gap: 10px;
+  margin-top: 6px;
+  width: 100%;
   flex-wrap: wrap;
 }
 .push-prompt-btn {
   flex: 1 1 auto;
-  padding: 9px 12px;
-  border-radius: 8px;
-  font-size: 12.5px;
+  padding: 11px 14px;
+  border-radius: 9px;
+  font-size: 13.5px;
   font-weight: 700;
   cursor: pointer;
   border: none;
   transition: opacity .2s, transform .1s;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 .push-prompt-btn:hover { opacity: .9; }
+.push-prompt-btn:active { transform: scale(.97); }
 .push-prompt-btn:disabled { opacity: .6; cursor: not-allowed; }
 .push-prompt-btn-primary {
   background: linear-gradient(135deg, var(--accent), var(--accent2));
   color: #fff;
+  box-shadow: 0 6px 18px rgba(139, 115, 85, .35);
 }
 .push-prompt-btn-ghost {
   background: transparent;
@@ -92,12 +142,12 @@
 
 .push-prompt-close {
   position: absolute;
-  top: 8px;
-  right: 10px;
+  top: 12px;
+  right: 14px;
   background: none;
   border: none;
   color: var(--muted);
-  font-size: 18px;
+  font-size: 20px;
   line-height: 1;
   cursor: pointer;
   padding: 4px;
@@ -106,9 +156,7 @@
 
 @media (max-width: 480px) {
   .push-prompt-card {
-    left: 12px;
-    right: 12px;
-    bottom: 12px;
-    width: auto;
+    width: calc(100vw - 32px);
+    padding: 22px 18px 18px;
   }
 }

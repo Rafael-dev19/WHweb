@@ -4,7 +4,7 @@ require_once dirname(__DIR__) . '/includes/config.php';
 $area = htmlspecialchars(trim($_GET['area'] ?? ''), ENT_QUOTES, 'UTF-8');
 
 $titulo  = 'Acceso restringido';
-$icono   = 'fa-lock';
+$icono   = 'lock';
 $mensaje = 'Necesitas iniciar sesión con una cuenta autorizada para acceder a esta área.';
 $detalle = 'Si ya tienes una cuenta, inicia sesión con tus credenciales de personal.';
 
@@ -26,7 +26,10 @@ if ($area === 'admin') {
   <title>Acceso restringido — Wooden House</title>
   <meta name="description" content="Acceso restringido a Wooden House. Inicia sesión con tu cuenta para continuar.">
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -37,7 +40,7 @@ if ($area === 'admin') {
       align-items: center;
       justify-content: center;
       background: #1a1a1a;
-      font-family: 'Segoe UI', Arial, sans-serif;
+      font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
       color: #e0d8cc;
       padding: 20px;
     }
@@ -71,9 +74,9 @@ if ($area === 'admin') {
       align-items: center;
       justify-content: center;
       margin: 0 auto 24px;
-      font-size: 32px;
       color: #c9a96e;
     }
+    .ad-icon svg { width: 34px; height: 34px; stroke-width: 1.5; }
 
     .ad-badge {
       display: inline-block;
@@ -90,8 +93,9 @@ if ($area === 'admin') {
     }
 
     .ad-titulo {
-      font-size: 22px;
-      font-weight: 700;
+      font-family: 'Fraunces', 'Georgia', serif;
+      font-size: 24px;
+      font-weight: 600;
       color: #e8dcc8;
       margin-bottom: 12px;
       line-height: 1.3;
@@ -133,6 +137,7 @@ if ($area === 'admin') {
       cursor: pointer;
       transition: opacity 0.2s, transform 0.1s;
     }
+    .btn-login svg, .btn-inicio svg { width: 15px; height: 15px; stroke-width: 2; }
     .btn-login:hover { opacity: 0.88; transform: translateY(-1px); }
 
     .btn-inicio {
@@ -179,7 +184,7 @@ if ($area === 'admin') {
     </div>
 
     <div class="ad-icon">
-      <i class="fa-solid <?= $icono ?>"></i>
+      <i data-lucide="<?= $icono ?>"></i>
     </div>
 
     <div class="ad-badge">Acceso restringido</div>
@@ -190,11 +195,11 @@ if ($area === 'admin') {
 
     <div class="ad-acciones">
       <a href="/inicio?auth=1" class="btn-login">
-        <i class="fa-solid fa-right-to-bracket"></i>
+        <i data-lucide="log-in"></i>
         Iniciar sesión
       </a>
       <a href="/inicio" class="btn-inicio">
-        <i class="fa-solid fa-house"></i>
+        <i data-lucide="house"></i>
         Ir al inicio
       </a>
     </div>
@@ -205,5 +210,10 @@ if ($area === 'admin') {
   </div>
   </main>
 
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      if (window.lucide) window.lucide.createIcons();
+    });
+  </script>
 </body>
 </html>

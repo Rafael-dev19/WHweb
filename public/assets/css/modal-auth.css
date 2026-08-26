@@ -80,13 +80,14 @@
   background: none;
   border: none;
   color: var(--color-text-muted);
-  font-size: 18px;
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 8px;
   transition: color 0.15s, background 0.15s;
   line-height: 1;
+  display: inline-flex;
 }
+.auth-modal-close svg { width: 20px; height: 20px; stroke-width: 1.75; }
 .auth-modal-close:hover {
   color: var(--color-text-main);
   background: var(--color-bg-input);
@@ -204,15 +205,13 @@
   white-space: pre-line;
 }
 .auth-alert.error {
-  background: #4a2020;
-  border-left: 4px solid #8b1a1a;
-  color: #ffb3b3;
+  background: var(--color-error-bg);
+  color: var(--color-error);
   display: block;
 }
 .auth-alert.success {
-  background: #1a3a25;
-  border-left: 4px solid #2e7d32;
-  color: #a5d6a7;
+  background: var(--color-success-bg);
+  color: var(--color-success);
   display: block;
 }
 
@@ -329,6 +328,9 @@
 
 .auth-user-actions { display: flex; flex-direction: column; gap: 10px; }
 
+.btn-auth-mi-cuenta, .btn-auth-logout { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.btn-auth-mi-cuenta svg, .btn-auth-logout svg { width: 16px; height: 16px; stroke-width: 1.75; }
+
 .btn-auth-mi-cuenta {
   width: 100%;
   padding: 13px;
@@ -402,7 +404,7 @@
   border-color: var(--color-primary-hover);
   gap: 8px;
 }
-.btn-cuenta-nav i { font-size: 14px; }
+.btn-cuenta-nav svg { width: 15px; height: 15px; stroke-width: 2; }
 
 /* Pill de usuario autenticado en nav */
 .nav-auth-avatar-sm {
@@ -428,7 +430,9 @@
   text-overflow: ellipsis;
 }
 .nav-auth-chevron-sm {
-  font-size: 9px;
+  width: 11px;
+  height: 11px;
+  stroke-width: 2;
   color: var(--color-text-muted);
   transition: transform 0.2s;
 }
@@ -493,16 +497,16 @@
   transition: background 0.15s, color 0.15s;
   font-family: inherit;
 }
-.auth-mini-item i { width: 16px; text-align: center; color: var(--color-primary); font-size: 13px; }
+.auth-mini-item svg { width: 16px; height: 16px; stroke-width: 1.75; color: var(--color-primary); flex-shrink: 0; }
 .auth-mini-item:hover { background: rgba(139,115,85,0.12); color: var(--color-accent); }
-.auth-mini-item:hover i { color: var(--color-accent); }
+.auth-mini-item:hover svg { color: var(--color-accent); }
 
 .auth-mini-divider { height: 1px; background: var(--color-border); margin: 2px 0; }
 
 .auth-mini-logout { color: var(--color-text-muted, #c0c0c0); }
-.auth-mini-logout i { color: var(--color-error, #c07070); }
+.auth-mini-logout svg { color: var(--color-error, #c07070); }
 .auth-mini-logout:hover { background: rgba(196,74,74,0.1); color: var(--color-error, #ffb3b3); }
-.auth-mini-logout:hover i { color: var(--color-error, #ffb3b3); }
+.auth-mini-logout:hover svg { color: var(--color-error, #ffb3b3); }
 
 /* ── Login suggest card ──────────────────────────────────────────── */
 .login-suggest-card {
@@ -517,10 +521,10 @@
   flex-wrap: wrap;
 }
 .login-suggest-icon {
-  font-size: 22px;
   color: var(--color-accent);
   flex-shrink: 0;
 }
+.login-suggest-icon svg { width: 22px; height: 22px; stroke-width: 1.75; }
 .login-suggest-text {
   flex: 1;
   font-size: 14px;
@@ -546,12 +550,13 @@
   background: none;
   border: none;
   color: #666;
-  font-size: 16px;
   cursor: pointer;
   padding: 4px;
   transition: color 0.15s;
   flex-shrink: 0;
+  display: inline-flex;
 }
+.login-suggest-close svg { width: 16px; height: 16px; stroke-width: 1.75; }
 .login-suggest-close:hover { color: var(--color-text-main); }
 
 /* ── Banner correo no verificado ─────────────────────────────── */
@@ -559,11 +564,11 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #3a2800;
-  border-bottom: 2px solid #c8860a;
+  background: var(--color-warning-bg);
+  border-bottom: 2px solid var(--color-warning);
   padding: 11px 20px;
   font-size: 13px;
-  color: #f0c060;
+  color: var(--color-warning);
   flex-wrap: wrap;
   animation: wh-slidein 0.3s ease;
 }
@@ -576,31 +581,36 @@
   20%     { transform: translateX(-6px); }
   60%     { transform: translateX(6px); }
 }
-.wh-verif-icon { font-size: 16px; flex-shrink: 0; }
+.wh-verif-icon { display: inline-flex; flex-shrink: 0; }
+.wh-verif-icon svg { width: 18px; height: 18px; stroke-width: 1.75; }
 .wh-verif-text { flex: 1; min-width: 200px; line-height: 1.4; }
-.wh-verif-text strong { color: #ffd080; }
+.wh-verif-text strong { color: var(--color-warning); }
 .wh-verif-actions { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
 .wh-verif-btn {
   padding: 6px 14px;
   border-radius: 7px;
-  border: 1px solid rgba(200,134,10,0.5);
-  background: rgba(200,134,10,0.15);
-  color: #ffd080;
+  border: 1px solid var(--color-warning);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s, border-color 0.2s;
   font-family: inherit;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
-.wh-verif-btn:hover { background: rgba(200,134,10,0.3); border-color: #c8860a; }
+.wh-verif-btn svg { width: 13px; height: 13px; stroke-width: 2; }
+.wh-verif-btn:hover { background: var(--color-warning); color: var(--color-bg-main); }
 .wh-verif-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .wh-verif-btn-ok {
-  background: rgba(61,120,72,0.2);
-  border-color: rgba(61,120,72,0.5);
-  color: #90d4a0;
+  background: var(--color-success-bg);
+  border-color: var(--color-success);
+  color: var(--color-success);
 }
-.wh-verif-btn-ok:hover { background: rgba(61,120,72,0.35); border-color: #3d7848; }
+.wh-verif-btn-ok:hover { background: var(--color-success); color: var(--color-bg-main); }
 
 /* ── Barra de navegación fija móvil (compartida entre páginas) ───── */
 .mobile-bottom-nav {
@@ -655,7 +665,7 @@
   text-overflow: ellipsis;
   max-width: 100%;
 }
-.mbn-item i { font-size: 20px; transition: color 0.15s; flex-shrink: 0; }
+.mbn-item svg { width: 20px; height: 20px; stroke-width: 1.75; transition: color 0.15s; flex-shrink: 0; }
 .mbn-item:hover, .mbn-item:active { color: var(--color-accent); }
 
 /* En pantallas muy pequeñas (< 360px), ocultar etiquetas y mostrar solo iconos */
@@ -681,11 +691,11 @@
   background: var(--color-accent);
   border-radius: 0 0 4px 4px;
 }
-.mbn-item--active i { color: var(--color-accent); }
+.mbn-item--active svg { color: var(--color-accent); }
 
 /* CTA en inicio (énfasis sin indicador de página actual) */
 .mbn-item--cta { color: var(--color-accent); }
-.mbn-item--cta i { color: var(--color-accent); }
+.mbn-item--cta svg { color: var(--color-accent); }
 
 @media (max-width: 992px) {
   .mobile-bottom-nav { display: block !important; }
@@ -752,9 +762,9 @@
   bottom: 90px;
   left: 50%;
   transform: translateX(-50%);
-  background: #1e4d2b;
-  color: #90d4a0;
-  border: 1px solid #3d7848;
+  background: var(--color-bg-card);
+  color: var(--color-text-main);
+  border: 1px solid var(--color-success);
   border-radius: 12px;
   padding: 14px 24px;
   font-size: 14px;
@@ -767,6 +777,7 @@
   animation: wh-toast-in 0.4s ease, wh-toast-out 0.4s ease 4.5s forwards;
   white-space: nowrap;
 }
+.wh-toast-verificado svg { color: var(--color-success); width: 18px; height: 18px; stroke-width: 1.75; flex-shrink: 0; }
 @keyframes wh-toast-in {
   from { opacity: 0; transform: translateX(-50%) translateY(20px); }
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -807,11 +818,11 @@
 .wh-help--down::after { bottom: auto; top: calc(100% + 8px); }
 .wh-help--down::before { bottom: auto; top: calc(100% + 2px); border-top-color: transparent; border-bottom-color: #555; }
 
-/* Caja informativa dorada */
+/* Caja informativa dorada (sin border-left de color, ver DESIGN.md) */
 .wh-info-box {
   display: flex; align-items: flex-start; gap: 10px;
-  background: rgba(201,169,110,0.07); border-left: 3px solid var(--color-accent);
+  background: rgba(201,169,110,0.1);
   border-radius: 8px; padding: 12px 16px; margin-bottom: 18px;
   font-size: 13px; color: var(--color-accent); line-height: 1.5;
 }
-.wh-info-box i { flex-shrink: 0; margin-top: 2px; }
+.wh-info-box svg { flex-shrink: 0; margin-top: 2px; width: 18px; height: 18px; stroke-width: 1.75; }

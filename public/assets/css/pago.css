@@ -137,11 +137,17 @@ body {
 }
 
 .page-title {
+  font-family: var(--font-display);
   color: var(--color-primary);
   font-size: 36px;
   margin-bottom: 10px;
-  font-weight: bold;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
 }
+.page-title svg { width: 32px; height: 32px; stroke-width: 1.5; }
 
 .page-subtitle {
   color: var(--color-text-muted);
@@ -161,6 +167,7 @@ body {
 }
 
 .section-title {
+  font-family: var(--font-display);
   color: var(--color-primary);
   font-size: 24px;
   margin-bottom: 28px;
@@ -169,8 +176,9 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-weight: 700;
+  font-weight: 600;
 }
+.section-title svg { width: 22px; height: 22px; stroke-width: 1.75; }
 
 /* ========================================
    MÉTODOS DE PAGO — handled by Bootstrap row g-3 / col-6
@@ -301,7 +309,7 @@ body {
   font-size: 14px;
   padding: 12px 16px;
   border-radius: 8px;
-  border-left: 4px solid #f44336;
+  border: 1px solid rgba(244,67,54,.35);
   background: rgba(244, 67, 54, 0.1);
   color: #ff6b6b;
   display: none;
@@ -309,7 +317,7 @@ body {
 }
 
 #card-errors.warning {
-  border-left-color: #ff9800;
+  border-color: rgba(255,152,0,.35);
   background: rgba(255, 152, 0, 0.1);
   color: #ffb74d;
 }
@@ -510,7 +518,13 @@ body {
 
 .notice strong {
   color: var(--color-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
 }
+.notice strong svg { width: 16px; height: 16px; stroke-width: 1.75; }
+
+#tipoPagoBanner svg { width: 15px; height: 15px; stroke-width: 1.75; vertical-align: -2px; margin-right: 2px; }
 
 /* ========================================
    FOOTER
@@ -544,7 +558,7 @@ body {
 .payment-form-section {
   margin-top: 25px;
   padding: 28px;
-  background: linear-gradient(135deg, var(--color-border), #333333);
+  background: var(--color-bg-card);
   border-radius: 12px;
   border: 2px solid var(--color-border-light);
   animation: fadeIn 0.25s ease;
@@ -586,6 +600,7 @@ body {
   letter-spacing: 0.3px;
   margin-top: 18px;
 }
+.btn-pay svg { width: 18px; height: 18px; stroke-width: 1.75; }
 
 .btn-stripe {
   background: linear-gradient(135deg, #635bff, #7b74ff);
@@ -646,9 +661,11 @@ body {
   font-weight: 500;
 }
 
-.security-badges i {
+.security-badges svg {
   color: #4caf50;
-  font-size: 14px;
+  width: 15px;
+  height: 15px;
+  stroke-width: 1.75;
 }
 
 /* ========================================
@@ -850,10 +867,11 @@ body {
 }
 
 .payment-gateway-header > i {
-  font-size: 28px;
   color: var(--color-primary);
   flex-shrink: 0;
+  display: inline-flex;
 }
+.payment-gateway-header > i svg { width: 28px; height: 28px; stroke-width: 1.5; }
 
 .payment-gateway-header h3 {
   color: var(--color-text-main);

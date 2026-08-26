@@ -319,7 +319,7 @@
     var closeBtn = document.createElement('button');
     closeBtn.className = 'wh-lightbox-close';
     closeBtn.setAttribute('aria-label', 'Cerrar');
-    closeBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+    closeBtn.innerHTML = '<i data-lucide="x"></i>';
 
     var hint = document.createElement('div');
     hint.className = 'wh-lightbox-hint';
@@ -330,6 +330,7 @@
     inner.appendChild(hint);
     overlay.appendChild(inner);
     document.body.appendChild(overlay);
+    window.lucide?.createIcons();
 
     // Zoom con scroll
     var zoom = 1;

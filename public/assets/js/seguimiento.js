@@ -4,6 +4,10 @@
 const API_URL = '/api';
 const siteEmail = document.body.dataset.siteEmail || 'woodenhouse250@gmail.com';
 
+function _refreshIcons() {
+  if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+}
+
 document.addEventListener('DOMContentLoaded', function () {
   initCartBadge();
   initSeguimiento();
@@ -79,7 +83,7 @@ async function trackOrder() {
 
   if (btn) {
     btn.disabled  = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Buscando...';
+    btn.innerHTML = '<span class="auth-spinner" style="border-top-color:#fff;border-color:rgba(255,255,255,.35);"></span> Buscando...';
   }
   if (resultBox) {
     resultBox.style.display = 'none';
@@ -220,7 +224,7 @@ async function trackOrder() {
     const saldoPendienteBtn = (data.pedido && item.tipo_pago === 'anticipo' && Math.max(0, (item.total || 0) - (item.monto_pagado || 0)) > 0.009)
       ? `<div style="text-align:center;margin-top:16px;">
            <a href="/pago?modo=saldo&numero=${encodeURIComponent(item.numero_pedido)}" class="btn-track" style="display:inline-flex;text-decoration:none;">
-             <i class="fa-solid fa-credit-card"></i> Pagar saldo pendiente
+             <i data-lucide="credit-card"></i> Pagar saldo pendiente
            </a>
          </div>`
       : '';
@@ -243,12 +247,13 @@ async function trackOrder() {
             ${saldoPendienteBtn}
           </div>
           <div class="track-result-footer">
-            <i class="fa-solid fa-envelope"></i>
+            <i data-lucide="mail"></i>
             ¿Dudas? Escríbenos a <a href="mailto:${siteEmail}">${siteEmail}</a>
           </div>
         </div>`;
       resultBox.style.display = 'block';
       resultBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      _refreshIcons();
     }
 
   } catch (err) {
@@ -258,7 +263,8 @@ async function trackOrder() {
   } finally {
     if (btn) {
       btn.disabled  = false;
-      btn.innerHTML = '<i class="fa-solid fa-search"></i> Buscar';
+      btn.innerHTML = '<i data-lucide="search"></i> Buscar';
+      _refreshIcons();
     }
   }
 }
@@ -311,15 +317,15 @@ function renderCotizacionToken(cot, token) {
   if (est === 'respondida') {
     accionHtml = `
       <div style="text-align:center;margin-top:18px;">
-        <button class="btn-track" onclick="confirmarCotizacion('${token}')"><i class="fa-solid fa-check"></i> Confirmar y continuar con mi proyecto</button>
+        <button class="btn-track" onclick="confirmarCotizacion('${token}')"><i data-lucide="check"></i> Confirmar y continuar con mi proyecto</button>
       </div>`;
   } else if (est === 'aceptada') {
-    accionHtml = `<p style="text-align:center;color:#4a8b5a;font-weight:600;margin-top:14px;"><i class="fa-solid fa-circle-check"></i> Confirmado — en espera de que agendemos tu producción.</p>`;
+    accionHtml = `<p style="text-align:center;color:#4a8b5a;font-weight:600;margin-top:14px;display:flex;align-items:center;justify-content:center;gap:6px;"><i data-lucide="circle-check" style="width:16px;height:16px;stroke-width:1.75;"></i> Confirmado — en espera de que agendemos tu producción.</p>`;
   } else if (est === 'convertida_a_pedido' && cot.numero_pedido) {
     accionHtml = `
       <div style="text-align:center;margin-top:18px;">
         <a href="/seguimiento?pedido=${encodeURIComponent(cot.numero_pedido)}" class="btn-track" style="display:inline-flex;text-decoration:none;">
-          <i class="fa-solid fa-box"></i> Ver seguimiento de tu pedido ${escapeHtml(cot.numero_pedido)}
+          <i data-lucide="package"></i> Ver seguimiento de tu pedido ${escapeHtml(cot.numero_pedido)}
         </a>
       </div>`;
   }
@@ -340,8 +346,8 @@ function renderCotizacionToken(cot, token) {
         <div style="text-align:center;background:#fff;border:1px solid #e5ddd4;border-radius:8px;padding:16px;margin-bottom:16px;">
           <div style="color: var(--color-text-muted);font-size:11px;text-transform:uppercase;letter-spacing:1px;">Precio total</div>
           <div style="font-size:28px;font-weight:700;color:#5C3D11;">${money(cot.precio_cotizado)}</div>
-          ${cot.fecha_visita ? `<div style="color: var(--color-text-muted);font-size:12px;margin-top:6px;">📍 Visita: ${escapeHtml(cot.fecha_visita)}${cot.hora_visita ? ' — ' + escapeHtml(cot.hora_visita) : ''}</div>` : ''}
-          <div style="color: var(--color-text-muted);font-size:12px;margin-top:4px;">${parseInt(cot.requiere_instalacion) ? '✅ Incluye instalación' : '— Sin instalación'}</div>
+          ${cot.fecha_visita ? `<div style="color: var(--color-text-muted);font-size:12px;margin-top:6px;display:flex;align-items:center;justify-content:center;gap:5px;"><i data-lucide="map-pin" style="width:12px;height:12px;stroke-width:1.75;"></i> Visita: ${escapeHtml(cot.fecha_visita)}${cot.hora_visita ? ' — ' + escapeHtml(cot.hora_visita) : ''}</div>` : ''}
+          <div style="color: var(--color-text-muted);font-size:12px;margin-top:4px;display:flex;align-items:center;justify-content:center;gap:5px;">${parseInt(cot.requiere_instalacion) ? '<i data-lucide="circle-check" style="width:12px;height:12px;stroke-width:1.75;color:#4a8b5a;"></i> Incluye instalación' : '— Sin instalación'}</div>
         </div>
 
         ${itemsRows ? `<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px;">
@@ -351,16 +357,17 @@ function renderCotizacionToken(cot, token) {
 
         ${cot.descripcion_respuesta ? `<div style="background:#fff;border:1px solid #e5ddd4;border-radius:6px;padding:14px;line-height:1.7;color:#3a3a3a;margin-bottom:12px;">${escapeHtml(cot.descripcion_respuesta).replace(/\n/g,'<br>')}</div>` : ''}
 
-        ${cot.pdf_url ? `<p style="text-align:center;"><a href="${cot.pdf_url}" target="_blank" rel="noopener" style="color:var(--color-primary);font-weight:600;"><i class="fa-solid fa-file-pdf"></i> Descargar propuesta en PDF</a></p>` : ''}
+        ${cot.pdf_url ? `<p style="text-align:center;"><a href="${cot.pdf_url}" target="_blank" rel="noopener" style="color:var(--color-primary);font-weight:600;display:inline-flex;align-items:center;gap:6px;"><i data-lucide="file-text" style="width:15px;height:15px;stroke-width:1.75;"></i> Descargar propuesta en PDF</a></p>` : ''}
 
         ${accionHtml}
       </div>
       <div class="track-result-footer">
-        <i class="fa-solid fa-envelope"></i>
+        <i data-lucide="mail"></i>
         ¿Dudas? Escríbenos a <a href="mailto:${siteEmail}">${siteEmail}</a>
       </div>
     </div>`;
   resultBox.style.display = 'block';
+  _refreshIcons();
   resultBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
@@ -405,7 +412,7 @@ function showAlert(message, type = 'info') {
   toast.style.cssText = `position:fixed;top:24px;right:24px;z-index:10000;padding:14px 22px;
     background:${colors[type]||colors.info};color:#fff;border-radius:10px;font-size:14px;
     font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.4);max-width:380px;line-height:1.5;
-    font-family:'Segoe UI',Tahoma,sans-serif;border-left:4px solid rgba(255,255,255,.4);`;
+    font-family:'Segoe UI',Tahoma,sans-serif;`;
   document.body.appendChild(toast);
   setTimeout(() => toast.remove(), 6000);
 }

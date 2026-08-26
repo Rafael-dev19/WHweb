@@ -136,6 +136,8 @@
       box-shadow: 0 10px 25px rgba(0,0,0,.25);
     }
 
+    .placeholder-img svg { width: 64px; height: 64px; stroke-width: 1.25; }
+
     .main-image img {
       width: 100%;
       height: 100%;
@@ -173,7 +175,7 @@
 
     .product-info { display: flex; flex-direction: column; gap: 20px; }
 
-    .product-title { font-size: clamp(24px, 4vw, 32px); color: var(--color-primary); font-weight: bold; }
+    .product-title { font-family: var(--font-display); font-size: clamp(24px, 4vw, 34px); color: var(--color-primary); font-weight: 600; }
 
     .rating { display: flex; align-items: center; gap: 10px; color: #ffa500; }
     .rating span { color: var(--color-text-muted); }
@@ -190,6 +192,7 @@
       color: #7fdb7f;
       border: 2px solid rgba(127,219,127,.18);
     }
+    .stock-indicator svg { width: 20px; height: 20px; stroke-width: 1.75; flex-shrink: 0; }
 
     .description { color: var(--color-text-muted); line-height: 1.8; font-size: 16px; }
 
@@ -210,7 +213,8 @@
       border-bottom: 1px solid var(--color-border);
     }
     .feature-item:last-child { border-bottom: none; }
-    .feature-icon { font-size: 24px; color: var(--color-primary); }
+    .feature-icon { color: var(--color-primary); display: inline-flex; flex-shrink: 0; }
+    .feature-icon svg { width: 22px; height: 22px; stroke-width: 1.75; }
 
     .cart-section {
       background: var(--color-bg-card);
@@ -260,14 +264,20 @@
       cursor: pointer;
       transition: all 0.3s;
       margin-bottom: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
     }
+    .btn-add-cart svg { width: 20px; height: 20px; stroke-width: 1.75; }
     .btn-add-cart:hover {
       background: var(--color-primary-hover);
       transform: translateY(-2px);
       box-shadow: 0 5px 20px rgba(139, 115, 85, 0.35);
     }
 
-    .shipping-note { text-align: center; color: var(--color-text-muted); font-size: 14px; margin-top: 10px; }
+    .shipping-note { display: flex; align-items: center; justify-content: center; gap: 6px; color: var(--color-text-muted); font-size: 14px; margin-top: 10px; }
+    .shipping-note svg { width: 15px; height: 15px; stroke-width: 1.75; flex-shrink: 0; }
 
     .tabs { margin-top: 50px; }
 
@@ -291,7 +301,11 @@
       cursor: pointer;
       transition: all 0.3s;
       font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
     }
+    .tab-button svg { width: 16px; height: 16px; stroke-width: 1.75; }
     /* alias para compatibilidad */
     .tab-btn { padding: 14px 22px; background: transparent; border: none; border-bottom: 3px solid transparent; color: var(--color-text-muted); font-size: 15px; cursor: pointer; transition: all 0.3s; font-weight: 700; }
 
@@ -323,6 +337,7 @@
       align-items: center;
       gap: 7px;
     }
+    .spec-section-title svg { width: 14px; height: 14px; stroke-width: 2; }
     .spec-section-title:first-child { border-top: none; padding-top: 0; }
 
     .spec-row {
@@ -356,7 +371,8 @@
     .spec-row-highlight .spec-label { color: var(--color-primary); }
 
     /* Feature items */
-    .feature-key { color: var(--color-text-muted, #aaa); font-size: 13px; font-weight: 600; }
+    .feature-key { color: var(--color-text-muted, #aaa); font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+    .feature-key svg { width: 14px; height: 14px; stroke-width: 1.75; }
     .feature-val { color: var(--color-text-main); font-size: 13px; }
     .feature-item {
       display: flex;
@@ -559,8 +575,8 @@
       align-items: center;
       justify-content: center;
       color: #555;
-      font-size: 32px;
     }
+    .placeholder-img-small svg { width: 28px; height: 28px; stroke-width: 1.25; }
     .related-info { padding: 12px; }
     .related-name {
       color: var(--color-text-main);
@@ -601,7 +617,6 @@
       padding: 10px 14px;
       background: var(--color-border);
       border-radius: 8px;
-      border-left: 3px solid var(--color-primary);
     }
     .tab-pane ul li strong { color: var(--color-text-main); }
     .tab-pane p {

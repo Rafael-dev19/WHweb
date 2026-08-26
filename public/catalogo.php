@@ -12,6 +12,9 @@ require_once dirname(__DIR__) . '/includes/env.php';
   <title>Catálogo - Wooden House</title>
   <meta name="description" content="Explora el catálogo completo de Wooden House. Muebles de madera artesanales: cocinas, clósets, muebles de baño y más. Encuentra el mueble perfecto para tu hogar.">
   <link rel="canonical" href="<?= APP_URL ?>/catalogo">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
   <link rel="stylesheet" href="./assets/<?= av('css/variables.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/styles.css') ?>">
@@ -21,6 +24,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
   <link rel="stylesheet" href="./assets/<?= av('css/animations.css') ?>">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous" defer></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
 </head>
 <body>
 
@@ -35,10 +39,10 @@ require_once dirname(__DIR__) . '/includes/env.php';
       <a href="/solicitudes" title="Pedir cotización o agendar una cita de medición">Solicitar</a>
       <a href="/seguimiento" title="Consulta el estado de tu pedido, cita o cotización">Seguimiento</a>
       <a href="/carrito" class="cart-icon" id="cartIcon" title="Ver mi carrito de compras">
-        <i class="fa-solid fa-cart-shopping"></i> <span class="cart-badge" id="cartCount">0</span>
+        <i data-lucide="shopping-cart"></i> <span class="cart-badge" id="cartCount">0</span>
       </a>
       <button class="btn-cuenta-nav" title="Iniciar sesión o ver mi cuenta">
-        <i class="fa-solid fa-user"></i> Iniciar sesión
+        <i data-lucide="user"></i> Iniciar sesión
       </button>
     </div>
   </div>
@@ -49,15 +53,15 @@ require_once dirname(__DIR__) . '/includes/env.php';
 
     <div class="catalog-main-categories" id="categoriasMain">
       <button class="main-cat-btn active" data-main-cat="banos">
-        <i class="fa-solid fa-bath"></i>
+        <i data-lucide="bath"></i>
         <span>Baños</span>
       </button>
       <button class="main-cat-btn" data-main-cat="cocinas">
-        <i class="fa-solid fa-utensils"></i>
+        <i data-lucide="cooking-pot"></i>
         <span>Cocinas</span>
       </button>
       <button class="main-cat-btn" data-main-cat="closets">
-        <i class="fa-solid fa-shirt"></i>
+        <i data-lucide="shirt"></i>
         <span>Closets</span>
       </button>
     </div>
@@ -65,7 +69,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
     <div class="d-flex flex-wrap gap-4 align-items-center justify-content-between catalog-header">
       <div class="search-bar">
         <input type="text" id="buscar-producto" placeholder="Buscar por nombre, características...">
-        <button id="btn-buscar" class="btn-buscar"><i class="fa-solid fa-magnifying-glass"></i> Buscar</button>
+        <button id="btn-buscar" class="btn-buscar"><i data-lucide="search"></i> Buscar</button>
         <span class="wh-help" data-tip="Busca por nombre del mueble, material (madera, MDF…) o característica. Puedes combinar palabras.">?</span>
       </div>
 
@@ -117,29 +121,29 @@ require_once dirname(__DIR__) . '/includes/env.php';
 
   <nav class="mobile-bottom-nav" aria-label="Navegación rápida">
     <div class="mobile-bottom-nav-inner">
-      <a href="/catalogo" class="mbn-item mbn-item--active"><i class="fa-solid fa-store"></i><span>Catálogo</span></a>
-      <a href="/solicitudes" class="mbn-item"><i class="fa-solid fa-file-invoice"></i><span>Solicitar</span></a>
-      <a href="/seguimiento" class="mbn-item"><i class="fa-solid fa-magnifying-glass"></i><span>Seguimiento</span></a>
-      <a href="/carrito" class="mbn-item"><span class="mbn-icon-wrap"><i class="fa-solid fa-cart-shopping"></i><span class="mbn-cart-badge"></span></span><span>Carrito</span></a>
-      <button class="mbn-item" data-auth-action="openMenuMovil"><i class="fa-solid fa-user"></i><span>Mi cuenta</span></button>
+      <a href="/catalogo" class="mbn-item mbn-item--active"><i data-lucide="store"></i><span>Catálogo</span></a>
+      <a href="/solicitudes" class="mbn-item"><i data-lucide="receipt"></i><span>Solicitar</span></a>
+      <a href="/seguimiento" class="mbn-item"><i data-lucide="search"></i><span>Seguimiento</span></a>
+      <a href="/carrito" class="mbn-item"><span class="mbn-icon-wrap"><i data-lucide="shopping-cart"></i><span class="mbn-cart-badge"></span></span><span>Carrito</span></a>
+      <button class="mbn-item" data-auth-action="openMenuMovil"><i data-lucide="user"></i><span>Mi cuenta</span></button>
     </div>
   </nav>
 
   <!-- ══ GUÍA FLOTANTE "¿Cómo comprar?" ══════════════════════════════ -->
   <button class="wh-guide-btn" id="whGuideBtn" aria-label="¿Cómo comprar?" data-open-modal="whGuideCatModal">
-    <i class="fa-solid fa-circle-question"></i>
+    <i data-lucide="circle-help"></i>
     <span class="wh-guide-btn-label">¿Cómo comprar?</span>
   </button>
 
   <div class="wh-guide-modal" id="whGuideCatModal">
     <div class="wh-guide-content" role="dialog" aria-modal="true">
       <button class="wh-guide-close" data-close-modal="whGuideCatModal" aria-label="Cerrar">×</button>
-      <h2 class="wh-guide-title"><i class="fa-solid fa-cart-shopping"></i> ¿Cómo comprar?</h2>
+      <h2 class="wh-guide-title"><i data-lucide="shopping-cart"></i> ¿Cómo comprar?</h2>
       <p class="wh-guide-subtitle">Estás en el catálogo. Aquí puedes ver todos los muebles:</p>
       <div class="wh-guide-steps">
         <div class="wh-guide-step">
           <div class="wh-step-num">1</div>
-          <div class="wh-step-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
+          <div class="wh-step-icon"><i data-lucide="search"></i></div>
           <div class="wh-step-info">
             <strong>Busca el mueble que quieres</strong>
             <span>Usa la barra de búsqueda o los filtros de categoría de arriba</span>
@@ -147,7 +151,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
         </div>
         <div class="wh-guide-step">
           <div class="wh-step-num">2</div>
-          <div class="wh-step-icon"><i class="fa-solid fa-cart-plus"></i></div>
+          <div class="wh-step-icon"><i data-lucide="shopping-cart"></i></div>
           <div class="wh-step-info">
             <strong>Haz clic en "Agregar al carrito"</strong>
             <span>Puedes agregar varios productos antes de pagar</span>
@@ -155,7 +159,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
         </div>
         <div class="wh-guide-step">
           <div class="wh-step-num">3</div>
-          <div class="wh-step-icon"><i class="fa-solid fa-user-plus"></i></div>
+          <div class="wh-step-icon"><i data-lucide="user-plus"></i></div>
           <div class="wh-step-info">
             <strong>Crea tu cuenta o inicia sesión</strong>
             <span>Necesitas una cuenta gratis para finalizar la compra</span>
@@ -163,7 +167,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
         </div>
         <div class="wh-guide-step">
           <div class="wh-step-num">4</div>
-          <div class="wh-step-icon"><i class="fa-solid fa-credit-card"></i></div>
+          <div class="wh-step-icon"><i data-lucide="credit-card"></i></div>
           <div class="wh-step-info">
             <strong>Paga y recibe tu número de pedido</strong>
             <span>Con ese número puedes rastrear tu pedido en cualquier momento</span>
@@ -172,10 +176,10 @@ require_once dirname(__DIR__) . '/includes/env.php';
       </div>
       <div class="wh-guide-actions">
         <a href="/solicitudes" class="wh-guide-cta wh-guide-cta--alt" data-close-modal="whGuideCatModal">
-          <i class="fa-solid fa-file-invoice"></i> ¿Prefiero cotizar primero
+          <i data-lucide="receipt"></i> ¿Prefiero cotizar primero
         </a>
       </div>
-      <p class="wh-guide-note"><i class="fa-solid fa-circle-info"></i> Si no sabes el precio exacto o quieres medidas especiales, pide una cotización gratis</p>
+      <p class="wh-guide-note"><i data-lucide="info"></i> Si no sabes el precio exacto o quieres medidas especiales, pide una cotización gratis</p>
     </div>
   </div>
 
@@ -186,5 +190,10 @@ require_once dirname(__DIR__) . '/includes/env.php';
   <script src="./assets/<?= av('js/event-delegation.js') ?>"></script>
   <script src="./assets/<?= av('js/page-init.js') ?>"></script>
   <script src="./assets/<?= av('js/animations.js') ?>"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      if (window.lucide) window.lucide.createIcons();
+    });
+  </script>
 </body>
 </html>

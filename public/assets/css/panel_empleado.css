@@ -14,6 +14,11 @@
     --info:#4a7c8b;
     --danger:#8b4a4a;
 
+    --chip:#232323;
+    --active-bg:#37373d;
+    --hover-text:#fff;
+    --active-text:#fff;
+
     /* Bootstrap 5 — Mapear variables a la paleta Wooden House */
     --bs-primary:          #8b7355;
     --bs-primary-rgb:      139, 115, 85;
@@ -40,6 +45,11 @@
     --info:#2d5f8a;
     --danger:#a33a3a;
 
+    --chip:#f0ede8;
+    --active-bg:#e4ddd0;
+    --hover-text:var(--text);
+    --active-text:var(--text);
+
     --bs-primary:          #6e5c42;
     --bs-primary-rgb:      110, 92, 66;
     --bs-link-color:       #7d6230;
@@ -60,8 +70,15 @@
   /* Transición suave al cambiar de tema (ver styles.css para la nota completa) */
   *{ transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease; }
 
+  /* Iconos Lucide: sustituyen a Font Awesome. Ver panel_administrador.css
+     para la nota completa sobre el tamaño 1em basado en svg.lucide. */
+  svg.lucide{ width:1em; height:1em; stroke-width:1.75; flex-shrink:0; }
+  .wh-icon-spin{ animation: wh-spin-slow .8s linear infinite; display:inline-flex; }
+  .icon-2x{ font-size:2em; }
+  .icon-xl{ font-size:1.5em; }
+
   body{
-    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
     background:var(--bg);
     color:var(--text);
     overflow:hidden;
@@ -137,7 +154,7 @@
     position:relative;
     transition:.2s;
   }
-  .icon-btn:hover{ background:#2a2d2e; color:#fff; }
+  .icon-btn:hover{ background:var(--chip); color:var(--hover-text); }
   .icon-btn.has-notif{ animation:notif-ring 3s ease infinite; }
   @keyframes notif-ring{
     0%,90%,100%{ transform:rotate(0); }
@@ -200,7 +217,7 @@
     font-size:13px;
     color:var(--accent);
   }
-  .notif-head-title i{ font-size:14px; }
+  .notif-head-title i, .notif-head-title svg{ font-size:14px; }
   .notif-head-actions{ display:flex; gap:6px; }
 
   .notif-body{
@@ -219,7 +236,7 @@
     gap:8px;
     color:var(--muted);
   }
-  .notif-empty i{ font-size:28px; opacity:.35; }
+  .notif-empty i, .notif-empty svg{ font-size:28px; opacity:.35; }
   .notif-empty span{ font-size:12px; }
 
   .notif-item{
@@ -297,7 +314,7 @@
   }
 
   .logout-btn{
-    background:#3c3c3c;
+    background:var(--border);
     color:var(--muted2);
     padding:6px 12px;
     border-radius:8px;
@@ -307,7 +324,7 @@
     transition:.2s;
     white-space:nowrap;
   }
-  .logout-btn:hover{ background:#4a4a4a; }
+  .logout-btn:hover{ background:var(--chip); }
 
   /* LAYOUT */
   .container{
@@ -355,11 +372,11 @@
     transition:.15s;
     user-select:none;
   }
-  .sidebar-item:hover{ background:#2a2d2e; color:#fff; }
+  .sidebar-item:hover{ background:var(--chip); color:var(--hover-text); }
   /* El ítem activo se distingue por fondo + ícono en acento, sin franja lateral. */
   .sidebar-item.active{
-    background:#37373d;
-    color:#fff;
+    background:var(--active-bg);
+    color:var(--active-text);
     font-weight:700;
   }
   .sidebar-item.active .icon{ color:var(--accent); }
@@ -504,7 +521,7 @@
     font-weight:700;
     transition:.2s;
   }
-  .filter-btn:hover{ background:#3c3c3c; }
+  .filter-btn:hover{ background:var(--border); }
   .filter-btn.active{ background:var(--accent); border-color:var(--accent); color:#fff; }
 
   table{ width:100%; border-collapse:collapse; min-width:820px; }
@@ -652,7 +669,7 @@
     color:var(--muted2);
     cursor:pointer;
   }
-  .modal-close:hover{ background:#2a2d2e; }
+  .modal-close:hover{ background:var(--chip); }
 
   /* NOTIFICATIONS */
   .notification{
@@ -679,13 +696,13 @@
   [data-theme="light"] .notification{ background:var(--panel); color:var(--text); }
   /* El tipo se distingue por el color del ícono, no por una franja lateral. */
   .notification.success{ color:#81c784; }
-  .notification.success i{ color:#4caf50; }
+  .notification.success i, .notification.success svg{ color:#4caf50; }
   .notification.error{ color:#e57373; }
-  .notification.error i{ color:#f44336; }
+  .notification.error i, .notification.error svg{ color:#f44336; }
   .notification.info{ color:#90caf9; }
-  .notification.info i{ color:#2196f3; }
+  .notification.info i, .notification.info svg{ color:#2196f3; }
   .notification.warning{ color:#ffb74d; }
-  .notification.warning i{ color:#ff9800; }
+  .notification.warning i, .notification.warning svg{ color:#ff9800; }
   [data-theme="light"] .notification.success,
   [data-theme="light"] .notification.error,
   [data-theme="light"] .notification.info,
@@ -736,12 +753,12 @@
     font-weight:700;
     user-select:none;
   }
-  .nav-links a:hover{ background:#2a2d2e; color:#fff; }
+  .nav-links a:hover{ background:var(--chip); color:var(--hover-text); }
   .nav-links a.active{
-    background:#37373d;
-    color:#fff;
+    background:var(--active-bg);
+    color:var(--active-text);
   }
-  .nav-links a.active i{ color:var(--accent); }
+  .nav-links a.active i, .nav-links a.active svg{ color:var(--accent); }
 
   .nav-close{
     position:absolute;
@@ -756,7 +773,7 @@
     cursor:pointer;
     font-size:18px;
   }
-  .nav-close:hover{ background:#2a2d2e; }
+  .nav-close:hover{ background:var(--chip); }
 
   /* TIMELINE (4 ETAPAS) */
   .timeline{
@@ -771,7 +788,7 @@
     align-items:center;
     gap:8px;
     padding:8px 10px;
-    background:#1b1b1b;
+    background:var(--bg);
     border:1px solid var(--border);
     border-radius:999px;
     font-size:11px;
@@ -793,7 +810,7 @@
   .activity-list{ display:flex; flex-direction:column; gap:8px; }
   .activity-item{
     padding:10px;
-    background:#1b1b1b;
+    background:var(--bg);
     border:1px solid var(--border);
     border-radius:12px;
     font-size:12px;
@@ -801,7 +818,7 @@
     flex-direction:column;
     gap:3px;
   }
-  .activity-item .t{ font-weight:900; color:#fff; }
+  .activity-item .t{ font-weight:900; color:var(--text); }
   .activity-item .m{ color:var(--muted); font-size:11px; }
 
   /* CALENDARIO */
@@ -825,7 +842,7 @@
     padding:8px 0;
   }
   .cal-day{
-    background:#1b1b1b;
+    background:var(--bg);
     border:1px solid var(--border);
     border-radius:12px;
     min-height:90px;
@@ -864,7 +881,7 @@
     padding:6px 8px;
     border-radius:999px;
     border:1px solid var(--border);
-    background:#232323;
+    background:var(--chip);
     color:var(--muted2);
     overflow:hidden;
     text-overflow:ellipsis;
@@ -908,11 +925,11 @@
     flex-direction:column;
     gap:2px;
     padding:10px;
-    background:#1b1b1b;
+    background:var(--bg);
     border:1px solid var(--border);
     border-radius:12px;
   }
-  .cal-item .t{ font-weight:900; color:#fff; font-size:12px; }
+  .cal-item .t{ font-weight:900; color:var(--text); font-size:12px; }
   .cal-item .m{ color:var(--muted); font-size:11px; }
 
   /* RESPONSIVE */
@@ -965,7 +982,7 @@
 
   /* ── NOTIFICATION: color de texto explícito ─────── */
   .notification { color: var(--text); }
-  .notification i { margin-right: 6px; }
+  .notification i, .notification svg { margin-right: 6px; }
 
   /* ── TABLA: scroll horizontal en móvil ──────────── */
   .table-scroll-wrapper {

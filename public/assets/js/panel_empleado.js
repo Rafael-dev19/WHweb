@@ -1,3 +1,21 @@
+// ================== ICONOS LUCIDE (auto-refresh) ==================
+// El panel reemplaza secciones enteras con innerHTML en decenas de puntos;
+// en vez de llamar lucide.createIcons() manualmente en cada uno, un
+// MutationObserver sobre <body> reprograma un refresh cada vez que el DOM
+// cambia (debounced para no llamarlo cientos de veces por segundo).
+(function(){
+  let _iconRefreshTimer = null;
+  function _scheduleIconRefresh(){
+    clearTimeout(_iconRefreshTimer);
+    _iconRefreshTimer = setTimeout(() => window.lucide?.createIcons(), 30);
+  }
+  const _iconObserver = new MutationObserver(_scheduleIconRefresh);
+  document.addEventListener('DOMContentLoaded', () => {
+    window.lucide?.createIcons();
+    _iconObserver.observe(document.body, { childList: true, subtree: true });
+  });
+})();
+
 // ================== UTILIDADES ==================
 function openModal(id){
   document.getElementById(id)?.classList.add('active');
@@ -10,11 +28,12 @@ function closeModal(id){
 
 function showNotification(message, type='info'){
   document.querySelectorAll('.notification').forEach(n => n.remove());
-  const icons = { success: 'fa-circle-check', error: 'fa-circle-xmark', info: 'fa-circle-info', warning: 'fa-triangle-exclamation' };
+  const icons = { success: 'circle-check', error: 'circle-x', info: 'info', warning: 'triangle-alert' };
   const notif = document.createElement('div');
   notif.className = `notification ${type}`;
-  notif.innerHTML = `<i class="fa-solid ${icons[type] || 'fa-circle-info'}" style="margin-right:8px;"></i>${message}`;
+  notif.innerHTML = `<i data-lucide="${icons[type] || 'info'}" style="margin-right:8px;"></i>${message}`;
   document.body.appendChild(notif);
+  window.lucide?.createIcons();
   const delay = type === 'error' ? 5000 : 3500;
   setTimeout(() => {
     notif.style.cssText += ';opacity:0;transform:translateX(120%);transition:all .3s ease';
@@ -125,11 +144,11 @@ const NOTIF_UNREAD_KEY = 'wh_emp_notifs_unread';
 const NOTIF_SEEN_KEY   = 'wh_emp_notifs_seen';
 
 const NOTIF_ICONS = {
-  pedido:      { icon:'fa-box',          color:'var(--accent)' },
-  cita:        { icon:'fa-calendar-days',color:'#4a7c8b' },
-  cotizacion:  { icon:'fa-briefcase',    color:'#4a8b5a' },
-  pago:        { icon:'fa-credit-card',  color:'#7c5c8b' },
-  sistema:     { icon:'fa-gear',         color:'var(--muted2)' },
+  pedido:      { icon:'box',          color:'var(--accent)' },
+  cita:        { icon:'calendar',     color:'#4a7c8b' },
+  cotizacion:  { icon:'briefcase',    color:'#4a8b5a' },
+  pago:        { icon:'credit-card',  color:'#7c5c8b' },
+  sistema:     { icon:'settings',     color:'var(--muted2)' },
 };
 
 function getNotifs(){ return JSON.parse(localStorage.getItem(NOTIF_KEY) || '[]'); }
@@ -166,7 +185,7 @@ function _notifIconHtml(tipo){
   else if(t.includes('pago'))  key='pago';
   const cfg = NOTIF_ICONS[key];
   return `<div class="notif-icon" style="color:${cfg.color};border-color:${cfg.color}40;">
-    <i class="fa-solid ${cfg.icon}"></i>
+    <i data-lucide="${cfg.icon}"></i>
   </div>`;
 }
 
@@ -175,7 +194,7 @@ function renderNotifPanel(){
   const list = getNotifs().slice(0, 20);
   if(!list.length){
     notifBody.innerHTML = `<div class="notif-empty">
-      <i class="fa-solid fa-bell-slash"></i>
+      <i data-lucide="bell-off"></i>
       <span>Sin notificaciones</span>
     </div>`;
     return;
@@ -302,7 +321,7 @@ function renderActivity(){
   if(!list.length){
     box.innerHTML = `
       <div class="activity-item">
-        <div class="t"><i class="fa-solid fa-clipboard-list"></i> Sin actividad reciente</div>
+        <div class="t"><i data-lucide="clipboard-list"></i> Sin actividad reciente</div>
         <div class="m">Cuando actualices pedidos/inventario aparecerán aquí.</div>
       </div>`;
     return;
@@ -485,12 +504,12 @@ function addInventoryItem(){
   saveItems(items);
   logMovement({ type:'alta_insumo', id, name, delta: stock, reason:'alta_inicial' });
 
-  addActivity('<i class="fa-solid fa-cubes"></i> Insumo agregado', `${id} | ${name} | Stock inicial: ${stock}`);
+  addActivity('<i data-lucide="boxes"></i> Insumo agregado', `${id} | ${name} | Stock inicial: ${stock}`);
   pushNotif('Insumo agregado', `${id} | ${name}`);
 
   closeModal('addItemModal');
   renderInventory();
-  showNotification('<i class="fa-solid fa-check"></i> Insumo agregado', 'success');
+  showNotification('<i data-lucide="check"></i> Insumo agregado', 'success');
   renderActivity();
 }
 
@@ -535,9 +554,9 @@ function applyStockChange(){
 
     closeModal('stockModal');
     renderInventory();
-    showNotification('<i class="fa-solid fa-check"></i> Ajuste guardado', 'success');
+    showNotification('<i data-lucide="check"></i> Ajuste guardado', 'success');
 
-    addActivity('<i class="fa-solid fa-cubes"></i> Ajuste de inventario', `${id} | Δ ${realDelta} | ${reason}`);
+    addActivity('<i data-lucide="boxes"></i> Ajuste de inventario', `${id} | Δ ${realDelta} | ${reason}`);
     pushNotif('Ajuste inventario', `${id} | Δ ${realDelta} | ${reason}`);
     renderActivity();
     return;
@@ -555,9 +574,9 @@ function applyStockChange(){
 
   closeModal('stockModal');
   renderInventory();
-  showNotification('<i class="fa-solid fa-check"></i> Movimiento guardado', 'success');
+  showNotification('<i data-lucide="check"></i> Movimiento guardado', 'success');
 
-  addActivity('<i class="fa-solid fa-cubes"></i> Movimiento de inventario', `${id} | Δ ${realDelta} | ${reason}`);
+  addActivity('<i data-lucide="boxes"></i> Movimiento de inventario', `${id} | Δ ${realDelta} | ${reason}`);
   pushNotif('Movimiento inventario', `${id} | Δ ${realDelta} | ${reason}`);
   renderActivity();
 }
@@ -584,7 +603,7 @@ function syncAutoInventory(){
       const delta = next - cur;
       items[idx].stock = next;
       logMovement({ type:'auto', id:c.id, name: items[idx].name, delta, reason: c.reason || 'auto' });
-      addActivity('<i class="fa-solid fa-cubes"></i> Auto-actualizar inventario', `${c.id} | Δ ${delta} | ${c.reason || 'auto'}`);
+      addActivity('<i data-lucide="boxes"></i> Auto-actualizar inventario', `${c.id} | Δ ${delta} | ${c.reason || 'auto'}`);
     }
   });
 
@@ -695,7 +714,7 @@ function buildCalendar(){
     cell.addEventListener('click', () => {
       selectedDateISO = dayISO;
       renderDayEvents(dayISO);
-      showNotification(`<i class="fa-solid fa-calendar-days"></i> Día seleccionado: ${dayISO}`, 'info');
+      showNotification(`<i data-lucide="calendar"></i> Día seleccionado: ${dayISO}`, 'info');
     });
 
     if(!selectedDateISO && dayISO === todayISO) selectedDateISO = todayISO;
@@ -743,16 +762,16 @@ function renderDayEvents(dayISO){
       ? `<span style="background:rgba(74,124,139,.2);color:#4a7c8b;border-radius:8px;padding:1px 7px;font-size:10px;font-weight:700;">Cita</span>`
       : '';
     const verBtn = e.eventoTipo === 'pedido' && e.datos?.id
-      ? `<button class="btn btn-primary btn-small" data-call="verDetallePedidoEmp" data-args="[${e.datos.id}]"><i class="fa-solid fa-eye"></i> Ver</button>`
+      ? `<button class="btn btn-primary btn-small" data-call="verDetallePedidoEmp" data-args="[${e.datos.id}]"><i data-lucide="eye"></i> Ver</button>`
       : e.eventoTipo === 'cita' && e.datos?.id
-      ? `<button class="btn btn-primary btn-small" data-call="verDetalleCitaEmp" data-args="[${e.datos.id}]"><i class="fa-solid fa-eye"></i> Ver</button>`
+      ? `<button class="btn btn-primary btn-small" data-call="verDetalleCitaEmp" data-args="[${e.datos.id}]"><i data-lucide="eye"></i> Ver</button>`
       : '';
     const elimBtn = esManual
       ? `<button class="btn btn-secondary btn-small" data-call="deleteEvent" data-args='["${e.id}"]'>Eliminar</button>`
       : '';
     return `
     <div class="cal-item">
-      <div class="t">${icon} ${escapeHtml((e.time ? e.time + ' — ' : '') + e.title)} ${badge}${e.cliente_id ? ` <span style="background:#e8f5e9;color:#2E7D32;border-radius:8px;padding:1px 7px;font-size:10px;font-weight:700;"><i class="fa-solid fa-user-check"></i> #${e.cliente_id}</span>` : ''}</div>
+      <div class="t">${icon} ${escapeHtml((e.time ? e.time + ' — ' : '') + e.title)} ${badge}${e.cliente_id ? ` <span style="background:#2d6a3f20;color:#2d6a3f;border-radius:8px;padding:1px 7px;font-size:10px;font-weight:700;"><i data-lucide="user-check"></i> #${e.cliente_id}</span>` : ''}</div>
       <div class="m">${escapeHtml(e.notes || '')}</div>
       <div style="display:flex; gap:8px; margin-top:6px;">${verBtn}${elimBtn}</div>
     </div>`;
@@ -836,9 +855,9 @@ function saveCalendarEvent(){
   selectedDateISO = date;
   buildCalendar();
   renderNext7();
-  showNotification('<i class="fa-solid fa-check"></i> Evento guardado', 'success');
+  showNotification('<i data-lucide="check"></i> Evento guardado', 'success');
 
-  addActivity('<i class="fa-solid fa-calendar-days"></i> Evento agregado', `${date} ${time || ''} | ${title}`);
+  addActivity('<i data-lucide="calendar"></i> Evento agregado', `${date} ${time || ''} | ${title}`);
   pushNotif('Evento agregado', `${date} ${time || ''} | ${title}`);
   renderActivity();
 }
@@ -874,7 +893,7 @@ async function saveCita() {
     });
     if (data.success) {
       closeModal('nuevaCita');
-      showNotification(`<i class="fa-solid fa-check"></i> Cita ${data.numero_cita} agendada`, 'success');
+      showNotification(`<i data-lucide="check"></i> Cita ${data.numero_cita} agendada`, 'success');
       cargarCitasAPI();
     } else {
       showNotification(data.error || 'Error al agendar cita', 'error');
@@ -903,7 +922,7 @@ async function saveCotizacion() {
     });
     if (data.success) {
       closeModal('nuevaCotizacion');
-      showNotification(`<i class="fa-solid fa-check"></i> Cotización ${data.numero_cotizacion} registrada`, 'success');
+      showNotification(`<i data-lucide="check"></i> Cotización ${data.numero_cotizacion} registrada`, 'success');
       cargarCotizacionesAPI();
     } else {
       showNotification(data.error || 'Error al crear cotización', 'error');
@@ -915,7 +934,7 @@ let _calEmpLastLoaded = 0; // timestamp ms de la última carga
 
 async function cargarCitasParaCalendario(silencioso = false) {
   const btn = document.getElementById('calRefreshBtn');
-  if (btn && !silencioso) btn.innerHTML = '<i class="fa-solid fa-arrows-rotate fa-spin"></i>';
+  if (btn && !silencioso) btn.innerHTML = '<i class="wh-icon-spin" data-lucide="refresh-cw"></i>';
 
   try {
     const hoy  = new Date();
@@ -965,7 +984,7 @@ async function cargarCitasParaCalendario(silencioso = false) {
     _calEmpLastLoaded = Date.now();
   } catch(e) { /* silencioso — el calendario muestra eventos de localStorage */ }
   finally {
-    if (btn) btn.innerHTML = '<i class="fa-solid fa-arrows-rotate"></i>';
+    if (btn) btn.innerHTML = '<i data-lucide="refresh-cw"></i>';
   }
 }
 
@@ -989,7 +1008,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // addActivity ya recibe el título con <i> tag y renderActivity lo muestra con innerHTML
   if(!getActivity().length){
     cargarNombreEmpleado();
-    addActivity('<i class="fa-solid fa-circle-check"></i> Panel empleado inicializado', 'Acceso limitado: ver/actualizar pedidos y citas.');
+    addActivity('<i data-lucide="circle-check"></i> Panel empleado inicializado', 'Acceso limitado: ver/actualizar pedidos y citas.');
   }
   renderActivity();
 });
@@ -1083,14 +1102,14 @@ async function cargarPedidosEmpleadoAPI() {
       return `
       <tr data-status="${p.estado}" data-id="${p.id}" data-entrega="${p.fecha_estimada||''}">
         <td>${p.numero_pedido}</td>
-        <td>${escapeHtml(p.nombre_cliente)}${p.cliente_id?` <span class="status-badge status-active" style="font-size:10px;padding:2px 8px;" title="Cliente registrado #${p.cliente_id}"><i class="fa-solid fa-user-check"></i> #${p.cliente_id}</span>`:''}</td>
+        <td>${escapeHtml(p.nombre_cliente)}${p.cliente_id?` <span class="status-badge status-active" style="font-size:10px;padding:2px 8px;" title="Cliente registrado #${p.cliente_id}"><i data-lucide="user-check"></i> #${p.cliente_id}</span>`:''}</td>
         <td>${p.correo_cliente}</td>
         <td>${p.fecha_estimada || '—'}</td>
         <td><span class="status-badge ${ESTADO_PEDIDO_CLASS[p.estado] || ''}">${ESTADO_PEDIDO_LABELS[p.estado] || p.estado}</span></td>
         <td style="color:var(--accent);font-weight:800;">$${parseFloat(p.total||0).toLocaleString('es-MX')}</td>
         <td style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
           <button data-call="verDetallePedidoEmp" data-args="[${p.id}]" style="background:var(--accent);color:#fff;border:none;padding:5px 12px;border-radius:4px;cursor:pointer;font-size:12px;white-space:nowrap;flex-shrink:0;">
-            <i class="fa-solid fa-eye"></i> Ver
+            <i data-lucide="eye"></i> Ver
           </button>
           <select class="form-select" style="width:120px;font-size:12px;" data-onchange="actualizarEstadoPedidoEmp" data-id="${p.id}" ${siguientes.length===0?'disabled':''}>
             ${opciones.map(s =>
@@ -1124,12 +1143,12 @@ async function actualizarEstadoPedidoEmp(id, estado) {
               method: 'POST', body: JSON.stringify({ pedido_id: id }),
             });
             if (!r.success) {
-              showNotification('<i class="fa-solid fa-circle-xmark"></i> ' + (r.error || 'Error al registrar el saldo'), 'error');
+              showNotification('<i data-lucide="circle-x"></i> ' + (r.error || 'Error al registrar el saldo'), 'error');
               cargarPedidosEmpleadoAPI();
               return;
             }
           } else {
-            showNotification('<i class="fa-solid fa-triangle-exclamation"></i> El pedido no puede marcarse como finalizado con saldo pendiente. Registra el pago primero.', 'warning');
+            showNotification('<i data-lucide="triangle-alert"></i> El pedido no puede marcarse como finalizado con saldo pendiente. Registra el pago primero.', 'warning');
             cargarPedidosEmpleadoAPI();
             return;
           }
@@ -1142,15 +1161,15 @@ async function actualizarEstadoPedidoEmp(id, estado) {
       body: JSON.stringify({ estado }),
     });
     if (data.success) {
-      showNotification('<i class="fa-solid fa-circle-check"></i> Estado actualizado', 'success');
+      showNotification('<i data-lucide="circle-check"></i> Estado actualizado', 'success');
       cargarPedidosEmpleadoAPI();
       if (window._empPedId === id) verDetallePedidoEmp(id);
       // Sincronizar calendario con el nuevo estado del pedido
       cargarCitasParaCalendario(true).then(() => { buildCalendar(); renderNext7(); if (selectedDateISO) renderDayEvents(selectedDateISO); });
     } else {
-      showNotification('<i class="fa-solid fa-circle-xmark"></i> ' + (data.error || 'Error'), 'error');
+      showNotification('<i data-lucide="circle-x"></i> ' + (data.error || 'Error'), 'error');
     }
-  } catch(e) { showNotification('<i class="fa-solid fa-circle-xmark"></i> Error de conexión', 'error'); }
+  } catch(e) { showNotification('<i data-lucide="circle-x"></i> Error de conexión', 'error'); }
 }
 
 // ── Citas ─────────────────────────────────────────────────────
@@ -1166,15 +1185,15 @@ async function cargarCitasAPI() {
       <tr>
         <td>${c.numero_cita}</td>
         <td>${escapeHtml(c.nombre_cliente)}</td>
-        <td>${c.cliente_id ? `<span class="status-badge status-active" style="font-size:10px;padding:2px 8px;"><i class="fa-solid fa-user-check"></i> #${c.cliente_id}</span>` : '<span style="color: var(--muted);font-size:11px;">—</span>'}</td>
+        <td>${c.cliente_id ? `<span class="status-badge status-active" style="font-size:10px;padding:2px 8px;"><i data-lucide="user-check"></i> #${c.cliente_id}</span>` : '<span style="color: var(--muted);font-size:11px;">—</span>'}</td>
         <td>${c.fecha_cita}</td>
         <td>${c.rango_horario || '—'}</td>
         <td>${c.tipo}</td>
         <td><span class="status-badge ${clsMap[c.estado]||''}">${c.estado}</span></td>
         <td style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;">
-          <button data-call="verDetalleCitaEmp" data-args="[${c.id}]" class="btn btn-primary btn-small" title="Ver detalle"><i class='fa-solid fa-eye'></i> Ver</button>
-          <button class="btn btn-secondary btn-small" data-call="confirmarCita" data-args="[${c.id}]" title="Confirmar cita"><i class="fa-solid fa-check"></i></button>
-          <button class="btn btn-secondary btn-small" data-call="completarCita" data-args="[${c.id}]" title="Marcar como completada"><i class="fa-solid fa-flag-checkered"></i></button>
+          <button data-call="verDetalleCitaEmp" data-args="[${c.id}]" class="btn btn-primary btn-small" title="Ver detalle"><i data-lucide='eye'></i> Ver</button>
+          <button class="btn btn-secondary btn-small" data-call="confirmarCita" data-args="[${c.id}]" title="Confirmar cita"><i data-lucide="check"></i></button>
+          <button class="btn btn-secondary btn-small" data-call="completarCita" data-args="[${c.id}]" title="Marcar como completada"><i data-lucide="flag"></i></button>
         </td>
       </tr>
     `).join('');
@@ -1184,7 +1203,7 @@ async function cargarCitasAPI() {
 async function confirmarCita(id) {
   const data = await apiFetch(`${API_BASE}/citas.php?id=${id}`, { method:'PUT', body: JSON.stringify({ estado: 'confirmada' }) });
   if (data.success) {
-    showNotification('<i class="fa-solid fa-circle-check"></i> Cita confirmada', 'success');
+    showNotification('<i data-lucide="circle-check"></i> Cita confirmada', 'success');
     cargarCitasAPI();
     cargarCitasParaCalendario(true).then(() => { buildCalendar(); renderNext7(); if (selectedDateISO) renderDayEvents(selectedDateISO); });
   }
@@ -1192,7 +1211,7 @@ async function confirmarCita(id) {
 async function completarCita(id) {
   const data = await apiFetch(`${API_BASE}/citas.php?id=${id}`, { method:'PUT', body: JSON.stringify({ estado: 'completada' }) });
   if (data.success) {
-    showNotification('<i class="fa-solid fa-circle-check"></i> Cita completada', 'success');
+    showNotification('<i data-lucide="circle-check"></i> Cita completada', 'success');
     cargarCitasAPI();
     cargarCitasParaCalendario(true).then(() => { buildCalendar(); renderNext7(); if (selectedDateISO) renderDayEvents(selectedDateISO); });
   }
@@ -1222,13 +1241,13 @@ async function cargarCotizacionesAPI() {
       <tr>
         <td>${c.numero_cotizacion}</td>
         <td>${escapeHtml(c.nombre_cliente)}</td>
-        <td>${cid ? `<span class="status-badge status-active" style="font-size:10px;padding:2px 8px;"><i class="fa-solid fa-user-check"></i> #${cid}</span>` : '<span style="color: var(--muted);font-size:11px;">—</span>'}</td>
+        <td>${cid ? `<span class="status-badge status-active" style="font-size:10px;padding:2px 8px;"><i data-lucide="user-check"></i> #${cid}</span>` : '<span style="color: var(--muted);font-size:11px;">—</span>'}</td>
         <td>${escapeHtml(tipo)}</td>
         <td>${c.rango_presupuesto || '—'}</td>
         <td><span class="status-badge ${clsMap[c.estado]||''}">${estadoLabels[c.estado]||c.estado}</span></td>
         <td>
           <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;">
-            <button data-call="verDetalleCotEmp" data-args="[${c.id}]" class="btn btn-primary btn-small" title="Ver detalle"><i class='fa-solid fa-eye'></i> Ver</button>
+            <button data-call="verDetalleCotEmp" data-args="[${c.id}]" class="btn btn-primary btn-small" title="Ver detalle"><i data-lucide='eye'></i> Ver</button>
             <select class="form-select" style="width:115px;font-size:11px;" data-onchange="actualizarCotizacion" data-id="${c.id}">
               ${['nueva','en_revision','respondida','cerrada'].map(s =>
                 `<option value="${s}" ${s===c.estado?'selected':''}>${estadoLabels[s]||s}</option>`
@@ -1249,7 +1268,7 @@ async function verDetallePedidoEmp(id) {
   const body  = document.getElementById('emp_ped_body');
   const folio = document.getElementById('emp_ped_folio');
   openModal('empPedidoDetalleModal');
-  body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>';
+  body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);"><i class="wh-icon-spin icon-2x" data-lucide="loader-circle"></i></div>';
   window._empPedId = id;
 
   const tr = document.querySelector(`tr[data-id="${id}"]`);
@@ -1291,7 +1310,7 @@ async function verDetallePedidoEmp(id) {
         mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(partesDireccion)}`;
       }
       const mapsBtn = mapsUrl
-        ? ` <a href="${mapsUrl}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;margin-left:8px;padding:3px 10px;background:#4285F420;border:1px solid #4285F460;border-radius:6px;color:#4285F4;font-size:11px;text-decoration:none;vertical-align:middle;"><i class="fa-solid fa-map-location-dot"></i> Ver en mapa${p.lat ? ' 📍' : ''}</a>`
+        ? ` <a href="${mapsUrl}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;margin-left:8px;padding:3px 10px;background:#4285F420;border:1px solid #4285F460;border-radius:6px;color:#4285F4;font-size:11px;text-decoration:none;vertical-align:middle;"><i data-lucide="map-pinned"></i> Ver en mapa${p.lat ? ' 📍' : ''}</a>`
         : '';
       entrega = `🚚 Envío — ${partesDireccion || 'Sin dirección'}${mapsBtn}`;
     }
@@ -1337,15 +1356,15 @@ async function verDetallePedidoEmp(id) {
     const esAnticipo     = p.tipo_pago === 'anticipo';
     const saldoPendiente = Math.max(0, (p.total||0) - (p.monto_pagado||0));
     const saldoHtml = saldoPendiente > 0.009
-      ? `<div style="background:var(--bg);border-left:3px solid #c9a96e;border-radius:6px;padding:12px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+      ? `<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
           <div>
             <div style="font-weight:700;color:var(--accent);margin-bottom:4px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">${esAnticipo ? 'Anticipo (50%)' : 'Pago pendiente'}</div>
             <div style="font-size:12px;color:var(--muted2);">Pagado: <strong>${money(p.monto_pagado||0)}</strong> · Saldo pendiente: <strong style="color:var(--accent);">${money(saldoPendiente)}</strong></div>
           </div>
-          <button class="btn btn-secondary btn-small" data-call="marcarSaldoManualEmp" data-args="[${id}]"><i class="fa-solid fa-hand-holding-dollar"></i> ${p.monto_pagado>0?'Marcar saldo pagado':'Marcar como pagado'}</button>
+          <button class="btn btn-secondary btn-small" data-call="marcarSaldoManualEmp" data-args="[${id}]"><i data-lucide="hand-coins"></i> ${p.monto_pagado>0?'Marcar saldo pagado':'Marcar como pagado'}</button>
         </div>`
-      : (esAnticipo ? `<div style="background:var(--bg);border-left:3px solid var(--ok);border-radius:6px;padding:12px;margin-bottom:14px;">
-          <div style="font-weight:700;color:var(--ok);font-size:12px;"><i class="fa-solid fa-circle-check"></i> Anticipo y saldo liquidados</div>
+      : (esAnticipo ? `<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:14px;">
+          <div style="font-weight:700;color:var(--ok);font-size:12px;"><i data-lucide="circle-check"></i> Anticipo y saldo liquidados</div>
         </div>` : '');
 
     body.innerHTML = `
@@ -1357,7 +1376,7 @@ async function verDetallePedidoEmp(id) {
         </div>
       </div>
 
-      <div style="background:var(--bg);border-left:3px solid var(--accent);border-radius:6px;padding:12px;margin-bottom:14px;">
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:14px;">
         <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Cliente</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;color:var(--muted2);">
           <div><span style="color:var(--muted);display:block;font-size:10px;">Nombre</span><strong>${escapeHtml(p.nombre_cliente)}</strong></div>
@@ -1367,15 +1386,15 @@ async function verDetallePedidoEmp(id) {
           <div style="grid-column:1/-1;"><span style="color:var(--muted);display:block;font-size:10px;">Entrega</span><strong>${entrega}</strong></div>
           <div style="grid-column:1/-1;"><span style="color:var(--muted);display:block;font-size:10px;">Instalación</span><strong>${instalacion}</strong></div>
           ${p.notas?`<div style="grid-column:1/-1;"><span style="color:var(--muted);display:block;font-size:10px;">Notas</span><strong>${escapeHtml(p.notas)}</strong></div>`:''}
-          ${p.cliente_id?`<div style="grid-column:1/-1;margin-top:4px;"><span style="background:#2d6a3f20;color:#2d6a3f;border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700;"><i class="fa-solid fa-user-check"></i> Cliente registrado #${p.cliente_id}</span></div>`:''}
+          ${p.cliente_id?`<div style="grid-column:1/-1;margin-top:4px;"><span style="background:#2d6a3f20;color:#2d6a3f;border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700;"><i data-lucide="user-check"></i> Cliente registrado #${p.cliente_id}</span></div>`:''}
         </div>
       </div>
 
       ${saldoHtml}
 
       ${(p.imagenes_diseno?.length || p.mensaje_disenador) ? `
-      <div style="background:var(--bg);border-left:3px solid #8b7355;border-radius:6px;padding:12px;margin-bottom:14px;">
-        <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i class="fa-solid fa-pen-ruler"></i> Diseño (SketchUp / VCarve)</div>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:14px;">
+        <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i data-lucide="ruler"></i> Diseño (SketchUp / VCarve)</div>
         ${p.imagenes_diseno?.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:${p.mensaje_disenador ? '10px' : '0'};">
           ${p.imagenes_diseno.map(img => `<a href="${img.url_imagen}" target="_blank" rel="noopener"><img src="${img.url_imagen}" alt="Diseño" style="width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}
         </div>` : ''}
@@ -1383,14 +1402,14 @@ async function verDetallePedidoEmp(id) {
       </div>` : ''}
 
       ${p.cotizacion_origen ? `
-      <div style="background:var(--bg);border-left:3px solid #c9a96e;border-radius:6px;padding:12px;margin-bottom:14px;">
-        <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i class="fa-solid fa-file-invoice-dollar"></i> Partidas cotizadas (${escapeHtml(p.cotizacion_origen.numero_cotizacion)})</div>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:14px;">
+        <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i data-lucide="receipt"></i> Partidas cotizadas (${escapeHtml(p.cotizacion_origen.numero_cotizacion)})</div>
         ${p.cotizacion_origen.items?.length ? `<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">
           <tbody>${p.cotizacion_origen.items.map(it => `<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 4px;color:var(--muted2);">${escapeHtml(it.nombre_item)}</td><td style="padding:5px 4px;text-align:center;color:var(--muted2);">${it.cantidad} ${escapeHtml(it.unidad)}</td><td style="padding:5px 4px;text-align:right;color:var(--accent);font-weight:700;">${money(it.subtotal)}</td></tr>`).join('')}</tbody>
         </table>` : ''}
         ${p.cotizacion_origen.descripcion_respuesta ? `<div style="font-size:12px;color:var(--muted2);margin-bottom:8px;">${escapeHtml(p.cotizacion_origen.descripcion_respuesta)}</div>` : ''}
         ${p.cotizacion_origen.imagenes?.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;">${p.cotizacion_origen.imagenes.map(im => `<a href="${im.url_imagen}" target="_blank" rel="noopener"><img src="${im.url_imagen}" alt="Referencia" style="width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}</div>` : ''}
-        ${p.cotizacion_origen.pdf_url ? `<p style="margin-top:8px;"><a href="${p.cotizacion_origen.pdf_url}" target="_blank" rel="noopener" style="color:var(--accent);font-size:12px;"><i class="fa-solid fa-file-pdf"></i> Ver PDF de la propuesta</a></p>` : ''}
+        ${p.cotizacion_origen.pdf_url ? `<p style="margin-top:8px;"><a href="${p.cotizacion_origen.pdf_url}" target="_blank" rel="noopener" style="color:var(--accent);font-size:12px;"><i data-lucide="file-text"></i> Ver PDF de la propuesta</a></p>` : ''}
       </div>` : ''}
 
       <div style="margin-bottom:14px;">
@@ -1405,7 +1424,7 @@ async function verDetallePedidoEmp(id) {
 
       ${window.WH_ROL === 'disenador' && ['anticipo_pagado','pagado'].includes(est) ? `
       <div style="padding-top:14px;border-top:1px solid var(--border);margin-bottom:14px;">
-        <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i class="fa-solid fa-pen-ruler"></i> Diseñar — marcar listo para producción</div>
+        <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i data-lucide="ruler"></i> Diseñar — marcar listo para producción</div>
         <div class="form-group" style="margin-bottom:8px;">
           <label class="form-label" style="font-size:11px;">Imágenes de diseño (SketchUp / VCarve) *</label>
           <input type="file" id="disenoImgInput" accept="image/jpeg,image/jpg,image/png,image/webp" multiple class="form-input">
@@ -1415,7 +1434,7 @@ async function verDetallePedidoEmp(id) {
           <textarea id="disenoMensajeInput" class="form-input" rows="2" placeholder="Ej: cuidado con la veta en el panel frontal..."></textarea>
         </div>
         <button class="btn btn-primary btn-small" id="btnMarcarListoProduccion" data-call="marcarListoParaProduccion" data-args="[${id}]">
-          <i class="fa-solid fa-check"></i> Marcar listo para producción
+          <i data-lucide="check"></i> Marcar listo para producción
         </button>
       </div>` : ''}
 
@@ -1430,11 +1449,11 @@ async function verDetallePedidoEmp(id) {
               class="status-badge ${c2}" style="cursor:pointer;border:none;opacity:0.85;">→ ${l2}</button>`;
           }).join('') || '<span style="color:var(--muted);font-size:12px;">Estado final — sin más transiciones</span>'}
         </div>
-        ${['pendiente','anticipo_pagado','pagado'].includes(est) ? '<p style="color:var(--muted);font-size:11px;margin-top:8px;"><i class="fa-solid fa-circle-info"></i> Este pedido pasará a producción cuando el diseñador termine el diseño y lo marque como listo.</p>' : ''}
+        ${['pendiente','anticipo_pagado','pagado'].includes(est) ? '<p style="color:var(--muted);font-size:11px;margin-top:8px;"><i data-lucide="info"></i> Este pedido pasará a producción cuando el diseñador termine el diseño y lo marque como listo.</p>' : ''}
       </div>
     `;
   } catch(e) {
-    body.innerHTML = `<div style="color:var(--danger);padding:20px;text-align:center;"><i class="fa-solid fa-circle-exclamation"></i> Error: ${e.message}</div>`;
+    body.innerHTML = `<div style="color:var(--danger);padding:20px;text-align:center;"><i data-lucide="circle-alert"></i> Error: ${e.message}</div>`;
   }
 }
 
@@ -1474,11 +1493,11 @@ async function marcarListoParaProduccion(id) {
   const files      = filesInput?.files;
   const mensaje    = document.getElementById('disenoMensajeInput')?.value?.trim() || '';
   if (!files || files.length === 0) {
-    showNotification('<i class="fa-solid fa-triangle-exclamation"></i> Adjunta al menos una imagen del diseño.', 'error');
+    showNotification('<i data-lucide="triangle-alert"></i> Adjunta al menos una imagen del diseño.', 'error');
     return;
   }
   const btn = document.getElementById('btnMarcarListoProduccion');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Subiendo...'; }
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="wh-icon-spin" data-lucide="loader-circle"></i> Subiendo...'; }
   try {
     const urls = await subirImagenesDiseno(files, id);
     const data = await apiFetch(`${API_BASE}/pedidos.php?id=${id}`, {
@@ -1490,16 +1509,16 @@ async function marcarListoParaProduccion(id) {
       }),
     });
     if (data.success) {
-      showNotification('<i class="fa-solid fa-circle-check"></i> Pedido marcado listo para producción.', 'success');
+      showNotification('<i data-lucide="circle-check"></i> Pedido marcado listo para producción.', 'success');
       cargarPedidosEmpleadoAPI();
       verDetallePedidoEmp(id);
     } else {
-      showNotification('<i class="fa-solid fa-circle-xmark"></i> ' + (data.error || 'Error'), 'error');
+      showNotification('<i data-lucide="circle-x"></i> ' + (data.error || 'Error'), 'error');
     }
   } catch (e) {
-    showNotification('<i class="fa-solid fa-circle-xmark"></i> ' + (e.message || 'Error al subir imágenes'), 'error');
+    showNotification('<i data-lucide="circle-x"></i> ' + (e.message || 'Error al subir imágenes'), 'error');
   } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-check"></i> Marcar listo para producción'; }
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="check"></i> Marcar listo para producción'; }
   }
 }
 
@@ -1511,14 +1530,14 @@ async function marcarSaldoManualEmp(id) {
       body: JSON.stringify({ pedido_id: id }),
     });
     if (data.success) {
-      showNotification('<i class="fa-solid fa-circle-check"></i> Saldo registrado como pagado', 'success');
+      showNotification('<i data-lucide="circle-check"></i> Saldo registrado como pagado', 'success');
       verDetallePedidoEmp(id);
       cargarPedidosEmpleadoAPI();
     } else {
-      showNotification('<i class="fa-solid fa-circle-xmark"></i> ' + (data.error || 'Error'), 'error');
+      showNotification('<i data-lucide="circle-x"></i> ' + (data.error || 'Error'), 'error');
     }
   } catch(e) {
-    showNotification('<i class="fa-solid fa-circle-xmark"></i> Error de conexión', 'error');
+    showNotification('<i data-lucide="circle-x"></i> Error de conexión', 'error');
   }
 }
 
@@ -1527,7 +1546,7 @@ async function verDetalleCitaEmp(id) {
   const folio = document.getElementById('emp_cita_folio');
   window._empCitaId = id;
   openModal('empCitaDetalleModal');
-  body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>';
+  body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);"><i class="wh-icon-spin icon-2x" data-lucide="loader-circle"></i></div>';
 
   try {
     const data = await apiFetch(`${API_BASE}/citas.php?id=${id}`);
@@ -1546,7 +1565,7 @@ async function verDetalleCitaEmp(id) {
         <span style="font-size:11px;color:var(--muted);">Registrada: ${(c.fecha_creacion||'').substring(0,10)}</span>
       </div>
 
-      <div style="background:var(--bg);border-left:3px solid #4a7c8b;border-radius:6px;padding:12px;margin-bottom:14px;">
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:14px;">
         <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Fecha y Tipo</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;color:var(--muted2);">
           <div><span style="color:var(--muted);display:block;font-size:10px;">📅 Fecha</span><strong style="font-size:15px;">${c.fecha_cita||'—'}</strong></div>
@@ -1556,7 +1575,7 @@ async function verDetalleCitaEmp(id) {
         </div>
       </div>
 
-      <div style="background:var(--bg);border-left:3px solid var(--accent);border-radius:6px;padding:12px;">
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;">
         <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Cliente</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;color:var(--muted2);">
           <div><span style="color:var(--muted);display:block;font-size:10px;">Nombre</span><strong>${escapeHtml(c.nombre_cliente)}</strong></div>
@@ -1564,12 +1583,12 @@ async function verDetalleCitaEmp(id) {
           <div style="grid-column:1/-1;"><span style="color:var(--muted);display:block;font-size:10px;">Correo</span><strong>${escapeHtml(c.correo_cliente)}</strong></div>
           <div style="grid-column:1/-1;"><span style="color:var(--muted);display:block;font-size:10px;">📍 Dirección</span><strong>${escapeHtml(c.direccion||'Sin especificar')}</strong></div>
           ${c.notas?`<div style="grid-column:1/-1;"><span style="color:var(--muted);display:block;font-size:10px;">Notas</span><strong>${escapeHtml(c.notas)}</strong></div>`:''}
-          ${c.cliente_id?`<div style="grid-column:1/-1;margin-top:4px;"><span style="background:#2d6a3f20;color:#2d6a3f;border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700;"><i class="fa-solid fa-user-check"></i> Cliente registrado #${c.cliente_id}</span></div>`:''}
+          ${c.cliente_id?`<div style="grid-column:1/-1;margin-top:4px;"><span style="background:#2d6a3f20;color:#2d6a3f;border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700;"><i data-lucide="user-check"></i> Cliente registrado #${c.cliente_id}</span></div>`:''}
         </div>
       </div>
     `;
   } catch(e) {
-    body.innerHTML = `<div style="color:var(--danger);padding:20px;text-align:center;"><i class="fa-solid fa-circle-exclamation"></i> Error: ${e.message}</div>`;
+    body.innerHTML = `<div style="color:var(--danger);padding:20px;text-align:center;"><i data-lucide="circle-alert"></i> Error: ${e.message}</div>`;
   }
 }
 
@@ -1578,7 +1597,7 @@ async function verDetalleCotEmp(id) {
   const folio = document.getElementById('emp_cot_folio');
   window._empCotId = id;
   openModal('empCotDetalleModal');
-  body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>';
+  body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);"><i class="wh-icon-spin icon-2x" data-lucide="loader-circle"></i></div>';
 
   try {
     const data = await apiFetch(`${API_BASE}/cotizaciones.php?id=${id}`);
@@ -1596,17 +1615,17 @@ async function verDetalleCotEmp(id) {
         <span style="font-size:11px;color:var(--muted);">Creada: ${(cot.fecha_creacion||'').substring(0,10)}</span>
       </div>
 
-      <div style="background:var(--bg);border-left:3px solid var(--accent);border-radius:6px;padding:12px;margin-bottom:14px;">
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:14px;">
         <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Cliente</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;color:var(--muted2);">
           <div><span style="color:var(--muted);display:block;font-size:10px;">Nombre</span><strong>${escapeHtml(cot.nombre_cliente)}</strong></div>
           <div><span style="color:var(--muted);display:block;font-size:10px;">Teléfono</span><strong>${escapeHtml(cot.telefono_cliente||'—')}</strong></div>
           <div style="grid-column:1/-1;"><span style="color:var(--muted);display:block;font-size:10px;">Correo</span><strong>${escapeHtml(cot.correo_cliente)}</strong></div>
-          ${cot.cliente_id?`<div style="grid-column:1/-1;margin-top:4px;"><span style="background:#2d6a3f20;color:#2d6a3f;border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700;"><i class="fa-solid fa-user-check"></i> Cliente registrado #${cot.cliente_id}</span></div>`:''}
+          ${cot.cliente_id?`<div style="grid-column:1/-1;margin-top:4px;"><span style="background:#2d6a3f20;color:#2d6a3f;border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700;"><i data-lucide="user-check"></i> Cliente registrado #${cot.cliente_id}</span></div>`:''}
         </div>
       </div>
 
-      <div style="background:var(--bg);border-left:3px solid var(--ok);border-radius:6px;padding:12px;">
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;">
         <div style="font-weight:700;color:var(--ok);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Especificaciones</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;color:var(--muted2);">
           <div><span style="color:var(--muted);display:block;font-size:10px;">Modelo de mueble</span><strong>${escapeHtml(cot.modelo_mueble||'No especificado')}</strong></div>
@@ -1623,13 +1642,13 @@ async function verDetalleCotEmp(id) {
       </div>
     `;
   } catch(e) {
-    body.innerHTML = `<div style="color:var(--danger);padding:20px;text-align:center;"><i class="fa-solid fa-circle-exclamation"></i> Error: ${e.message}</div>`;
+    body.innerHTML = `<div style="color:var(--danger);padding:20px;text-align:center;"><i data-lucide="circle-alert"></i> Error: ${e.message}</div>`;
   }
 }
 
 async function actualizarCotizacion(id, estado) {
   const data = await apiFetch(`${API_BASE}/cotizaciones.php?id=${id}`, { method:'PUT', body: JSON.stringify({ estado }) });
-  if (data.success) showNotification('<i class="fa-solid fa-circle-check"></i> Cotización actualizada', 'success');
+  if (data.success) showNotification('<i data-lucide="circle-check"></i> Cotización actualizada', 'success');
 }
 
 // ── KPIs dashboard ────────────────────────────────────────────
@@ -1707,7 +1726,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let initialized = false;
     firebaseAuth.onAuthStateChanged(user => {
       if (!initialized) { initialized = true; return; } // ignorar primer disparo al cargar
-      if (!user) window.location.replace('/inicio');
+      const _esLocalDev = ['127.0.0.1', 'localhost'].includes(location.hostname);
+      if (!user && !_esLocalDev) window.location.replace('/inicio');
     });
   }
 
@@ -1919,7 +1939,7 @@ async function generarRutaDia(fecha) {
   const body  = document.getElementById('rutaDiaBody');
   const mBtn  = document.getElementById('rutaDiaMapsBtn');
   if (label) label.textContent = fecha;
-  if (body)  body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);"><i class="fa-solid fa-spinner fa-spin fa-xl"></i><br><span style="font-size:13px;margin-top:10px;display:block;">Recopilando paradas...</span></div>';
+  if (body)  body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);"><i class="wh-icon-spin icon-xl" data-lucide="loader-circle"></i><br><span style="font-size:13px;margin-top:10px;display:block;">Recopilando paradas...</span></div>';
   if (mBtn)  mBtn.style.display = 'none';
   openModal('rutaDiaModal');
 
@@ -1978,7 +1998,7 @@ async function generarRutaDia(fecha) {
 
     if (!stops.length) {
       if (body) body.innerHTML = `<div style="padding:28px;text-align:center;color:var(--muted);">
-        <i class="fa-solid fa-map-pin" style="font-size:2rem;margin-bottom:10px;display:block;opacity:.35;"></i>
+        <i data-lucide="map-pin" style="font-size:2rem;margin-bottom:10px;display:block;opacity:.35;"></i>
         No hay paradas para <strong>${fecha}</strong>.<br>
         <span style="font-size:12px;margin-top:6px;display:block;">Solo se incluyen pedidos con estado "Listo para entrega" y citas con domicilio programadas para ese día.</span>
       </div>`;
@@ -1993,12 +2013,12 @@ async function generarRutaDia(fecha) {
       oLat = pos.lat;
       oLng = pos.lng;
       originStr   = `${pos.lat},${pos.lng}`;
-      originLabel = `<i class="fa-solid fa-location-dot" style="color:var(--ok);"></i> Tu ubicación actual (GPS)`;
+      originLabel = `<i data-lucide="locate" style="color:var(--ok);"></i> Tu ubicación actual (GPS)`;
     } else {
       oLat = ORIGEN_TIENDA.lat;
       oLng = ORIGEN_TIENDA.lng;
       originStr   = ORIGEN_TIENDA.address;
-      originLabel = `<i class="fa-solid fa-store" style="color:var(--accent);"></i> ${ORIGEN_TIENDA.label}`;
+      originLabel = `<i data-lucide="store" style="color:var(--accent);"></i> ${ORIGEN_TIENDA.label}`;
     }
 
     // ── 6. Ordenar: citas como anclas horarias, pedidos entre ellas ──
@@ -2011,25 +2031,25 @@ async function generarRutaDia(fecha) {
       // Separador de sección horaria
       if (s.tipo === '_header') {
         return `<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.9px;padding:10px 2px 5px;border-top:1px solid var(--border);margin-top:6px;">
-          <i class="fa-solid fa-clock" style="margin-right:4px;"></i>${escapeHtml(s.label)}
+          <i data-lucide="clock" style="margin-right:4px;"></i>${escapeHtml(s.label)}
         </div>`;
       }
       stopNum++;
       const isCita = s.tipo === 'cita';
       const distBadge = s._distKm != null
-        ? `<span style="font-size:10px;color:var(--muted);"><i class="fa-solid fa-arrows-left-right"></i> ~${s._distKm < 1 ? (s._distKm*1000).toFixed(0)+' m' : s._distKm.toFixed(1)+' km'}</span>`
+        ? `<span style="font-size:10px;color:var(--muted);"><i data-lucide="arrow-left-right"></i> ~${s._distKm < 1 ? (s._distKm*1000).toFixed(0)+' m' : s._distKm.toFixed(1)+' km'}</span>`
         : '';
       return `
       <div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border);">
         <div style="flex-shrink:0;width:28px;height:28px;border-radius:50%;background:${isCita?'#3d5a80':'var(--accent)'};color:#fff;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center;">${stopNum}</div>
         <div style="flex:1;min-width:0;">
           <div style="font-weight:700;font-size:13px;color:var(--text);">${s.icon} ${escapeHtml(s.label)}</div>
-          ${s.hora ? `<div style="font-size:11px;color:var(--ok);margin-top:2px;font-weight:700;"><i class="fa-regular fa-clock"></i> Cita a las ${escapeHtml(s.hora)}</div>` : ''}
+          ${s.hora ? `<div style="font-size:11px;color:var(--ok);margin-top:2px;font-weight:700;"><i data-lucide="clock"></i> Cita a las ${escapeHtml(s.hora)}</div>` : ''}
           <div style="font-size:12px;color:var(--muted2);margin-top:4px;word-break:break-word;">${escapeHtml(s.address || '(sin dirección registrada)')}</div>
           <div style="display:flex;gap:6px;margin-top:5px;flex-wrap:wrap;">
             ${s.lat && s.lng
-              ? `<span style="font-size:10px;background:#1b5e2020;color:#2e7d32;border-radius:10px;padding:1px 8px;"><i class="fa-solid fa-map-pin"></i> GPS exacto</span>`
-              : `<span style="font-size:10px;background:var(--bg);color:var(--muted);border-radius:10px;padding:1px 8px;"><i class="fa-solid fa-magnifying-glass-location"></i> Búsqueda por dirección</span>`}
+              ? `<span style="font-size:10px;background:#2d6a3f20;color:#2d6a3f;border-radius:10px;padding:1px 8px;"><i data-lucide="map-pin"></i> GPS exacto</span>`
+              : `<span style="font-size:10px;background:var(--bg);color:var(--muted);border-radius:10px;padding:1px 8px;"><i data-lucide="search"></i> Búsqueda por dirección</span>`}
             ${distBadge}
           </div>
         </div>
@@ -2041,7 +2061,7 @@ async function generarRutaDia(fecha) {
     if (body) body.innerHTML = `
       <div style="padding:10px 12px;background:var(--bg);border-radius:8px;font-size:12px;color:var(--muted2);margin-bottom:12px;">
         <div style="margin-bottom:4px;"><strong>Salida:</strong> ${originLabel}</div>
-        ${!pos ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;"><i class="fa-solid fa-circle-info"></i> Activa el GPS del dispositivo para partir desde tu ubicación actual.</div>` : ''}
+        ${!pos ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;"><i data-lucide="info"></i> Activa el GPS del dispositivo para partir desde tu ubicación actual.</div>` : ''}
       </div>
       <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;padding:0 2px;">
         ${realStops.length} ${realStops.length===1?'parada':'paradas'} ·
@@ -2049,7 +2069,7 @@ async function generarRutaDia(fecha) {
       </div>
       ${stopsHtml}
       ${realStops.some(s => !s.lat || !s.lng)
-        ? `<div style="margin-top:10px;font-size:11px;color:var(--muted);padding:8px 10px;background:var(--bg);border-radius:6px;"><i class="fa-solid fa-circle-info"></i> Google Maps geocodificará las paradas sin coordenadas GPS.</div>`
+        ? `<div style="margin-top:10px;font-size:11px;color:var(--muted);padding:8px 10px;background:var(--bg);border-radius:6px;"><i data-lucide="info"></i> Google Maps geocodificará las paradas sin coordenadas GPS.</div>`
         : ''}
     `;
 
@@ -2071,6 +2091,6 @@ async function generarRutaDia(fecha) {
     }
 
   } catch(e) {
-    if (body) body.innerHTML = `<div style="color:var(--danger);padding:24px;text-align:center;"><i class="fa-solid fa-circle-exclamation"></i> Error: ${escapeHtml(e.message)}</div>`;
+    if (body) body.innerHTML = `<div style="color:var(--danger);padding:24px;text-align:center;"><i data-lucide="circle-alert"></i> Error: ${escapeHtml(e.message)}</div>`;
   }
 }

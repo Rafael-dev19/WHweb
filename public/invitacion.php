@@ -12,11 +12,14 @@ $token = htmlspecialchars(trim($_GET['token'] ?? ''), ENT_QUOTES, 'UTF-8');
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Activar cuenta — Wooden House</title>
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: 'Segoe UI', Arial, sans-serif;
+      font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
       background: #0e0c09;
       min-height: 100vh;
       display: flex;
@@ -35,7 +38,7 @@ $token = htmlspecialchars(trim($_GET['token'] ?? ''), ENT_QUOTES, 'UTF-8');
     }
     .logo { text-align: center; margin-bottom: 28px; }
     .logo img { height: 52px; }
-    h1 { color: #e8dcc8; font-size: 22px; font-weight: 700; text-align: center; margin-bottom: 6px; }
+    h1 { font-family: 'Fraunces', Georgia, serif; color: #e8dcc8; font-size: 24px; font-weight: 600; text-align: center; margin-bottom: 6px; }
     .sub { color: #7a7060; font-size: 13px; text-align: center; line-height: 1.6; margin-bottom: 28px; }
     .badge-rol {
       display: inline-block;
@@ -71,26 +74,35 @@ $token = htmlspecialchars(trim($_GET['token'] ?? ''), ENT_QUOTES, 'UTF-8');
     .alert-success { background: #0a2a0a; color: #70c070; border: 1px solid #105010; }
     #loadingView { text-align: center; color: #7a7060; padding: 20px 0; }
     #tokenInvalidView { display: none; text-align: center; }
-    #tokenInvalidView i { font-size: 48px; color: #884422; margin-bottom: 16px; }
+    #tokenInvalidView svg { width: 48px; height: 48px; stroke-width: 1.25; color: #884422; margin-bottom: 16px; }
     #tokenInvalidView p { color: #7a7060; font-size: 14px; line-height: 1.6; }
     #formView { display: none; }
+    .btn { display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn svg { width: 16px; height: 16px; stroke-width: 1.75; }
+    .spin-loader {
+      display: inline-block; width: 28px; height: 28px;
+      border: 3px solid rgba(201,169,110,.25); border-top-color: #c9a96e;
+      border-radius: 50%; animation: spin-loader-rotate .7s linear infinite;
+    }
+    .spin-loader-sm { width: 15px; height: 15px; border-width: 2px; vertical-align: -3px; margin-right: 6px; }
+    @keyframes spin-loader-rotate { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
 <div class="card">
   <div class="logo">
-    <img src="/assets/img/logo_wh.png" alt="Wooden House" onerror="this.style.display='none'">
+    <img src="/assets/img/logo-login.png" alt="Wooden House" onerror="this.style.display='none'">
   </div>
 
   <!-- Estado: cargando -->
   <div id="loadingView">
-    <i class="fa-solid fa-spinner fa-spin" style="font-size:32px;color:#c9a96e;"></i>
+    <span class="spin-loader"></span>
     <p style="color:#7a7060;margin-top:12px;">Verificando invitación...</p>
   </div>
 
   <!-- Estado: token inválido / expirado -->
   <div id="tokenInvalidView">
-    <i class="fa-solid fa-triangle-exclamation"></i>
+    <i data-lucide="triangle-alert"></i>
     <h1 style="margin-bottom:10px;">Invitación inválida</h1>
     <p id="tokenInvalidMsg">Esta invitación no es válida o ha expirado.<br>Pide al administrador que te envíe una nueva.</p>
   </div>
@@ -122,7 +134,7 @@ $token = htmlspecialchars(trim($_GET['token'] ?? ''), ENT_QUOTES, 'UTF-8');
     </div>
 
     <button class="btn" id="btnActivar" onclick="activarCuenta()">
-      <i class="fa-solid fa-key"></i> Crear cuenta y entrar
+      <i data-lucide="key"></i> Crear cuenta y entrar
     </button>
     <p style="color:#5a5040;font-size:11px;text-align:center;margin-top:14px;">
       Al activar, aceptas las políticas de seguridad de Wooden House.
@@ -189,7 +201,7 @@ async function activarCuenta() {
   if (pass !== pass2)  { _showAlert('Las contraseñas no coinciden.'); return; }
 
   btn.disabled = true;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creando cuenta...';
+  btn.innerHTML = '<span class="spin-loader spin-loader-sm"></span> Creando cuenta...';
 
   try {
     const auth = firebase.auth();
@@ -214,7 +226,8 @@ async function activarCuenta() {
       throw new Error(data.error || 'Error al activar la cuenta.');
     }
 
-    btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> ¡Cuenta creada! Redirigiendo...';
+    btn.innerHTML = '<i data-lucide="circle-check"></i> ¡Cuenta creada! Redirigiendo...';
+    if (window.lucide) window.lucide.createIcons();
     setTimeout(() => { window.location.href = data.redirect; }, 1200);
 
   } catch (e) {
@@ -225,12 +238,14 @@ async function activarCuenta() {
       msg = 'Contraseña muy débil. Usa al menos 8 caracteres con letras y números.';
     _showAlert(msg);
     btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-key"></i> Crear cuenta y entrar';
+    btn.innerHTML = '<i data-lucide="key"></i> Crear cuenta y entrar';
+    if (window.lucide) window.lucide.createIcons();
   }
 }
 
 // Confirmar con Enter en el campo de contraseña
 document.addEventListener('DOMContentLoaded', () => {
+  if (window.lucide) window.lucide.createIcons();
   validarToken();
   document.getElementById('invPasswordConfirm')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') activarCuenta();

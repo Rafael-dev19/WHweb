@@ -35,11 +35,14 @@ unset($_usuario);
   <meta name="robots" content="noindex, nofollow">
 
 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
   <link rel="stylesheet" href="../assets/<?= av('css/panel_empleado.css') ?>">
   <link rel="stylesheet" href="../assets/<?= av('css/push-prompt.css') ?>">
   <link rel="stylesheet" href="../assets/<?= av('css/animations.css') ?>">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous" defer></script>
 </head>
 
@@ -48,7 +51,7 @@ unset($_usuario);
   <div class="header">
     <div class="header-left">
     <button class="menu-toggle" id="menuToggle" aria-label="Abrir menú" aria-expanded="false">
-      <i class="fa-solid fa-bars"></i>
+      <i data-lucide="menu"></i>
     </button>
     <div class="logo">
       <img src="/assets/img/logo-header.png" alt="Wooden House" style="height:80px;" class="panel-logo">
@@ -57,7 +60,7 @@ unset($_usuario);
 
     <div class="header-right">
       <button class="icon-btn" id="notifBtn" aria-label="Notificaciones" title="Notificaciones">
-        <i class="fa-solid fa-bell"></i>
+        <i data-lucide="bell"></i>
         <span class="badge-dot" id="notifDot"></span>
       </button>
 
@@ -73,12 +76,12 @@ unset($_usuario);
   <div class="notif-panel" id="notifPanel">
     <div class="notif-head">
       <div class="notif-head-title">
-        <i class="fa-solid fa-bell"></i>
+        <i data-lucide="bell"></i>
         Notificaciones
       </div>
       <div class="notif-head-actions">
-        <button class="btn btn-secondary btn-small" data-call="markAllNotifRead" title="Marcar todas como leídas"><i class="fa-solid fa-check-double"></i></button>
-        <button class="btn btn-secondary btn-small" data-call="clearAllNotifs" title="Limpiar todo" style="color:var(--danger,#e57373);"><i class="fa-solid fa-trash"></i></button>
+        <button class="btn btn-secondary btn-small" data-call="markAllNotifRead" title="Marcar todas como leídas"><i data-lucide="check-check"></i></button>
+        <button class="btn btn-secondary btn-small" data-call="clearAllNotifs" title="Limpiar todo" style="color:var(--danger,#e57373);"><i data-lucide="trash-2"></i></button>
       </div>
     </div>
     <div class="notif-body" id="notifBody"></div>
@@ -88,21 +91,21 @@ unset($_usuario);
     <button class="nav-close" id="navClose" aria-label="Cerrar menú">×</button>
     <div class="nav-title">Panel Empleado</div>
 
-    <a href="#" data-section="dashboard" class="active"><i class="fa-solid fa-chart-bar"></i> Dashboard</a>
-    <a href="#" data-section="pedidos"><i class="fa-solid fa-box"></i> Gestión de Pedidos</a>
+    <a href="#" data-section="dashboard" class="active"><i data-lucide="chart-column"></i> Dashboard</a>
+    <a href="#" data-section="pedidos"><i data-lucide="box"></i> Gestión de Pedidos</a>
   </div>
 
   <div class="container">
     <aside class="sidebar" id="sidebarDesktop">
       <div class="sidebar-item active" data-section="dashboard">
-        <span class="icon"><i class="fa-solid fa-chart-bar"></i></span>
+        <span class="icon"><i data-lucide="chart-column"></i></span>
         <span>Dashboard</span>
       </div>
 
       <div class="sidebar-section">GESTIÓN</div>
 
       <div class="sidebar-item" data-section="pedidos">
-        <span class="icon"><i class="fa-solid fa-box"></i></span>
+        <span class="icon"><i data-lucide="box"></i></span>
         <span>Gestión de Pedidos</span>
       </div>
 
@@ -133,7 +136,7 @@ unset($_usuario);
                 <button class="btn btn-secondary" data-call="prevMonth">← Mes</button>
                 <button class="btn btn-secondary" data-call="goToday">Hoy</button>
                 <button class="btn btn-secondary" data-call="nextMonth">Mes →</button>
-                <button class="btn btn-secondary" data-call="refrescarCalendarioEmp" title="Actualizar calendario" id="calRefreshBtn"><i class="fa-solid fa-arrows-rotate"></i></button>
+                <button class="btn btn-secondary" data-call="refrescarCalendarioEmp" title="Actualizar calendario" id="calRefreshBtn"><i data-lucide="refresh-cw"></i></button>
                 <button class="btn btn-primary" data-call="openAddEventModal">+ Evento</button>
               </div>
             </div>
@@ -147,7 +150,7 @@ unset($_usuario);
                   <div class="cal-list-head" id="selectedDayTitle" style="display:flex;justify-content:space-between;align-items:center;">
                     <span>Eventos del día</span>
                     <button id="rutaDiaCal" class="btn btn-primary btn-small" style="display:none;" data-call="generarRutaDia" data-args='[]'>
-                      <i class="fa-solid fa-route"></i> Ruta
+                      <i data-lucide="route"></i> Ruta
                     </button>
                   </div>
                   <div class="cal-list-body" id="dayEventsList">
@@ -218,13 +221,13 @@ unset($_usuario);
     <div class="modal-content" style="max-width:900px;width:min(900px,96vw);">
       <div class="modal-header" style="background:var(--accent);color:#fff;border-radius:8px 8px 0 0;margin:-18px -18px 16px;padding:16px 18px;">
         <h3 class="modal-title" style="color:#fff;">
-          <i class="fa-solid fa-box"></i> Detalle del Pedido
+          <i data-lucide="box"></i> Detalle del Pedido
           <span id="emp_ped_folio" style="font-weight:900;margin-left:8px;opacity:.85;"></span>
         </h3>
         <button class="modal-close" data-dismiss="empPedidoDetalleModal" style="color:#fff;">×</button>
       </div>
       <div id="emp_ped_body" style="overflow-x:auto;min-height:180px;">
-        <div style="text-align:center;padding:40px;color:var(--muted);"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>
+        <div style="text-align:center;padding:40px;color:var(--muted);"><i class="wh-icon-spin icon-2x" data-lucide="loader-circle"></i></div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" data-dismiss="empPedidoDetalleModal">Cerrar</button>
@@ -237,13 +240,13 @@ unset($_usuario);
     <div class="modal-content" style="max-width:600px;">
       <div class="modal-header" style="background:#3d4d8b;color:#fff;border-radius:8px 8px 0 0;margin:-18px -18px 16px;padding:16px 18px;">
         <h3 class="modal-title" style="color:#fff;">
-          <i class="fa-solid fa-calendar-days"></i> Detalle de Cita
+          <i data-lucide="calendar"></i> Detalle de Cita
           <span id="emp_cita_folio" style="font-weight:900;margin-left:8px;opacity:.85;"></span>
         </h3>
         <button class="modal-close" data-dismiss="empCitaDetalleModal" style="color:#fff;">×</button>
       </div>
       <div id="emp_cita_body" style="overflow-x:auto;">
-        <div style="text-align:center;padding:40px;color:var(--muted);"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>
+        <div style="text-align:center;padding:40px;color:var(--muted);"><i class="wh-icon-spin icon-2x" data-lucide="loader-circle"></i></div>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:center;padding:12px 0 0;margin-top:4px;border-top:1px solid var(--border);">
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -260,13 +263,13 @@ unset($_usuario);
     <div class="modal-content" style="max-width:650px;">
       <div class="modal-header" style="background:#1e5c22;color:#fff;border-radius:8px 8px 0 0;margin:-18px -18px 16px;padding:16px 18px;">
         <h3 class="modal-title" style="color:#fff;">
-          <i class="fa-solid fa-briefcase"></i> Detalle de Cotización
+          <i data-lucide="briefcase"></i> Detalle de Cotización
           <span id="emp_cot_folio" style="font-weight:900;margin-left:8px;opacity:.85;"></span>
         </h3>
         <button class="modal-close" data-dismiss="empCotDetalleModal" style="color:#fff;">×</button>
       </div>
       <div id="emp_cot_body" style="overflow-x:auto;">
-        <div style="text-align:center;padding:40px;color:var(--muted);"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>
+        <div style="text-align:center;padding:40px;color:var(--muted);"><i class="wh-icon-spin icon-2x" data-lucide="loader-circle"></i></div>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:center;padding:12px 0 0;margin-top:4px;border-top:1px solid var(--border);">
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -283,18 +286,18 @@ unset($_usuario);
     <div class="modal-content" style="max-width:620px;width:min(620px,96vw);">
       <div class="modal-header" style="background:#1a3a4a;color:#fff;border-radius:8px 8px 0 0;margin:-18px -18px 16px;padding:16px 18px;">
         <h3 class="modal-title" style="color:#fff;display:flex;align-items:center;gap:10px;">
-          <i class="fa-solid fa-route"></i> Ruta del Día
+          <i data-lucide="route"></i> Ruta del Día
           <span id="rutaDiaFechaLabel" style="font-size:13px;opacity:.75;font-weight:400;"></span>
         </h3>
         <button class="modal-close" data-dismiss="rutaDiaModal" style="color:#fff;">×</button>
       </div>
       <div id="rutaDiaBody" style="overflow-y:auto;min-height:120px;max-height:60vh;">
-        <div style="text-align:center;padding:30px;color:var(--muted);"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>
+        <div style="text-align:center;padding:30px;color:var(--muted);"><i class="wh-icon-spin icon-2x" data-lucide="loader-circle"></i></div>
       </div>
       <div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
         <button class="btn btn-secondary" data-dismiss="rutaDiaModal">Cerrar</button>
         <button id="rutaDiaMapsBtn" class="btn btn-primary" style="display:none;">
-          <i class="fa-solid fa-map-location-dot"></i> Abrir en Google Maps
+          <i data-lucide="map-pinned"></i> Abrir en Google Maps
         </button>
       </div>
     </div>

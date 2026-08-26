@@ -35,12 +35,15 @@ unset($_usuario);
   <meta name="description" content="Panel de administración de Wooden House. Gestión de productos, pedidos, empleados y reportes.">
   <meta name="robots" content="noindex, nofollow">
 
-  
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
   <link rel="stylesheet" href="../assets/<?= av('css/panel_administrador.css') ?>">
   <link rel="stylesheet" href="../assets/<?= av('css/push-prompt.css') ?>">
   <link rel="stylesheet" href="../assets/<?= av('css/animations.css') ?>">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous" defer></script>
 </head>
 
@@ -49,7 +52,7 @@ unset($_usuario);
   <div class="header">
     <div class="header-left">
     <button class="menu-toggle" id="menuToggle" aria-label="Abrir menú" aria-expanded="false">
-      <i class="fa-solid fa-bars"></i>
+      <i data-lucide="menu"></i>
     </button>
     <div class="logo">
       <img src="/assets/img/logo-header.png" alt="Wooden House" style="height:80px;" class="panel-logo">
@@ -58,7 +61,7 @@ unset($_usuario);
 
     <div class="user-info">
       <button class="icon-btn" id="notifBtn" aria-label="Notificaciones" title="Notificaciones">
-        <i class="fa-solid fa-bell"></i>
+        <i data-lucide="bell"></i>
         <span class="badge-dot" id="notifDot"></span>
       </button>
       <div class="user-avatar" id="userAvatar">—</div>
@@ -70,12 +73,12 @@ unset($_usuario);
   <div class="notif-panel" id="notifPanel">
     <div class="notif-head">
       <div class="notif-head-title">
-        <i class="fa-solid fa-bell"></i>
+        <i data-lucide="bell"></i>
         Notificaciones
       </div>
       <div class="notif-head-actions">
-        <button class="btn btn-secondary btn-small" data-call="markAllNotifRead" title="Marcar todas como leídas"><i class="fa-solid fa-check-double"></i></button>
-        <button class="btn btn-secondary btn-small" data-call="clearAllNotifs" title="Limpiar todo" style="color:var(--danger,#e57373);"><i class="fa-solid fa-trash"></i></button>
+        <button class="btn btn-secondary btn-small" data-call="markAllNotifRead" title="Marcar todas como leídas"><i data-lucide="check-check"></i></button>
+        <button class="btn btn-secondary btn-small" data-call="clearAllNotifs" title="Limpiar todo" style="color:var(--danger,#e57373);"><i data-lucide="trash-2"></i></button>
       </div>
     </div>
     <div class="notif-body" id="notifBody"></div>
@@ -88,22 +91,22 @@ unset($_usuario);
     </div>
 
     <?php if ($_esJefe): ?>
-    <a href="#" data-section="dashboard" class="active"><span class="icon"><i class="fa-solid fa-chart-bar"></i></span> Dashboard</a>
+    <a href="#" data-section="dashboard" class="active"><span class="icon"><i data-lucide="chart-column"></i></span> Dashboard</a>
     <?php endif; ?>
 
-    <a href="#" data-section="pedidos"<?= $_esJefe ? '' : ' class="active"' ?>><span class="icon"><i class="fa-solid fa-box"></i></span> Todos los Pedidos</a>
-    <a href="#" data-section="citas"><span class="icon"><i class="fa-solid fa-calendar-days"></i></span> Calendario de Citas</a>
-    <a href="#" data-section="cotizaciones"><span class="icon"><i class="fa-solid fa-briefcase"></i></span> Cotizaciones</a>
+    <a href="#" data-section="pedidos"<?= $_esJefe ? '' : ' class="active"' ?>><span class="icon"><i data-lucide="box"></i></span> Todos los Pedidos</a>
+    <a href="#" data-section="citas"><span class="icon"><i data-lucide="calendar"></i></span> Calendario de Citas</a>
+    <a href="#" data-section="cotizaciones"><span class="icon"><i data-lucide="briefcase"></i></span> Cotizaciones</a>
 
-    <a href="#" data-section="catalogo"><span class="icon"><i class="fa-solid fa-gear"></i></span> Gestionar Catálogo</a>
-    <a href="#" data-section="empleados"><span class="icon"><i class="fa-solid fa-briefcase"></i></span> Gestionar Empleados</a>
+    <a href="#" data-section="catalogo"><span class="icon"><i data-lucide="settings"></i></span> Gestionar Catálogo</a>
+    <a href="#" data-section="empleados"><span class="icon"><i data-lucide="briefcase"></i></span> Gestionar Empleados</a>
     <?php if ($_esJefe): ?>
-    <a href="#" data-section="reportes"><span class="icon"><i class="fa-solid fa-chart-bar"></i></span> Reportes Avanzados</a>
-    <a href="#" data-section="financiero"><span class="icon"><i class="fa-solid fa-tag"></i></span> Análisis Financiero</a>
+    <a href="#" data-section="reportes"><span class="icon"><i data-lucide="chart-column"></i></span> Reportes Avanzados</a>
+    <a href="#" data-section="financiero"><span class="icon"><i data-lucide="tag"></i></span> Análisis Financiero</a>
     <?php endif; ?>
-    <a href="#" data-section="clientes"><span class="icon"><i class="fa-solid fa-users"></i></span> Clientes Registrados</a>
+    <a href="#" data-section="clientes"><span class="icon"><i data-lucide="users"></i></span> Clientes Registrados</a>
     <?php if ($_esJefe): ?>
-    <a href="#" data-section="ofertas"><span class="icon"><i class="fa-solid fa-tag"></i></span> Ofertas & Marketing</a>
+    <a href="#" data-section="ofertas"><span class="icon"><i data-lucide="tag"></i></span> Ofertas & Marketing</a>
     <?php endif; ?>
   </div>
 
@@ -111,31 +114,31 @@ unset($_usuario);
     <aside class="sidebar">
       <?php if ($_esJefe): ?>
       <div class="sidebar-item active" data-section="dashboard">
-        <span class="icon"><i class="fa-solid fa-chart-bar"></i></span><span>Dashboard</span>
+        <span class="icon"><i data-lucide="chart-column"></i></span><span>Dashboard</span>
       </div>
       <?php endif; ?>
 
       <div class="sidebar-section">GESTIÓN</div>
-      <div class="sidebar-item<?= $_esJefe ? '' : ' active' ?>" data-section="pedidos"><span class="icon"><i class="fa-solid fa-box"></i></span><span>Todos los Pedidos</span></div>
-      <div class="sidebar-item" data-section="citas"><span class="icon"><i class="fa-solid fa-calendar-days"></i></span><span>Calendario de Citas</span></div>
-      <div class="sidebar-item" data-section="cotizaciones"><span class="icon"><i class="fa-solid fa-briefcase"></i></span><span>Cotizaciones</span></div>
+      <div class="sidebar-item<?= $_esJefe ? '' : ' active' ?>" data-section="pedidos"><span class="icon"><i data-lucide="box"></i></span><span>Todos los Pedidos</span></div>
+      <div class="sidebar-item" data-section="citas"><span class="icon"><i data-lucide="calendar"></i></span><span>Calendario de Citas</span></div>
+      <div class="sidebar-item" data-section="cotizaciones"><span class="icon"><i data-lucide="briefcase"></i></span><span>Cotizaciones</span></div>
 
       <div class="sidebar-section">ADMIN</div>
-      <div class="sidebar-item" data-section="catalogo"><span class="icon"><i class="fa-solid fa-gear"></i></span><span>Gestionar Catálogo</span></div>
-      <div class="sidebar-item" data-section="empleados"><span class="icon"><i class="fa-solid fa-briefcase"></i></span><span>Gestionar Empleados</span></div>
+      <div class="sidebar-item" data-section="catalogo"><span class="icon"><i data-lucide="settings"></i></span><span>Gestionar Catálogo</span></div>
+      <div class="sidebar-item" data-section="empleados"><span class="icon"><i data-lucide="briefcase"></i></span><span>Gestionar Empleados</span></div>
       <?php if ($_esJefe): ?>
-      <div class="sidebar-item" data-section="reportes"><span class="icon"><i class="fa-solid fa-chart-bar"></i></span><span>Reportes Avanzados</span></div>
-      <div class="sidebar-item" data-section="financiero"><span class="icon"><i class="fa-solid fa-tag"></i></span><span>Análisis Financiero</span></div>
+      <div class="sidebar-item" data-section="reportes"><span class="icon"><i data-lucide="chart-column"></i></span><span>Reportes Avanzados</span></div>
+      <div class="sidebar-item" data-section="financiero"><span class="icon"><i data-lucide="tag"></i></span><span>Análisis Financiero</span></div>
       <?php endif; ?>
 
       <div class="sidebar-section">CLIENTES & MARKETING</div>
-      <div class="sidebar-item" data-section="clientes"><span class="icon"><i class="fa-solid fa-users"></i></span><span>Clientes Registrados</span></div>
+      <div class="sidebar-item" data-section="clientes"><span class="icon"><i data-lucide="users"></i></span><span>Clientes Registrados</span></div>
       <?php if ($_esJefe): ?>
-      <div class="sidebar-item" data-section="ofertas"><span class="icon"><i class="fa-solid fa-tag"></i></span><span>Ofertas & Marketing</span></div>
+      <div class="sidebar-item" data-section="ofertas"><span class="icon"><i data-lucide="tag"></i></span><span>Ofertas & Marketing</span></div>
       <?php endif; ?>
 
       <div class="sidebar-section">PRODUCCIÓN</div>
-      <div class="sidebar-item" data-section="capacidad"><span class="icon"><i class="fa-solid fa-industry"></i></span><span>Capacidad del Taller</span></div>
+      <div class="sidebar-item" data-section="capacidad"><span class="icon"><i data-lucide="factory"></i></span><span>Capacidad del Taller</span></div>
     </aside>
 
     <main class="main-content">
@@ -207,11 +210,11 @@ unset($_usuario);
 
         <div class="section">
           <div class="section-header">
-            <h2 class="section-title"><i class="fa-solid fa-calendar-days"></i> Agenda del Mes</h2>
+            <h2 class="section-title"><i data-lucide="calendar"></i> Agenda del Mes</h2>
             <div style="display:flex; gap:8px; flex-wrap:wrap;align-items:center;">
-              <button class="btn btn-secondary" data-call="prevMonth"><i class="fa-solid fa-chevron-left"></i></button>
-              <button class="btn btn-secondary" data-call="nextMonth"><i class="fa-solid fa-chevron-right"></i></button>
-              <button class="btn btn-secondary" data-call="refrescarCalendarioAdmin" title="Actualizar calendario" id="admCalRefreshBtn"><i class="fa-solid fa-arrows-rotate"></i></button>
+              <button class="btn btn-secondary" data-call="prevMonth"><i data-lucide="chevron-left"></i></button>
+              <button class="btn btn-secondary" data-call="nextMonth"><i data-lucide="chevron-right"></i></button>
+              <button class="btn btn-secondary" data-call="refrescarCalendarioAdmin" title="Actualizar calendario" id="admCalRefreshBtn"><i data-lucide="refresh-cw"></i></button>
             </div>
           </div>
 
@@ -234,7 +237,7 @@ unset($_usuario);
                   <div class="cal-list-head" id="dayHead" style="display:flex;justify-content:space-between;align-items:center;">
                     <span id="dayHeadLabel">Selecciona un día</span>
                     <button id="admRutaDiaBtn" class="btn btn-primary btn-small" style="display:none;" data-call="generarRutaDiaAdmin" data-args='[]'>
-                      <i class="fa-solid fa-route"></i> Ruta
+                      <i data-lucide="route"></i> Ruta
                     </button>
                   </div>
                   <div class="cal-list-body" id="dayList">
@@ -258,7 +261,7 @@ unset($_usuario);
         <div class="section">
           <div class="section-header"><h2 class="section-title">Actividad Reciente</h2></div>
           <div id="actividadReciente" style="color:var(--muted); font-size:13px;">
-            <i class="fa-solid fa-spinner fa-spin"></i> Cargando actividad...
+            <i class="wh-icon-spin" data-lucide="loader-circle"></i> Cargando actividad...
           </div>
         </div>
       </div>
@@ -295,7 +298,7 @@ unset($_usuario);
                   </tr>
                 </thead>
                 <tbody id="pedidosTable">
-                  <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando pedidos...</td></tr>
+                  <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px;"><i class="wh-icon-spin" data-lucide="loader-circle"></i> Cargando pedidos...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -313,7 +316,7 @@ unset($_usuario);
           <div class="section-header">
             <h2 class="section-title">Todas las Citas</h2>
             <button class="btn btn-secondary btn-small" data-call="cargarCitasCalendarioAPI">
-              <i class="fa-solid fa-rotate-right"></i> Actualizar
+              <i data-lucide="rotate-cw"></i> Actualizar
             </button>
           </div>
 
@@ -327,7 +330,7 @@ unset($_usuario);
                 </thead>
                 <tbody id="citasTable">
                   <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px;">
-                    <i class="fa-solid fa-spinner fa-spin"></i> Cargando citas...
+                    <i class="wh-icon-spin" data-lucide="loader-circle"></i> Cargando citas...
                   </td></tr>
                 </tbody>
               </table>
@@ -346,10 +349,10 @@ unset($_usuario);
             <h2 class="section-title">Cotizaciones</h2>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
               <button class="btn btn-secondary btn-small" data-call="abrirCatalogoCotizador">
-                <i class="fa-solid fa-tags"></i> Catálogo de precios
+                <i data-lucide="tags"></i> Catálogo de precios
               </button>
               <button class="btn btn-secondary btn-small" data-call="cargarCotizacionesAPI">
-                <i class="fa-solid fa-rotate-right"></i> Actualizar
+                <i data-lucide="rotate-cw"></i> Actualizar
               </button>
             </div>
           </div>
@@ -371,7 +374,7 @@ unset($_usuario);
                 </thead>
                 <tbody id="cotizacionesAdminBody">
                   <tr><td colspan="8" style="text-align:center;padding:30px;color:var(--muted);">
-                    <i class="fa-solid fa-spinner fa-spin"></i> Cargando cotizaciones...
+                    <i class="wh-icon-spin" data-lucide="loader-circle"></i> Cargando cotizaciones...
                   </td></tr>
                 </tbody>
               </table>
@@ -437,7 +440,7 @@ unset($_usuario);
         <div class="section">
           <div class="section-header">
             <h2 class="section-title">Personal</h2>
-            <button class="btn btn-primary" data-call="abrirNuevoEmpleado"><i class="fa-solid fa-paper-plane"></i> Invitar Empleado</button>
+            <button class="btn btn-primary" data-call="abrirNuevoEmpleado"><i data-lucide="send"></i> Invitar Empleado</button>
           </div>
 
           <div class="table-container">
@@ -466,8 +469,8 @@ unset($_usuario);
           <div class="section-header">
             <h2 class="section-title">Controles</h2>
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
-              <button class="btn btn-secondary" data-call="exportReportXLSX"><i class="fa-solid fa-file-excel"></i> Exportar Excel (.xlsx)</button>
-              <button class="btn btn-secondary" data-call="printReportPDF"><i class="fa-solid fa-file-pdf"></i> Exportar PDF</button>
+              <button class="btn btn-secondary" data-call="exportReportXLSX"><i data-lucide="file-spreadsheet"></i> Exportar Excel (.xlsx)</button>
+              <button class="btn btn-secondary" data-call="printReportPDF"><i data-lucide="file-text"></i> Exportar PDF</button>
             </div>
           </div>
 
@@ -534,21 +537,21 @@ unset($_usuario);
         <p class="page-subtitle">Ingresos y métricas del negocio — datos en tiempo real</p>
 
         <div class="row row-cols-2 row-cols-md-4 g-3 stats-grid">
-          <div class="col"><div class="stat-card"><div class="stat-title">Ingresos del Mes</div><div class="stat-value" id="finIngresosMes"><i class="fa-solid fa-spinner fa-spin"></i></div><div class="stat-subtitle" id="finIngresosMesHint">—</div></div></div>
-          <div class="col"><div class="stat-card"><div class="stat-title">Pedidos del Mes</div><div class="stat-value" id="finPedidosMes"><i class="fa-solid fa-spinner fa-spin"></i></div><div class="stat-subtitle" id="finPedidosMesHint">—</div></div></div>
-          <div class="col"><div class="stat-card"><div class="stat-title">Ingresos Totales</div><div class="stat-value" id="finIngresosTotales"><i class="fa-solid fa-spinner fa-spin"></i></div><div class="stat-subtitle" id="finIngresosTotalesHint">—</div></div></div>
-          <div class="col"><div class="stat-card"><div class="stat-title">Clientes del Mes</div><div class="stat-value" id="finClientesMes"><i class="fa-solid fa-spinner fa-spin"></i></div><div class="stat-subtitle" id="finClientesMesHint">—</div></div></div>
+          <div class="col"><div class="stat-card"><div class="stat-title">Ingresos del Mes</div><div class="stat-value" id="finIngresosMes"><i class="wh-icon-spin" data-lucide="loader-circle"></i></div><div class="stat-subtitle" id="finIngresosMesHint">—</div></div></div>
+          <div class="col"><div class="stat-card"><div class="stat-title">Pedidos del Mes</div><div class="stat-value" id="finPedidosMes"><i class="wh-icon-spin" data-lucide="loader-circle"></i></div><div class="stat-subtitle" id="finPedidosMesHint">—</div></div></div>
+          <div class="col"><div class="stat-card"><div class="stat-title">Ingresos Totales</div><div class="stat-value" id="finIngresosTotales"><i class="wh-icon-spin" data-lucide="loader-circle"></i></div><div class="stat-subtitle" id="finIngresosTotalesHint">—</div></div></div>
+          <div class="col"><div class="stat-card"><div class="stat-title">Clientes del Mes</div><div class="stat-value" id="finClientesMes"><i class="wh-icon-spin" data-lucide="loader-circle"></i></div><div class="stat-subtitle" id="finClientesMesHint">—</div></div></div>
         </div>
 
         <div class="section" style="margin-top:16px;">
           <div class="section-header">
             <h2 class="section-title">Productos más vendidos (este mes)</h2>
             <button class="btn btn-secondary btn-small" data-call="cargarFinanciero">
-              <i class="fa-solid fa-rotate-right"></i> Actualizar
+              <i data-lucide="rotate-cw"></i> Actualizar
             </button>
           </div>
           <div id="finProductosBody" style="color:var(--muted);font-size:13px;padding:12px 0;">
-            <i class="fa-solid fa-spinner fa-spin"></i> Cargando...
+            <i class="wh-icon-spin" data-lucide="loader-circle"></i> Cargando...
           </div>
         </div>
       </div>
@@ -559,18 +562,18 @@ unset($_usuario);
         <div class="modal-content" style="max-width:620px;width:min(620px,96vw);">
           <div class="modal-header" style="background:#1a3a4a;color:#fff;border-radius:8px 8px 0 0;margin:-18px -18px 16px;padding:16px 18px;">
             <h3 class="modal-title" style="color:#fff;display:flex;align-items:center;gap:10px;">
-              <i class="fa-solid fa-route"></i> Ruta del Día
+              <i data-lucide="route"></i> Ruta del Día
               <span id="admRutaDiaFechaLabel" style="font-size:13px;opacity:.75;font-weight:400;"></span>
             </h3>
             <button class="modal-close" data-dismiss="admRutaDiaModal" style="color:#fff;">×</button>
           </div>
           <div id="admRutaDiaBody" style="overflow-y:auto;min-height:120px;max-height:60vh;">
-            <div style="text-align:center;padding:30px;color:var(--muted);"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>
+            <div style="text-align:center;padding:30px;color:var(--muted);"><i class="wh-icon-spin icon-2x" data-lucide="loader-circle"></i></div>
           </div>
           <div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
             <button class="btn btn-secondary" data-dismiss="admRutaDiaModal">Cerrar</button>
             <button id="admRutaDiaMapsBtn" class="btn btn-primary" style="display:none;">
-              <i class="fa-solid fa-map-location-dot"></i> Abrir en Google Maps
+              <i data-lucide="map-pinned"></i> Abrir en Google Maps
             </button>
           </div>
         </div>
@@ -629,7 +632,7 @@ unset($_usuario);
 
           <div class="section" style="margin-top:16px;">
             <div class="section-header">
-              <h2 class="section-title"><i class="fa-solid fa-ruler-combined"></i> Dimensiones y características</h2>
+              <h2 class="section-title"><i data-lucide="ruler"></i> Dimensiones y características</h2>
             </div>
 
             <div class="row g-3 form-grid" style="margin-top:10px;">
@@ -675,7 +678,7 @@ unset($_usuario);
 
           <div class="section" style="margin-top:16px;">
             <div class="section-header">
-              <h2 class="section-title"><i class="fa-solid fa-images"></i> Imágenes del producto</h2>
+              <h2 class="section-title"><i data-lucide="images"></i> Imágenes del producto</h2>
             </div>
 
             <div id="imgDropZone" style="
@@ -687,7 +690,7 @@ unset($_usuario);
               transition:border-color .2s;
               margin-top:10px;
             " data-trigger-click="p_imgs_files">
-              <i class="fa-solid fa-cloud-arrow-up" style="font-size:28px;color:var(--accent);"></i>
+              <i data-lucide="cloud-upload" style="font-size:28px;color:var(--accent);"></i>
               <p style="margin:8px 0 4px;font-weight:600;color:#ddd;">Arrastra imágenes aquí o haz clic para seleccionar</p>
               <p style="color:var(--muted);font-size:12px;">JPG, PNG, WEBP — cualquier tamaño (se optimizan automáticamente)</p>
             </div>
@@ -719,7 +722,7 @@ unset($_usuario);
           <div class="modal-footer">
             <button class="btn btn-secondary" data-dismiss="productoModal">Cancelar</button>
             <button class="btn btn-primary" id="btnGuardarProducto" data-call="saveProductoFull">
-              <i class="fa-solid fa-floppy-disk"></i> Guardar
+              <i data-lucide="save"></i> Guardar
             </button>
           </div>
         </div>
@@ -776,19 +779,19 @@ unset($_usuario);
           </div>
 
           <div id="emp_info" style="display:none;background:#0a1a0a;border:1px solid #1a4a1a;border-radius:6px;padding:10px;font-size:12px;color:#70c070;margin-bottom:12px;">
-            <i class="fa-solid fa-circle-check"></i> El empleado recibirá un correo con su enlace de activación (válido 48h). Él crea su propia contraseña.
+            <i data-lucide="circle-check"></i> El empleado recibirá un correo con su enlace de activación (válido 48h). Él crea su propia contraseña.
           </div>
           <div id="emp_error" style="display:none;color:#e05;font-size:13px;margin-bottom:12px;padding:10px;background:#2a0a0a;border-radius:6px;"></div>
 
           <button class="btn btn-primary" style="width:100%;" id="emp_btn_guardar" data-call="guardarEmpleado">
-            <i class="fa-solid fa-paper-plane"></i> Enviar invitación
+            <i data-lucide="send"></i> Enviar invitación
           </button>
         </div>
       </div>
 
       <!-- CAPACIDAD DEL TALLER -->
       <div id="capacidad-section" class="content-section hidden">
-        <h1 class="page-title"><i class="fa-solid fa-industry"></i> Capacidad del Taller</h1>
+        <h1 class="page-title"><i data-lucide="factory"></i> Capacidad del Taller</h1>
         <p class="page-subtitle">Demanda de producción en tiempo real · Gestión de días bloqueados</p>
 
         <div class="row row-cols-2 row-cols-md-4 g-3 stats-grid" style="margin-bottom:24px;">
@@ -829,7 +832,7 @@ unset($_usuario);
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
               <h3 style="color:var(--accent);font-size:15px;font-weight:800;">Carga del Taller — Próximos 30 días hábiles</h3>
               <button class="btn btn-sm btn-secondary" data-call="cargarCapacidad">
-                <i class="fa-solid fa-rotate-right"></i> Actualizar
+                <i data-lucide="rotate-cw"></i> Actualizar
               </button>
             </div>
 
@@ -850,7 +853,7 @@ unset($_usuario);
 
             <div id="capacidadGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;">
               <div style="color:var(--muted);text-align:center;padding:20px;grid-column:1/-1;">
-                <i class="fa-solid fa-spinner fa-spin"></i> Cargando...
+                <i class="wh-icon-spin" data-lucide="loader-circle"></i> Cargando...
               </div>
             </div>
           </div>
@@ -859,7 +862,7 @@ unset($_usuario);
           <div class="col-lg-4">
           <div class="table-card" style="position:sticky;top:20px;">
             <h3 style="color:var(--accent);font-size:15px;font-weight:800;margin-bottom:16px;">
-              <i class="fa-solid fa-calendar-xmark"></i> Bloquear Día
+              <i data-lucide="calendar-x"></i> Bloquear Día
             </h3>
             <p style="color:var(--muted);font-size:12px;margin-bottom:16px;line-height:1.5;">
               Los días bloqueados no aparecen como disponibles para los clientes en el checkout.
@@ -879,7 +882,7 @@ unset($_usuario);
                   style="font-size:13px;" maxlength="100">
               </div>
               <button class="btn btn-danger" data-call="bloquearDia" style="width:100%;">
-                <i class="fa-solid fa-lock"></i> Bloquear este día
+                <i data-lucide="lock"></i> Bloquear este día
               </button>
             </div>
 
@@ -899,7 +902,7 @@ unset($_usuario);
 
       <!-- CLIENTES REGISTRADOS -->
       <div id="clientes-section" class="content-section hidden">
-        <h1 class="page-title"><i class="fa-solid fa-users"></i> Clientes Registrados</h1>
+        <h1 class="page-title"><i data-lucide="users"></i> Clientes Registrados</h1>
         <p class="page-subtitle">Clientes con cuenta en la tienda, su historial y datos de contacto</p>
 
         <div class="section">
@@ -908,7 +911,7 @@ unset($_usuario);
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
               <input class="form-input" id="clientesSearch" placeholder="Buscar nombre, correo, ciudad..." style="max-width:260px;font-size:13px;" data-oninput="cargarClientesAdmin">
               <button class="btn btn-secondary btn-small" data-call="cargarClientesAdmin">
-                <i class="fa-solid fa-rotate-right"></i> Actualizar
+                <i data-lucide="rotate-cw"></i> Actualizar
               </button>
             </div>
           </div>
@@ -946,7 +949,7 @@ unset($_usuario);
                 </thead>
                 <tbody id="clientesAdminBody">
                   <tr><td colspan="9" style="text-align:center;padding:30px;color:var(--muted);">
-                    <i class="fa-solid fa-spinner fa-spin"></i> Cargando clientes...
+                    <i class="wh-icon-spin" data-lucide="loader-circle"></i> Cargando clientes...
                   </td></tr>
                 </tbody>
               </table>
@@ -961,11 +964,11 @@ unset($_usuario);
       <div class="modal" id="clienteDetalleModal">
         <div class="modal-content" style="max-width:700px;">
           <div class="modal-header" style="background:var(--accent);color:#fff;border-radius:8px 8px 0 0;margin:-18px -18px 16px;padding:16px 18px;">
-            <h3 class="modal-title" style="color:#fff;"><i class="fa-solid fa-user-circle"></i> Perfil del Cliente</h3>
+            <h3 class="modal-title" style="color:#fff;"><i data-lucide="circle-user"></i> Perfil del Cliente</h3>
             <button class="modal-close" data-dismiss="clienteDetalleModal" style="color:#fff;">×</button>
           </div>
           <div id="clienteDetalleBody" style="overflow-x:auto;">
-            <div style="text-align:center;padding:40px;color:var(--muted);"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>
+            <div style="text-align:center;padding:40px;color:var(--muted);"><i class="wh-icon-spin icon-2x" data-lucide="loader-circle"></i></div>
           </div>
           <div style="display:flex;justify-content:flex-end;padding:12px 0 0;border-top:1px solid var(--border);">
             <button class="btn btn-secondary" data-dismiss="clienteDetalleModal">Cerrar</button>
@@ -976,14 +979,14 @@ unset($_usuario);
       <!-- OFERTAS & MARKETING (solo jefe) -->
       <?php if ($_esJefe): ?>
       <div id="ofertas-section" class="content-section hidden">
-        <h1 class="page-title"><i class="fa-solid fa-tag"></i> Ofertas & Marketing</h1>
+        <h1 class="page-title"><i data-lucide="tag"></i> Ofertas & Marketing</h1>
         <p class="page-subtitle">Descuentos, promociones y códigos de cupón para tus clientes</p>
 
         <div class="section">
           <div class="section-header">
             <h2 class="section-title">Campañas activas</h2>
             <button class="btn btn-primary" data-call="abrirOfertaModal" data-args='["create"]'>
-              <i class="fa-solid fa-plus"></i> Nueva Oferta
+              <i data-lucide="plus"></i> Nueva Oferta
             </button>
           </div>
 
@@ -1004,7 +1007,7 @@ unset($_usuario);
                 </thead>
                 <tbody id="ofertasAdminBody">
                   <tr><td colspan="8" style="text-align:center;padding:30px;color:var(--muted);">
-                    <i class="fa-solid fa-spinner fa-spin"></i> Cargando ofertas...
+                    <i class="wh-icon-spin" data-lucide="loader-circle"></i> Cargando ofertas...
                   </td></tr>
                 </tbody>
               </table>
@@ -1013,7 +1016,7 @@ unset($_usuario);
         </div>
 
         <div class="section" style="margin-top:16px;">
-          <div class="section-header"><h2 class="section-title"><i class="fa-solid fa-lightbulb"></i> ¿Cómo funcionan los códigos?</h2></div>
+          <div class="section-header"><h2 class="section-title"><i data-lucide="lightbulb"></i> ¿Cómo funcionan los códigos?</h2></div>
           <div style="color:var(--muted);font-size:13px;line-height:1.7;">
             <p><strong style="color:var(--accent);">Porcentaje:</strong> Descuenta X% del total del pedido. Ej: VERANO20 = 20% off.</p>
             <p style="margin-top:6px;"><strong style="color:var(--accent);">Monto fijo:</strong> Descuenta $X del total. Ej: PROMO500 = $500 off.</p>
@@ -1028,7 +1031,7 @@ unset($_usuario);
       <div class="modal" id="ofertaModal">
         <div class="modal-content" style="max-width:560px;">
           <div class="modal-header">
-            <h3 class="modal-title" id="ofertaModalTitle"><i class="fa-solid fa-tag"></i> Nueva Oferta</h3>
+            <h3 class="modal-title" id="ofertaModalTitle"><i data-lucide="tag"></i> Nueva Oferta</h3>
             <button class="modal-close" data-dismiss="ofertaModal">×</button>
           </div>
 
@@ -1084,7 +1087,7 @@ unset($_usuario);
           <div class="modal-footer">
             <button class="btn btn-secondary" data-dismiss="ofertaModal">Cancelar</button>
             <button class="btn btn-primary" id="of_btn_guardar" data-call="guardarOferta">
-              <i class="fa-solid fa-floppy-disk"></i> Guardar Oferta
+              <i data-lucide="save"></i> Guardar Oferta
             </button>
           </div>
         </div>
@@ -1111,13 +1114,13 @@ unset($_usuario);
     <div class="modal-content" style="max-width:900px;width:min(900px,96vw);">
       <div class="modal-header" style="background:var(--accent);color:#fff;border-radius:8px 8px 0 0;margin:-18px -18px 16px;padding:16px 18px;">
         <h3 class="modal-title" style="color:#fff;">
-          <i class="fa-solid fa-box"></i> Detalle del Pedido
+          <i data-lucide="box"></i> Detalle del Pedido
           <span id="adm_ped_folio" style="font-weight:900;margin-left:8px;opacity:.85;"></span>
         </h3>
         <button class="modal-close" data-dismiss="adminPedidoDetalleModal" style="color:#fff;">×</button>
       </div>
       <div id="adm_ped_body" style="overflow-x:auto;min-height:180px;">
-        <div style="text-align:center;padding:40px;color:var(--muted);"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>
+        <div style="text-align:center;padding:40px;color:var(--muted);"><i class="wh-icon-spin icon-2x" data-lucide="loader-circle"></i></div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" data-dismiss="adminPedidoDetalleModal">Cerrar</button>
@@ -1130,13 +1133,13 @@ unset($_usuario);
     <div class="modal-content" style="max-width:600px;">
       <div class="modal-header" style="background:#3d4d8b;color:#fff;border-radius:8px 8px 0 0;margin:-18px -18px 16px;padding:16px 18px;">
         <h3 class="modal-title" style="color:#fff;">
-          <i class="fa-solid fa-calendar-days"></i> Detalle de Cita
+          <i data-lucide="calendar"></i> Detalle de Cita
           <span id="adm_cita_folio" style="font-weight:900;margin-left:8px;opacity:.85;"></span>
         </h3>
         <button class="modal-close" data-dismiss="adminCitaDetalleModal" style="color:#fff;">×</button>
       </div>
       <div id="adm_cita_body" style="overflow-x:auto;">
-        <div style="text-align:center;padding:40px;color:var(--muted);"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>
+        <div style="text-align:center;padding:40px;color:var(--muted);"><i class="wh-icon-spin icon-2x" data-lucide="loader-circle"></i></div>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:center;padding:12px 0 0;margin-top:4px;border-top:1px solid var(--border);">
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -1144,7 +1147,7 @@ unset($_usuario);
           <button class="btn btn-secondary btn-small" data-admin-cita-estado="completada">🏁 Completar</button>
           <button class="btn btn-danger btn-small"    data-admin-cita-estado="cancelada">❌ Cancelar</button>
           <button class="btn btn-primary btn-small" data-call="generarCotizacionDesdeCita">
-            <i class="fa-solid fa-file-invoice-dollar"></i> Generar cotización
+            <i data-lucide="receipt"></i> Generar cotización
           </button>
         </div>
         <button class="btn btn-secondary" data-dismiss="adminCitaDetalleModal">Cerrar</button>
@@ -1156,14 +1159,14 @@ unset($_usuario);
   <div class="modal" id="catalogoCotizadorModal">
     <div class="modal-content" style="max-width:640px;">
       <div class="modal-header" style="background:#8b7355;color:#fff;border-radius:8px 8px 0 0;margin:-18px -18px 16px;padding:16px 18px;">
-        <h3 class="modal-title" style="color:#fff;"><i class="fa-solid fa-tags"></i> Catálogo de precios del cotizador</h3>
+        <h3 class="modal-title" style="color:#fff;"><i data-lucide="tags"></i> Catálogo de precios del cotizador</h3>
         <button class="modal-close" data-dismiss="catalogoCotizadorModal" style="color:#fff;">×</button>
       </div>
       <p style="color:var(--muted);font-size:12px;margin:0 0 12px;">
         Configura aquí el precio de cada partida una sola vez. Al cotizar, solo capturas cantidades y el total se calcula solo (los precios siguen siendo editables en cada cotización si hace falta un ajuste puntual).
       </p>
       <div id="catalogoCotizadorBody">
-        <div style="text-align:center;padding:30px;color:var(--muted);"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>
+        <div style="text-align:center;padding:30px;color:var(--muted);"><i class="wh-icon-spin icon-2x" data-lucide="loader-circle"></i></div>
       </div>
       <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px;">
         <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Agregar partida nueva</div>
@@ -1171,7 +1174,7 @@ unset($_usuario);
           <input type="text" id="catNombreNuevo" placeholder="Nombre (ej: Jaladera)" style="flex:1 1 140px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px;">
           <input type="text" id="catUnidadNuevo" placeholder="Unidad (pza, m2, ml…)" value="pza" style="width:110px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px;">
           <input type="number" id="catPrecioNuevo" placeholder="Precio" min="0" step="0.01" style="width:100px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px;">
-          <button class="btn btn-primary btn-small" data-call="agregarPartidaCatalogoNueva"><i class="fa-solid fa-plus"></i> Agregar</button>
+          <button class="btn btn-primary btn-small" data-call="agregarPartidaCatalogoNueva"><i data-lucide="plus"></i> Agregar</button>
         </div>
       </div>
       <div style="display:flex;justify-content:flex-end;padding:12px 0 0;">
@@ -1185,13 +1188,13 @@ unset($_usuario);
     <div class="modal-content" style="max-width:1180px;width:min(1180px,97vw);">
       <div class="modal-header" style="background:#1e5c22;color:#fff;border-radius:8px 8px 0 0;margin:-18px -18px 16px;padding:16px 18px;">
         <h3 class="modal-title" style="color:#fff;">
-          <i class="fa-solid fa-briefcase"></i> Detalle de Cotización
+          <i data-lucide="briefcase"></i> Detalle de Cotización
           <span id="adm_cot_folio" style="font-weight:900;margin-left:8px;opacity:.85;"></span>
         </h3>
         <button class="modal-close" data-dismiss="adminCotDetalleModal" style="color:#fff;">×</button>
       </div>
       <div id="adm_cot_body" style="overflow-x:auto;">
-        <div style="text-align:center;padding:40px;color:var(--muted);"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>
+        <div style="text-align:center;padding:40px;color:var(--muted);"><i class="wh-icon-spin icon-2x" data-lucide="loader-circle"></i></div>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;align-items:center;padding:12px 0 0;margin-top:4px;border-top:1px solid var(--border);">
         <button class="btn btn-secondary" data-dismiss="adminCotDetalleModal">Cerrar</button>

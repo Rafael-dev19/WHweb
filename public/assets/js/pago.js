@@ -1,6 +1,10 @@
 // ── Wooden House — Pago (Stripe + PayPal) ────────────────────────
 const API_BASE = '/api';
 
+function _refreshIcons() {
+  if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+}
+
 // Leer credenciales desde data attributes (sin inline script)
 (function () {
   var cfg = document.getElementById('payment-config');
@@ -56,9 +60,10 @@ async function cargarResumenSaldo(numeroPedido) {
 
     if (saldo <= 0) {
       const notice = document.getElementById('noticeBox');
-      notice.innerHTML = '<strong><i class="fa-solid fa-circle-check"></i> Este pedido ya está completamente pagado.</strong>';
+      notice.innerHTML = '<strong><i data-lucide="circle-check"></i> Este pedido ya está completamente pagado.</strong>';
       notice.style.display = 'block';
       document.getElementById('btnStripe')?.setAttribute('disabled', true);
+      _refreshIcons();
       return;
     }
 
@@ -68,8 +73,9 @@ async function cargarResumenSaldo(numeroPedido) {
     const banner = document.getElementById('tipoPagoBanner');
     if (banner) {
       banner.style.display = 'block';
-      banner.innerHTML = `<i class="fa-solid fa-circle-info"></i> Pagando el saldo pendiente del pedido <strong>${esc(p.numero_pedido)}</strong> — `
+      banner.innerHTML = `<i data-lucide="info"></i> Pagando el saldo pendiente del pedido <strong>${esc(p.numero_pedido)}</strong> — `
         + `Total del pedido: ${formatCurrency(p.total)} · Ya pagado: ${formatCurrency(p.monto_pagado || 0)}`;
+      _refreshIcons();
     }
 
     document.getElementById('shippingLine').style.display = 'none';
@@ -85,9 +91,10 @@ async function cargarResumenSaldo(numeroPedido) {
     initPayPal();
   } catch (err) {
     const notice = document.getElementById('noticeBox');
-    notice.innerHTML = '<strong><i class="fa-solid fa-triangle-exclamation"></i> No se pudo cargar la información del pedido.</strong>';
+    notice.innerHTML = '<strong><i data-lucide="triangle-alert"></i> No se pudo cargar la información del pedido.</strong>';
     notice.style.display = 'block';
     document.getElementById('btnStripe')?.setAttribute('disabled', true);
+    _refreshIcons();
   }
 }
 
@@ -150,8 +157,9 @@ function cargarResumen() {
     const banner = document.getElementById('tipoPagoBanner');
     if (banner) {
       banner.style.display = 'block';
-      banner.innerHTML = `<i class="fa-solid fa-circle-info"></i> Pagando anticipo del 50% — `
+      banner.innerHTML = `<i data-lucide="info"></i> Pagando anticipo del 50% — `
         + `Pagas ahora: <strong>${formatCurrency(montoAnticipo)}</strong> · Saldo pendiente: ${formatCurrency(saldoPendiente)}`;
+      _refreshIcons();
     }
 
     // Reflejar el anticipo también en el resumen del pedido, no solo en el banner

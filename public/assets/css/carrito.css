@@ -176,13 +176,19 @@
         }
 
         .page-title {
+            font-family: var(--font-display);
             color: var(--color-primary);
             font-size: 36px;
             margin-bottom: 10px;
-            font-weight: bold;
+            font-weight: 600;
             text-align: center;
             position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
         }
+        .page-title svg { width: 0.85em; height: 0.85em; stroke-width: 1.5; }
 
         .page-subtitle {
             color: var(--color-text-muted);
@@ -191,6 +197,7 @@
             position: relative;
         }
 
+        .btn-volver-catalogo svg { width: 14px; height: 14px; stroke-width: 2; }
         .btn-volver-catalogo {
             display: inline-flex;
             align-items: center;
@@ -248,7 +255,8 @@
             border-bottom: 2px solid var(--color-border);
         }
 
-        .section-icon { font-size: 24px; }
+        .section-icon { display: inline-flex; color: var(--color-primary); }
+        .section-icon svg { width: 22px; height: 22px; stroke-width: 1.75; }
 
         /* ========== CART ITEM ========== */
         .cart-item {
@@ -275,11 +283,11 @@
             align-items: center;
             justify-content: center;
             color: #666;
-            font-size: 40px;
             flex-shrink: 0;
             border: 2px solid var(--color-border-light);
             overflow: hidden;
         }
+        .cart-item-image svg { width: 36px; height: 36px; stroke-width: 1.25; }
 
         .cart-item-image img {
             width: 100%;
@@ -447,15 +455,18 @@
             padding: 20px;
             border-radius: 12px;
             margin-bottom: 20px;
-            border-left: 4px solid var(--color-primary);
+            border: 1px solid var(--color-border-light);
         }
 
         .date-info strong {
             color: var(--color-primary);
-            display: block;
+            display: flex;
+            align-items: center;
+            gap: 8px;
             margin-bottom: 10px;
             font-size: 16px;
         }
+        .date-info strong svg { width: 17px; height: 17px; stroke-width: 1.75; flex-shrink: 0; }
 
         .date-info p { color: var(--color-text-muted); font-size: 14px; line-height: 1.6; }
 
@@ -550,10 +561,11 @@
             background: linear-gradient(135deg, var(--color-bg-input), var(--color-border));
             padding: 18px;
             border-radius: 10px;
-            border-left: 4px solid var(--color-primary);
+            border: 1px solid var(--color-border-light);
         }
 
-        .info-box p { color: var(--color-text-muted); font-size: 14px; line-height: 1.6; }
+        .info-box p { color: var(--color-text-muted); font-size: 14px; line-height: 1.6; display: flex; align-items: flex-start; gap: 8px; }
+        .info-box p svg { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; margin-top: 2px; }
         .info-box strong { color: var(--color-primary); }
 
         /* ========== CART SUMMARY ========== */
@@ -569,13 +581,18 @@
         }
 
         .summary-title {
+            font-family: var(--font-display);
             color: var(--color-primary);
             font-size: 26px;
-            font-weight: bold;
+            font-weight: 600;
             margin-bottom: 25px;
             padding-bottom: 18px;
             border-bottom: 2px solid var(--color-border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
+        .summary-title svg { width: 22px; height: 22px; stroke-width: 1.75; }
 
         .summary-item {
             display: flex;
@@ -629,7 +646,12 @@
             margin-top: 28px;
             text-transform: uppercase;
             box-shadow: 0 4px 15px rgba(139, 115, 85, 0.3);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
+        .btn-checkout svg { width: 20px; height: 20px; stroke-width: 1.75; }
 
         .btn-checkout:hover {
             background: linear-gradient(135deg, var(--color-primary-hover), #b89570);
@@ -661,6 +683,7 @@
             justify-content: center;
             gap: 8px;
         }
+        .btn-vaciar-carrito svg { width: 15px; height: 15px; stroke-width: 1.75; }
         .btn-vaciar-carrito:hover {
             background: rgba(220,50,50,.08);
             border-color: #c0392b;
@@ -674,6 +697,7 @@
             margin-top: 18px;
             line-height: 1.6;
         }
+        .secure-note svg { width: 13px; height: 13px; stroke-width: 1.75; vertical-align: -2px; margin-right: 2px; }
 
         /* Footer */
         .footer {
@@ -820,16 +844,17 @@
 
         /* Semana seleccionada – resumen en el sidebar */
         .fecha-resumen-box {
-            background: linear-gradient(135deg, var(--color-border), #353535);
-            border-left: 4px solid var(--color-primary);
+            background: var(--color-bg-card);
+            border: 1px solid var(--color-primary-light);
             border-radius: 10px;
             padding: 14px 16px;
             margin-top: 14px;
             font-size: 13px;
-            color: #c0b090;
+            color: var(--color-text-muted);
             display: none;
         }
-        .fecha-resumen-box strong { color: #e8c87a; display: block; margin-bottom: 4px; }
+        .fecha-resumen-box strong { color: var(--color-accent); display: flex; align-items: center; gap: 7px; margin-bottom: 4px; }
+        .fecha-resumen-box strong svg { width: 14px; height: 14px; stroke-width: 1.75; flex-shrink: 0; }
 
         /* Indicador de disponibilidad */
         .disponibilidad-indicator {
@@ -958,6 +983,11 @@
     transition: border-color 0.15s, color 0.15s, background 0.15s;
     flex-shrink: 0;
     font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.sesion-card-editar svg { width: 13px; height: 13px; stroke-width: 1.75;
 }
 .sesion-card-editar:hover {
     border-color: #3d7848;

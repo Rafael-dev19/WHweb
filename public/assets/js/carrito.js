@@ -2,6 +2,10 @@ let carritoItems = [];
 let carritoTotal = 0;
 let _carritoRecuperado = false; // flag para notificar recuperación de carrito
 
+function _refreshIcons() {
+  if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+}
+
 // ── Init ──────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   initMenuHamburguesa();
@@ -13,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     _carritoRecuperado = false;
     setTimeout(() => {
       if (typeof showNotification === 'function') {
-        showNotification('<i class="fa-solid fa-rotate-left"></i> Carrito recuperado de tu visita anterior', 'info');
+        showNotification('<i data-lucide="rotate-ccw"></i> Carrito recuperado de tu visita anterior', 'info');
       }
     }, 600);
   }
@@ -119,13 +123,14 @@ function renderizarCarrito() {
   if (carritoItems.length === 0) {
     container.innerHTML = `
       <div class="carrito-vacio">
-        <div class="empty-cart-icon"><i class="fa-solid fa-cart-shopping"></i></div>
+        <div class="empty-cart-icon"><i data-lucide="shopping-cart"></i></div>
         <h3>Tu carrito está vacío</h3>
         <p>Agrega productos desde nuestro catálogo</p>
         <a href="/catalogo" class="btn-primary">Ver Catálogo</a>
       </div>`;
     if (accionesEl) accionesEl.style.display = 'none';
     if (resumenEl)  resumenEl.style.display  = 'none';
+    _refreshIcons();
     return;
   }
 
@@ -137,7 +142,7 @@ function renderizarCarrito() {
       <div class="item-imagen">
         ${item.imagen
           ? `<img src="${item.imagen}" alt="${esc(item.nombre)}">`
-          : '<div class="placeholder-imagen"><i class="fa-solid fa-box"></i></div>'}
+          : '<div class="placeholder-imagen"><i data-lucide="package"></i></div>'}
       </div>
       <div class="item-info">
         <h3>${esc(item.nombre)}</h3>
@@ -153,10 +158,11 @@ function renderizarCarrito() {
         <p class="subtotal-precio">${formatCurrency(item.precio * item.cantidad)}</p>
       </div>
       <button class="btn-eliminar" data-call="eliminarItem" data-args="[${item.id}]" title="Eliminar">
-        <i class="fa-solid fa-trash"></i>
+        <i data-lucide="trash-2"></i>
       </button>
     </div>
   `).join('');
+  _refreshIcons();
 
   container.querySelectorAll('input[data-item-id]').forEach(function (inp) {
     inp.addEventListener('change', function () {
@@ -181,11 +187,13 @@ function actualizarResumen() {
   const msgEnvio = document.getElementById('mensaje-envio');
   if (msgEnvio) {
     if (subtotal > 0 && subtotal < 5000) {
-      msgEnvio.innerHTML    = `<i class="fa-solid fa-lightbulb"></i> Agrega ${formatCurrency(5000 - subtotal)} más para obtener <strong>envío GRATIS</strong>`;
+      msgEnvio.innerHTML    = `<i data-lucide="lightbulb"></i> Agrega ${formatCurrency(5000 - subtotal)} más para obtener <strong>envío GRATIS</strong>`;
       msgEnvio.style.display = 'block';
+      _refreshIcons();
     } else if (subtotal >= 5000) {
-      msgEnvio.innerHTML    = `<i class="fa-solid fa-circle-check"></i> ¡Felicidades! Tienes <strong>envío GRATIS</strong>`;
+      msgEnvio.innerHTML    = `<i data-lucide="circle-check"></i> ¡Felicidades! Tienes <strong>envío GRATIS</strong>`;
       msgEnvio.style.display = 'block';
+      _refreshIcons();
     }
   }
 }
@@ -205,11 +213,11 @@ function cambiarCantidad(productoId, delta) {
 function actualizarCantidad(productoId, valor) {
   const cantidad = parseInt(valor);
   if (isNaN(cantidad) || cantidad < 1) {
-    showNotification('<i class="fa-solid fa-xmark"></i> Cantidad inválida', 'error');
+    showNotification('<i data-lucide="x"></i> Cantidad inválida', 'error');
     renderizarCarrito(); return;
   }
   if (cantidad > 99) {
-    showNotification('<i class="fa-solid fa-xmark"></i> Cantidad máxima: 99', 'error');
+    showNotification('<i data-lucide="x"></i> Cantidad máxima: 99', 'error');
     renderizarCarrito(); return;
   }
   const item = carritoItems.find(i => i.id === productoId);
@@ -225,7 +233,7 @@ function eliminarItem(productoId) {
   if (confirm(`¿Eliminar "${item.nombre}" del carrito?`)) {
     carritoItems = carritoItems.filter(i => i.id !== productoId);
     guardarCarrito(); renderizarCarrito(); actualizarResumen();
-    showNotification('<i class="fa-solid fa-trash"></i> Producto eliminado', 'info');
+    showNotification('<i data-lucide="trash-2"></i> Producto eliminado', 'info');
   }
 }
 
@@ -258,13 +266,13 @@ function confirmarVaciarCarrito() {
     guardarCarrito();
     renderizarCarrito();
     actualizarResumen();
-    showNotification('<i class="fa-solid fa-trash"></i> Carrito y datos vaciados', 'success');
+    showNotification('<i data-lucide="trash-2"></i> Carrito y datos vaciados', 'success');
   }
 }
 
 async function procederAlPago() {
   if (carritoItems.length === 0) {
-    showNotification('<i class="fa-solid fa-xmark"></i> El carrito está vacío', 'error'); return;
+    showNotification('<i data-lucide="x"></i> El carrito está vacío', 'error'); return;
   }
   const loader = showLoader('Verificando disponibilidad...');
   try {
@@ -273,7 +281,7 @@ async function procederAlPago() {
     window.location.href = '/pago';
   } catch {
     hideLoader();
-    showNotification('<i class="fa-solid fa-xmark"></i> Error al procesar. Intenta nuevamente.', 'error');
+    showNotification('<i data-lucide="x"></i> Error al procesar. Intenta nuevamente.', 'error');
   }
 }
 

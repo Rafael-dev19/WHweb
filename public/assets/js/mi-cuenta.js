@@ -18,6 +18,10 @@
     return '$' + parseFloat(monto || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
+  function _refreshIcons() {
+    if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+  }
+
   function fmtFecha(iso) {
     if (!iso) return '—';
     return new Date(iso.replace(' ', 'T')).toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric' });
@@ -56,7 +60,8 @@
       const pedidos = data.pedidos || [];
 
       if (pedidos.length === 0) {
-        wrap.innerHTML = `<div class="mc-empty"><i class="fa-solid fa-box-open"></i>Aún no tienes pedidos.<br><a href="/catalogo" style="color:var(--color-primary);margin-top:10px;display:inline-block;">Ver catálogo →</a></div>`;
+        wrap.innerHTML = `<div class="mc-empty"><i data-lucide="package-open"></i>Aún no tienes pedidos.<br><a href="/catalogo" style="color:var(--color-primary);margin-top:10px;display:inline-block;">Ver catálogo →</a></div>`;
+        _refreshIcons();
         return;
       }
 
@@ -68,9 +73,9 @@
             <div>
               <div class="mc-pedido-numero">${p.numero_pedido}</div>
               <div class="mc-pedido-meta">
-                <span><i class="fa-solid fa-calendar" style="opacity:.6"></i> ${fmtFecha(p.fecha_creacion)}</span>
-                <span><i class="fa-solid fa-box" style="opacity:.6"></i> ${p.cantidad_items || 0} producto(s)</span>
-                <span><i class="fa-solid fa-truck" style="opacity:.6"></i> ${p.tipo_entrega === 'recoger' ? 'Recojo en tienda' : 'Envío a domicilio'}</span>
+                <span><i data-lucide="calendar" style="opacity:.6"></i> ${fmtFecha(p.fecha_creacion)}</span>
+                <span><i data-lucide="package" style="opacity:.6"></i> ${p.cantidad_items || 0} producto(s)</span>
+                <span><i data-lucide="truck" style="opacity:.6"></i> ${p.tipo_entrega === 'recoger' ? 'Recojo en tienda' : 'Envío a domicilio'}</span>
               </div>
               <div style="margin-top:8px;">
                 <span class="mc-estado-badge ${clase}">${ESTADO_LABELS[p.estado] || p.estado}</span>
@@ -81,8 +86,10 @@
         }).join('') + `</div>`;
 
       wrap.innerHTML = html;
+      _refreshIcons();
     } catch (e) {
-      wrap.innerHTML = `<div class="mc-empty"><i class="fa-solid fa-triangle-exclamation"></i>${e.message}</div>`;
+      wrap.innerHTML = `<div class="mc-empty"><i data-lucide="triangle-alert"></i>${e.message}</div>`;
+      _refreshIcons();
     }
   }
 
