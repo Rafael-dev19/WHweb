@@ -228,7 +228,10 @@ async function activarCuenta() {
 
     btn.innerHTML = '<i data-lucide="circle-check"></i> ¡Cuenta creada! Redirigiendo...';
     if (window.lucide) window.lucide.createIcons();
-    setTimeout(() => { window.location.href = data.redirect; }, 1200);
+    // El administrador nunca recibe push (ver includes/notifications.php); los
+    // otros tres roles pasan primero por el módulo de activación.
+    const destino = data.rol === 'administrador' ? data.redirect : '/notificaciones-push.php';
+    setTimeout(() => { window.location.href = destino; }, 1200);
 
   } catch (e) {
     let msg = e.message || 'Error desconocido.';

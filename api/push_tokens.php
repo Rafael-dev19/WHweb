@@ -28,6 +28,18 @@ if ($method === 'POST' && $action === 'limpiar') {
 }
 
 switch ($method) {
+    // ── Estado de un token para el dispositivo actual (módulo de notificaciones) ──
+    case 'GET':
+        $usuario = requerirPersonal();
+        $token = trim($_GET['fcm_token'] ?? '');
+        if (empty($token) || strlen($token) > 255) jsonError('fcm_token inválido', 422);
+        $row = dbRow(
+            "SELECT id FROM dispositivos_push WHERE fcm_token = ? AND usuario_personal_id = ? AND activo = 1",
+            [$token, (int)$usuario['id']]
+        );
+        jsonSuccess(['activo' => (bool)$row]);
+        break;
+
     case 'POST':
         $usuario = requerirPersonal();
         requerirCsrf();

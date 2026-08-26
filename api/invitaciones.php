@@ -153,6 +153,7 @@ switch ($action) {
         jsonSuccess([
             'activado' => true,
             'redirect' => $redirect,
+            'rol'      => $inv['rol'],
             'mensaje'  => '¡Cuenta creada!',
         ]);
         break;

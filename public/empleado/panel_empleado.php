@@ -40,7 +40,6 @@ unset($_usuario);
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
   <link rel="stylesheet" href="../assets/<?= av('css/panel_empleado.css') ?>">
-  <link rel="stylesheet" href="../assets/<?= av('css/push-prompt.css') ?>">
   <link rel="stylesheet" href="../assets/<?= av('css/animations.css') ?>">
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous" defer></script>
@@ -80,6 +79,7 @@ unset($_usuario);
         Notificaciones
       </div>
       <div class="notif-head-actions">
+        <a class="btn btn-secondary btn-small" href="/notificaciones-push.php" title="Activar o desactivar notificaciones push en este dispositivo"><i data-lucide="smartphone"></i></a>
         <button class="btn btn-secondary btn-small" data-call="markAllNotifRead" title="Marcar todas como leídas"><i data-lucide="check-check"></i></button>
         <button class="btn btn-secondary btn-small" data-call="clearAllNotifs" title="Limpiar todo" style="color:var(--danger,#e57373);"><i data-lucide="trash-2"></i></button>
       </div>
@@ -521,14 +521,7 @@ unset($_usuario);
   <script src="../assets/<?= av('js/panel_empleado.js') ?>"></script>
   <script src="../assets/<?= av('js/event-delegation.js') ?>"></script>
   <script src="../assets/<?= av('js/animations.js') ?>"></script>
-  <script>window.WH_FCM_VAPID_KEY = <?= json_encode(FCM_VAPID_KEY) ?>;</script>
   <script src="../assets/<?= av('js/push-notifications.js') ?>"></script>
-  <script>
-    if (typeof firebaseAuth !== 'undefined') {
-      firebaseAuth.onAuthStateChanged(function (user) {
-        if (user) initPushPrompt();
-      });
-    }
-  </script>
+  <script>initPushForegroundListener();</script>
 </body>
 </html>

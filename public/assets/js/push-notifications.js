@@ -1,16 +1,20 @@
 // push-notifications.js — Registro de notificaciones push (Web Push / FCM)
-// Se usa SOLO dentro de los paneles de personal (jefe/administrador/empleado/
-// disenador). Los clientes nunca reciben push, solo correo — ver
-// includes/notifications.php.
+// Se usa SOLO para personal (jefe/empleado/disenador) — el administrador no
+// recibe push (ver includes/notifications.php) y los clientes tampoco, solo
+// correo.
 //
-// Flujo: initPushPrompt() decide si mostrar una tarjeta pidiendo permiso
-// explícito (nunca se pide el permiso del navegador sin que el usuario haya
-// tocado "Activar" primero — pedirlo automáticamente al entrar es confuso y
-// los navegadores lo penalizan). registerPush() hace el registro real.
-//
-// A pedido del jefe, las push son casi obligatorias para el personal: si no
-// están activadas, la tarjeta insiste en CADA inicio de sesión (sin cooldown
-// de días). "Ahora no"/cerrar solo la oculta por esta visita, no la apaga.
+// Dos responsabilidades separadas:
+//  1. registerPush() / initPushGate() — el módulo de activación
+//     (notificaciones-push.php). Login redirige ahí mientras no estén
+//     activadas en este dispositivo (si ya lo están, salta directo al panel
+//     — ver _destinoTrasLogin en modal-auth.js). El menú de notificaciones
+//     de cada panel también enlaza ahí para revisar el estado o
+//     desactivarlas cuando se quiera — en ese caso initPushGate() muestra
+//     una vista de estado en vez de saltarse el módulo.
+//  2. initPushForegroundListener() — se llama desde dentro de los paneles en
+//     cada carga; si el permiso ya está concedido, engancha el aviso en
+//     pantalla para pushes que llegan con la pestaña activa (el service
+//     worker solo dispara con la pestaña en segundo plano).
 
 const WH_PUSH_LS_REGISTRADO  = 'wh_push_registrado';
 
@@ -39,9 +43,40 @@ function _esFirefox() {
   return /Firefox/.test(navigator.userAgent);
 }
 
+function _leerCsrfCookie() {
+  const cookie = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('XSRF-TOKEN='));
+  return cookie ? decodeURIComponent(cookie.split('=')[1]) : '';
+}
+
+/* ── Aviso en pantalla para pushes recibidos con la pestaña activa ─────── */
+function _bindForegroundOnMessage(messaging) {
+  messaging.onMessage((payload) => {
+    const titulo = payload.notification?.title || payload.data?.title || 'Wooden House';
+    const cuerpo = payload.notification?.body  || payload.data?.body  || 'Ingresa al sitio para ver los detalles.';
+    if (typeof showNotification === 'function') {
+      showNotification(`<i data-lucide="bell"></i> <strong>${titulo}</strong> — ${cuerpo}`, 'info');
+    }
+  });
+}
+
+/* Engancha el aviso en pantalla si el permiso ya está concedido — se llama
+   al cargar cada panel. No pide permiso ni registra token (eso es cosa del
+   módulo de activación); si el permiso no está en 'granted' no hace nada. */
+async function initPushForegroundListener() {
+  try {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    if (typeof firebase === 'undefined' || !firebase.messaging) return;
+    if (!window.firebaseApp && typeof initFirebase === 'function') initFirebase();
+    _bindForegroundOnMessage(firebase.messaging());
+  } catch (e) {
+    console.warn('[Push] initPushForegroundListener error:', e);
+  }
+}
+
 /* ── Registro real: pide permiso (dispara el diálogo nativo del navegador
    SOLO si el permiso está en "default") y registra el token en el servidor.
-   Devuelve un status en vez de boolean para que el prompt sepa qué UI mostrar. */
+   Devuelve un status en vez de boolean para que el módulo de activación
+   sepa qué UI mostrar. */
 async function registerPush() {
   try {
     if (_esIOS() && !_esStandalone()) {
@@ -86,7 +121,7 @@ async function registerPush() {
     const resToken = await fetch('/api/push_tokens.php', {
       method: 'POST',
       credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': _leerCsrfCookie() },
       body: JSON.stringify({ fcm_token: token }),
     });
     const dataToken = await resToken.json().catch(() => ({}));
@@ -95,16 +130,7 @@ async function registerPush() {
       return { ok: false, status: 'error-servidor' };
     }
 
-    // Notificaciones en primer plano (pestaña activa): el service worker solo
-    // dispara con la pestaña en segundo plano, así que aquí se muestra la
-    // misma alerta genérica dentro del panel.
-    messaging.onMessage((payload) => {
-      const titulo = payload.notification?.title || payload.data?.title || 'Wooden House';
-      const cuerpo = payload.notification?.body  || payload.data?.body  || 'Ingresa al sitio para ver los detalles.';
-      if (typeof showNotification === 'function') {
-        showNotification(`<i data-lucide="bell"></i> <strong>${titulo}</strong> — ${cuerpo}`, 'info');
-      }
-    });
+    _bindForegroundOnMessage(messaging);
 
     try { localStorage.setItem(WH_PUSH_LS_REGISTRADO, '1'); } catch (_) {}
     return { ok: true, status: 'activado' };
@@ -113,176 +139,229 @@ async function registerPush() {
   }
 }
 
-/* ── Tarjeta de opt-in explícita ─────────────────────────────────────── */
-
-function _crearFondoPush() {
-  if (document.getElementById('pushPromptBackdrop')) return document.getElementById('pushPromptBackdrop');
-  const backdrop = document.createElement('div');
-  backdrop.id = 'pushPromptBackdrop';
-  backdrop.className = 'push-prompt-backdrop';
-  document.body.appendChild(backdrop);
-  return backdrop;
+/* Token FCM actual de este dispositivo sin registrar nada (getToken() del SDK
+   devuelve el token en caché si ya existe, no crea uno nuevo). */
+async function _obtenerTokenActual() {
+  if (!window.WH_FCM_VAPID_KEY || typeof firebase === 'undefined' || !firebase.messaging) return null;
+  if (!window.firebaseApp && typeof initFirebase === 'function') initFirebase();
+  const swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+  const messaging = firebase.messaging();
+  return await messaging.getToken({ vapidKey: window.WH_FCM_VAPID_KEY, serviceWorkerRegistration: swReg }) || null;
 }
 
-function _crearTarjetaPush() {
-  const backdrop = _crearFondoPush();
-  const existente = document.getElementById('pushPromptCard');
-  if (existente) return existente;
-  const card = document.createElement('div');
-  card.id = 'pushPromptCard';
-  card.className = 'push-prompt-card';
-  document.body.appendChild(card);
-  // Nueva tarjeta: dispara la transición de aparición aquí (una sola vez,
-  // sin importar qué vista se renderice después) para que también se vea
-  // en los casos que entran directo a una vista distinta a la inicial
-  // (iOS sin instalar, permiso ya bloqueado) — antes el fondo/tarjeta se
-  // quedaban en opacity:0 para esos casos porque nadie agregaba .visible.
-  requestAnimationFrame(() => {
-    card.classList.add('visible');
-    backdrop.classList.add('visible');
-  });
-  return card;
+/* ¿Este dispositivo tiene un token activo registrado en el servidor? (el
+   permiso del navegador puede estar en 'granted' sin que eso sea cierto —
+   nunca se completó el registro, o se desactivó desde este mismo módulo). */
+async function consultarEstadoPush() {
+  try {
+    const token = await _obtenerTokenActual();
+    if (!token) return { activo: false, token: null };
+    const res = await fetch('/api/push_tokens.php?fcm_token=' + encodeURIComponent(token), { credentials: 'same-origin' });
+    const data = await res.json().catch(() => ({}));
+    return { activo: !!(res.ok && data.activo), token };
+  } catch (e) {
+    return { activo: false, token: null };
+  }
 }
 
-function _cerrarTarjetaPush(card) {
-  if (!card) return;
-  card.classList.remove('visible');
-  document.getElementById('pushPromptBackdrop')?.classList.remove('visible');
-  setTimeout(() => {
-    card.remove();
-    document.getElementById('pushPromptBackdrop')?.remove();
-  }, 250);
+/* Da de baja el token de este dispositivo — no hay forma de que un sitio
+   revoque el permiso del navegador por JS, así que "desactivar" significa
+   dejar de mandarle push a este dispositivo específico desde el servidor. */
+async function deactivatePush(token) {
+  try {
+    const res = await fetch('/api/push_tokens.php', {
+      method: 'DELETE',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': _leerCsrfCookie() },
+      body: JSON.stringify({ fcm_token: token }),
+    });
+    const data = await res.json().catch(() => ({}));
+    return !!(res.ok && data.success);
+  } catch (e) {
+    return false;
+  }
+}
+
+/* ── Módulo de activación (página completa, no overlay) ────────────────
+   Renderiza vistas dentro del contenedor #<containerId> de
+   notificaciones-push.php. Cada vista termina llevando al usuario a
+   `destino` (el panel que le corresponde) — activando, u "omitiendo" por
+   ahora. Sin cooldown a propósito: si omite, el próximo login lo vuelve a
+   traer aquí hasta que las active (a pedido del jefe). */
+
+function _pgIr(destino) {
+  window.location.href = destino;
+}
+
+function _pgRender(container, { icono, iconoVariante, titulo, cuerpo, acciones }) {
+  container.innerHTML = `
+    <div class="pg-icon${iconoVariante ? ' ' + iconoVariante : ''}"><i data-lucide="${icono}"></i></div>
+    <h1 class="pg-titulo">${titulo}</h1>
+    <p class="pg-cuerpo">${cuerpo}</p>
+    <div class="pg-acciones">${acciones}</div>`;
+  window.lucide?.createIcons();
 }
 
 /* Vista 1: pedir permiso explícito (permission === 'default') */
-function _mostrarPromptInicial() {
-  const card = _crearTarjetaPush();
-  card.innerHTML = `
-    <div class="push-prompt-icon"><i data-lucide="bell"></i></div>
-    <div class="push-prompt-body">
-      <strong>¿Recibir notificaciones del sitio?</strong>
-      <p>Te avisamos al instante de pedidos, cotizaciones y citas nuevas, aunque no tengas el panel abierto.</p>
-    </div>
-    <div class="push-prompt-actions">
-      <button type="button" class="push-prompt-btn push-prompt-btn-primary" id="btnPushActivar">Activar notificaciones</button>
-      <button type="button" class="push-prompt-btn push-prompt-btn-ghost" id="btnPushAhoraNo">Ahora no</button>
-    </div>
-    <button type="button" class="push-prompt-close" id="btnPushCerrar" aria-label="Cerrar">×</button>`;
+function _mostrarGateInicial(container, destino) {
+  _pgRender(container, {
+    icono: 'bell',
+    titulo: '¿Recibir notificaciones del sitio?',
+    cuerpo: 'Te avisamos al instante de pedidos, cotizaciones y citas nuevas, aunque no tengas el panel abierto. Puedes activarlas desde cualquier dispositivo — celular, tablet o computadora — y todos quedan registrados a la vez.',
+    acciones: `
+      <button type="button" class="pg-btn pg-btn-primary" id="pgBtnActivar">Activar notificaciones</button>
+      <button type="button" class="pg-btn pg-btn-ghost" id="pgBtnOmitir">Ahora no</button>`,
+  });
 
-  document.getElementById('btnPushActivar').addEventListener('click', async () => {
-    const btn = document.getElementById('btnPushActivar');
+  document.getElementById('pgBtnActivar').addEventListener('click', async () => {
+    const btn = document.getElementById('pgBtnActivar');
     btn.disabled = true;
     btn.innerHTML = '<i class="wh-icon-spin" data-lucide="loader-circle"></i> Activando…';
+    window.lucide?.createIcons();
     const res = await registerPush();
     if (res.ok) {
-      _mostrarPromptExito(card);
+      _mostrarGateExito(container, destino);
     } else if (res.status === 'denegado') {
-      _mostrarPromptInstrucciones(card);
+      _mostrarGateInstrucciones(container, destino);
     } else if (res.status === 'ios-no-instalado') {
-      _mostrarPromptIOS(card);
+      _mostrarGateIOS(container, destino);
     } else {
-      _cerrarTarjetaPush(card);
       _avisoPush(res.mensaje ? ('No se pudieron activar las notificaciones (' + res.mensaje + ').') : 'No se pudieron activar las notificaciones.', 'error');
+      setTimeout(() => _pgIr(destino), 1500);
     }
   });
-  document.getElementById('btnPushAhoraNo').addEventListener('click', () => _descartarPrompt(card));
-  document.getElementById('btnPushCerrar').addEventListener('click', () => _descartarPrompt(card));
+  document.getElementById('pgBtnOmitir').addEventListener('click', () => _pgIr(destino));
 }
 
 /* Vista 2: el navegador ya tiene el permiso bloqueado — no se puede volver a
    pedir por JS, hay que explicar cómo activarlo a mano en los ajustes. */
-function _mostrarPromptInstrucciones(card) {
+function _mostrarGateInstrucciones(container, destino) {
   const pasos = _esFirefox()
     ? 'Toca el candado 🔒 junto a la dirección del sitio → Permisos → Notificaciones → Permitir, y recarga la página.'
     : _esSafari()
     ? 'Ve a Safari → Ajustes… → Páginas web → Notificaciones, busca este sitio y cámbialo a Permitir.'
     : 'Toca el candado 🔒 o el ícono "i" junto a la dirección del sitio → Notificaciones → Permitir, y recarga la página.';
 
-  card.innerHTML = `
-    <div class="push-prompt-icon push-prompt-icon-warn"><i data-lucide="triangle-alert"></i></div>
-    <div class="push-prompt-body">
-      <strong>Las notificaciones están bloqueadas</strong>
-      <p>Tu navegador ya no deja que el sitio vuelva a preguntar. ${pasos}</p>
-    </div>
-    <div class="push-prompt-actions">
-      <button type="button" class="push-prompt-btn push-prompt-btn-primary" id="btnPushReintentar">Ya las activé, reintentar</button>
-      <button type="button" class="push-prompt-btn push-prompt-btn-ghost" id="btnPushAhoraNo2">Ahora no</button>
-    </div>
-    <button type="button" class="push-prompt-close" id="btnPushCerrar2" aria-label="Cerrar">×</button>`;
+  _pgRender(container, {
+    icono: 'triangle-alert',
+    iconoVariante: 'pg-icon-warn',
+    titulo: 'Las notificaciones están bloqueadas',
+    cuerpo: `Tu navegador ya no deja que el sitio vuelva a preguntar. ${pasos}`,
+    acciones: `
+      <button type="button" class="pg-btn pg-btn-primary" id="pgBtnReintentar">Ya las activé, reintentar</button>
+      <button type="button" class="pg-btn pg-btn-ghost" id="pgBtnOmitir2">Continuar sin activar</button>`,
+  });
 
-  document.getElementById('btnPushReintentar').addEventListener('click', async () => {
+  document.getElementById('pgBtnReintentar').addEventListener('click', async () => {
+    const card = container.closest('.pg-card') || container;
     if (Notification.permission !== 'granted') {
-      card.classList.add('push-prompt-shake');
-      setTimeout(() => card.classList.remove('push-prompt-shake'), 400);
+      card.classList.add('pg-shake');
+      setTimeout(() => card.classList.remove('pg-shake'), 400);
       return;
     }
     const res = await registerPush();
-    if (res.ok) _mostrarPromptExito(card);
-    else _cerrarTarjetaPush(card);
+    if (res.ok) _mostrarGateExito(container, destino);
+    else _pgIr(destino);
   });
-  document.getElementById('btnPushAhoraNo2').addEventListener('click', () => _descartarPrompt(card));
-  document.getElementById('btnPushCerrar2').addEventListener('click', () => _descartarPrompt(card));
+  document.getElementById('pgBtnOmitir2').addEventListener('click', () => _pgIr(destino));
 }
 
 /* Vista 3: iOS/iPadOS en Safari normal (no instalado a pantalla de inicio) */
-function _mostrarPromptIOS(card) {
-  card.innerHTML = `
-    <div class="push-prompt-icon"><i data-lucide="smartphone"></i></div>
-    <div class="push-prompt-body">
-      <strong>Instala el panel para recibir notificaciones</strong>
-      <p>En iPhone/iPad: toca <i data-lucide="share"></i> Compartir → "Agregar a pantalla de inicio", y vuelve a abrir el panel desde ese ícono (no desde Safari).</p>
-    </div>
-    <div class="push-prompt-actions">
-      <button type="button" class="push-prompt-btn push-prompt-btn-primary" id="btnPushEntendido">Entendido</button>
-    </div>
-    <button type="button" class="push-prompt-close" id="btnPushCerrar3" aria-label="Cerrar">×</button>`;
-  document.getElementById('btnPushEntendido').addEventListener('click', () => _descartarPrompt(card));
-  document.getElementById('btnPushCerrar3').addEventListener('click', () => _descartarPrompt(card));
+function _mostrarGateIOS(container, destino) {
+  _pgRender(container, {
+    icono: 'smartphone',
+    titulo: 'Instala el panel para recibir notificaciones',
+    cuerpo: 'En iPhone/iPad: toca <i data-lucide="share"></i> Compartir → "Agregar a pantalla de inicio", y vuelve a abrir el panel desde ese ícono (no desde Safari).',
+    acciones: `<button type="button" class="pg-btn pg-btn-primary" id="pgBtnEntendido">Continuar al panel</button>`,
+  });
+  document.getElementById('pgBtnEntendido').addEventListener('click', () => _pgIr(destino));
 }
 
-function _mostrarPromptExito(card) {
-  card.innerHTML = `
-    <div class="push-prompt-icon push-prompt-icon-ok"><i data-lucide="circle-check"></i></div>
-    <div class="push-prompt-body">
-      <strong>¡Notificaciones activadas!</strong>
-      <p>Ya vas a recibir avisos de este dispositivo.</p>
-    </div>`;
-  setTimeout(() => _cerrarTarjetaPush(card), 2500);
+function _mostrarGateExito(container, destino) {
+  _pgRender(container, {
+    icono: 'circle-check',
+    iconoVariante: 'pg-icon-ok',
+    titulo: '¡Notificaciones activadas!',
+    cuerpo: 'Ya vas a recibir avisos de este dispositivo. Entrando al panel…',
+    acciones: '',
+  });
+  setTimeout(() => _pgIr(destino), 1800);
 }
 
-function _descartarPrompt(card) {
-  // Sin cooldown a propósito: el jefe pidió que insista en cada inicio de
-  // sesión hasta que el personal las active — esto solo oculta esta visita.
-  _cerrarTarjetaPush(card);
-}
-
-/* ── Punto de entrada: decide qué (si algo) mostrar al cargar el panel ── */
-async function initPushPrompt() {
-  if (!('Notification' in window)) return; // navegador sin soporte, no molestar
-
-  if (_esIOS() && !_esStandalone()) {
-    _mostrarPromptIOS(_crearTarjetaPush());
+/* Vista de estado: el permiso del navegador ya está en 'granted'. Solo se
+   llega aquí visitando el módulo a propósito (desde el menú de
+   notificaciones del panel) — el login salta el módulo por completo cuando
+   ya está en 'granted' (ver _destinoTrasLogin en modal-auth.js), así que no
+   hace falta distinguir "vengo de login" de "lo abrí yo". */
+function _mostrarGateEstado(container, destino, estado) {
+  if (!estado.activo) {
+    // Permiso concedido pero sin token activo en el servidor (nunca se
+    // completó el registro, o se desactivó antes) — mismo flujo que activar
+    // por primera vez, solo que aquí no se pedirá permiso al navegador
+    // (ya lo tiene) así que va directo a registrar el token.
+    _mostrarGateInicial(container, destino);
     return;
   }
 
-  if (Notification.permission === 'granted') {
-    // Ya autorizado antes — (re)registrar el token en silencio; si falla
-    // (ej. token vencido, CSP, etc.) sí avisar, para no fallar mudo.
-    const res = await registerPush();
-    if (!res.ok && res.status === 'error') {
-      _avisoPush(res.mensaje ? ('No se pudo renovar el registro de notificaciones (' + res.mensaje + ').') : 'No se pudo renovar el registro de notificaciones.', 'warning');
+  _pgRender(container, {
+    icono: 'circle-check',
+    iconoVariante: 'pg-icon-ok',
+    titulo: 'Notificaciones activadas',
+    cuerpo: 'Este dispositivo está registrado y recibe avisos de pedidos, cotizaciones y citas nuevas, aunque no tengas el panel abierto.',
+    acciones: `
+      <button type="button" class="pg-btn pg-btn-ghost" id="pgBtnDesactivar">Desactivar en este dispositivo</button>
+      <button type="button" class="pg-btn pg-btn-primary" id="pgBtnContinuar">Continuar al panel</button>`,
+  });
+
+  document.getElementById('pgBtnDesactivar').addEventListener('click', async () => {
+    const btn = document.getElementById('pgBtnDesactivar');
+    btn.disabled = true;
+    btn.textContent = 'Desactivando…';
+    const ok = estado.token ? await deactivatePush(estado.token) : false;
+    if (!ok) {
+      _avisoPush('No se pudo desactivar. Intenta de nuevo.', 'error');
+      btn.disabled = false;
+      btn.textContent = 'Desactivar en este dispositivo';
+      return;
     }
+    _pgRender(container, {
+      icono: 'bell-off',
+      titulo: 'Notificaciones desactivadas',
+      cuerpo: 'Este dispositivo ya no recibirá avisos push. Puedes volver a activarlas cuando quieras desde este mismo módulo.',
+      acciones: `<button type="button" class="pg-btn pg-btn-primary" id="pgBtnContinuar2">Continuar al panel</button>`,
+    });
+    document.getElementById('pgBtnContinuar2').addEventListener('click', () => _pgIr(destino));
+  });
+  document.getElementById('pgBtnContinuar').addEventListener('click', () => _pgIr(destino));
+}
+
+/* ── Punto de entrada del módulo de activación ──────────────────────── */
+async function initPushGate(containerId, destino) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  if (!('Notification' in window)) { _pgIr(destino); return; } // sin soporte, no molestar
+
+  if (_esIOS() && !_esStandalone()) {
+    _mostrarGateIOS(container, destino);
     return;
   }
 
   if (Notification.permission === 'denied') {
-    _mostrarPromptInstrucciones(_crearTarjetaPush());
+    _mostrarGateInstrucciones(container, destino);
+    return;
+  }
+
+  if (Notification.permission === 'granted') {
+    const estado = await consultarEstadoPush();
+    _mostrarGateEstado(container, destino, estado);
     return;
   }
 
   // permission === 'default': nunca se ha preguntado — mostrar el opt-in.
-  _mostrarPromptInicial();
+  _mostrarGateInicial(container, destino);
 }
 
-window.registerPush   = registerPush;
-window.initPushPrompt = initPushPrompt;
+window.registerPush              = registerPush;
+window.initPushGate              = initPushGate;
+window.initPushForegroundListener = initPushForegroundListener;

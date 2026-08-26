@@ -263,6 +263,27 @@
     return _firebaseAuth;
   }
 
+  /* ── A dónde mandar tras un login de personal ────────────────────
+     El backend (api/auth.php, acción cliente-login) devuelve tipo:'personal'
+     y rol cuando la cuenta es de jefe/administrador/empleado/disenador. El
+     administrador nunca recibe push (ver includes/notifications.php), así
+     que va directo a su panel; los otros tres roles pasan primero por el
+     módulo de activación de notificaciones — éste decide si ya están
+     activadas en este dispositivo y, de ser así, sigue de largo solo. */
+  function _destinoTrasLogin(data) {
+    if (data.tipo === 'personal' && data.rol !== 'administrador') {
+      // Si este dispositivo ya tiene el permiso concedido, no pasar por el
+      // módulo (evita el salto extra + espera en cada login) — el estado se
+      // puede revisar cuando se quiera desde el menú de notificaciones del
+      // panel, que enlaza a este mismo módulo.
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        return data.redirect;
+      }
+      return '/notificaciones-push.php';
+    }
+    return data.redirect;
+  }
+
   /* ── Llamar al backend ───────────────────────────────────────── */
   async function _llamarBackend(action, firebaseToken, extra = {}) {
     const csrfCookie = document.cookie.split(';')
@@ -633,7 +654,7 @@
       const data  = await _llamarBackend('cliente-login', token);
       if (!data.success) throw new Error(data.error || 'Error al iniciar sesión');
       if (data.redirect) {
-        window.location.href = data.redirect;
+        window.location.href = _destinoTrasLogin(data);
         return;
       }
       _onAutenticado(data.cliente, cred.user.emailVerified);
@@ -819,7 +840,7 @@
       const token = await cred.user.getIdToken();
       const data  = await _llamarBackend('cliente-login', token);
       if (!data.success) throw new Error(data.error || 'Error al iniciar sesión con Google');
-      if (data.redirect) { window.location.href = data.redirect; return; }
+      if (data.redirect) { window.location.href = _destinoTrasLogin(data); return; }
       _onAutenticado(data.cliente, true);
     } catch (e) {
       if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
