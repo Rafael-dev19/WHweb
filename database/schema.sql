@@ -720,3 +720,30 @@ ALTER TABLE clientes ADD COLUMN lng DECIMAL(10,7) NULL AFTER lat;
 -- referencia ya totp_secreto/totp_activo, seguro quitar las columnas.
 ALTER TABLE usuarios_personal DROP COLUMN totp_secreto;
 ALTER TABLE usuarios_personal DROP COLUMN totp_activo;
+
+-- ================================================================
+-- Nota de voz opcional del jefe al responder una cotización (alternativa/
+-- complemento a escribir descripcion_respuesta) — ver panel_administrador.js
+-- (cotizador) y api/cotizaciones.php (PUT). Viaja al pedido cuando la
+-- cotización se convierte (ver cotizacion_origen en api/pedidos.php).
+-- ================================================================
+ALTER TABLE cotizaciones ADD COLUMN audio_respuesta_url VARCHAR(350) NULL AFTER pdf_url;
+
+-- ================================================================
+-- Pedidos creados manualmente por jefe/diseñador (encargos que hoy llegan
+-- por WhatsApp y se pasaban a mano) — fotos y/o nota de voz que describen
+-- el proyecto para el diseñador, adjuntos al pedido vía api/pedidos.php
+-- (action=crear_manual).
+-- ================================================================
+CREATE TABLE IF NOT EXISTS pedido_adjuntos (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  pedido_id INT NOT NULL,
+  tipo ENUM('foto','audio') NOT NULL,
+  url VARCHAR(350) NOT NULL,
+  subido_por INT NOT NULL,
+  fecha_creacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT fk_pedido_adjunto_pedido FOREIGN KEY (pedido_id) REFERENCES pedidos(id) ON DELETE CASCADE,
+  CONSTRAINT fk_pedido_adjunto_subido_por FOREIGN KEY (subido_por) REFERENCES usuarios_personal(id),
+  INDEX idx_pedido (pedido_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

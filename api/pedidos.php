@@ -2,9 +2,111 @@
 require_once __DIR__ . '/_helpers.php';
 
 $method = requestMethod();
+$action = $_GET['action'] ?? '';
 $id     = isset($_GET['id'])     ? sanitizeInt($_GET['id'])    : null;
 $token  = isset($_GET['token'])  ? trim($_GET['token'])         : null;
 $numero = isset($_GET['numero']) ? trim($_GET['numero'])        : null;
+
+// ── Pedido cargado a mano por jefe/diseñador (encargo que hoy llega por
+// WhatsApp y se pasaba de palabra) — sin catálogo/precio, con descripción
+// libre y/o nota de voz + fotos para el diseñador. Antes del switch porque
+// no encaja en el POST de checkout de abajo (ese exige items de catálogo).
+if ($method === 'POST' && $action === 'crear_manual') {
+    $usuario = requerirPersonal();
+    if (!in_array($usuario['rol'], ['jefe', 'disenador'], true)) {
+        jsonError('Acceso denegado', 403);
+    }
+    requerirCsrf();
+    checkRateLimit('pedidos_crear_manual', 20, 3600);
+
+    $body = getJsonBody();
+    requireFields($body, ['nombre_cliente']);
+
+    $nombreCliente = sanitize($body['nombre_cliente']);
+    if (mb_strlen($nombreCliente) < 2) jsonError('Nombre del cliente requerido', 422);
+
+    $descripcion = sanitize($body['descripcion'] ?? '');
+    $audioUrl    = trim($body['audio_url'] ?? '');
+    if ($descripcion === '' && $audioUrl === '') {
+        jsonError('Describe el proyecto por texto o adjunta una nota de voz', 422);
+    }
+
+    // Los adjuntos deben venir de Firebase Storage del proyecto — nunca una URL arbitraria.
+    $storageHost = 'https://firebasestorage.googleapis.com/';
+    $fotos = is_array($body['fotos'] ?? null) ? $body['fotos'] : [];
+    $fotos = array_values(array_filter(array_map('trim', $fotos), fn($u) => strpos($u, $storageHost) === 0));
+    if (count($fotos) > 10) jsonError('Máximo 10 fotos por pedido', 422);
+    if ($audioUrl !== '' && strpos($audioUrl, $storageHost) !== 0) {
+        jsonError('audio_url inválido', 422);
+    }
+
+    // El diseñador que lo carga se asigna a sí mismo; si lo carga el jefe
+    // queda sin asignar y se avisa por push a todo el rol (puede haber más
+    // de un diseñador activo) — el que lo tome lo abre desde su panel.
+    $disenadorId = $usuario['rol'] === 'disenador' ? (int)$usuario['id'] : null;
+
+    $numeroPedido = generarNumeroPedido();
+    $tokenSeg     = generarTokenSeguimiento();
+
+    $pedidoId = 0;
+    try {
+        db()->beginTransaction();
+
+        $pedidoId = dbInsert('pedidos', [
+            'numero_pedido'     => $numeroPedido,
+            'token_seguimiento' => $tokenSeg,
+            'nombre_cliente'    => $nombreCliente,
+            'correo_cliente'    => '',
+            'telefono_cliente'  => sanitize($body['telefono_cliente'] ?? ''),
+            'tipo_entrega'      => 'envio',
+            'direccion_envio'   => sanitize($body['direccion_envio'] ?? ''),
+            'estado'            => 'pendiente',
+            'disenador_id'      => $disenadorId,
+            'mensaje_disenador' => $descripcion,
+            'notas'             => 'Pedido cargado a mano desde el panel (encargo directo/WhatsApp).',
+        ]);
+
+        // Placeholder: el detalle real (medidas, materiales) lo define el
+        // diseñador durante el trabajo — no hay catálogo/precio en el origen.
+        dbInsert('detalle_pedido', [
+            'pedido_id'       => $pedidoId,
+            'producto_id'     => null,
+            'nombre_producto' => 'Pedido personalizado — ver descripción para el diseñador',
+            'cantidad'        => 1,
+            'precio_unitario' => 0,
+            'total_linea'     => 0,
+        ]);
+
+        foreach ($fotos as $url) {
+            dbInsert('pedido_adjuntos', [
+                'pedido_id'  => $pedidoId,
+                'tipo'       => 'foto',
+                'url'        => $url,
+                'subido_por' => (int)$usuario['id'],
+            ]);
+        }
+        if ($audioUrl !== '') {
+            dbInsert('pedido_adjuntos', [
+                'pedido_id'  => $pedidoId,
+                'tipo'       => 'audio',
+                'url'        => $audioUrl,
+                'subido_por' => (int)$usuario['id'],
+            ]);
+        }
+
+        db()->commit();
+    } catch (Exception $e) {
+        db()->rollBack();
+        appLog('error', 'Error creando pedido manual', ['error' => $e->getMessage()]);
+        jsonError('Error interno al crear el pedido', 500);
+    }
+
+    try {
+        notificarPedidoManualCreado($pedidoId, $numeroPedido, $disenadorId);
+    } catch (\Throwable $e) {}
+
+    jsonSuccess(['pedido_id' => $pedidoId, 'numero_pedido' => $numeroPedido]);
+}
 
 switch ($method) {
     case 'GET':
@@ -82,13 +184,24 @@ switch ($method) {
             } catch (\Throwable $e) {
                 $pedido['imagenes_diseno'] = [];
             }
+            // Fotos/audio adjuntados al crear el pedido a mano (ver action=crear_manual) —
+            // referencia de lo que el cliente pidió, distinto de imagenes_diseno (lo que
+            // el diseñador produce).
+            try {
+                $pedido['adjuntos'] = dbRows(
+                    "SELECT id, tipo, url, fecha_creacion FROM pedido_adjuntos WHERE pedido_id = ? ORDER BY id",
+                    [$id]
+                );
+            } catch (\Throwable $e) {
+                $pedido['adjuntos'] = [];
+            }
             // Si el pedido nace de una cotización convertida (Fase 7), las partidas
             // cotizadas no caben en detalle_pedido (cantidades con decimales, ej.
             // "12.5 m²") — se adjunta aquí la cotización de origen completa para
             // que el diseñador/empleado vean qué se cotizó y con qué fotos.
             try {
                 $cotOrigen = dbRow(
-                    "SELECT id, numero_cotizacion, descripcion_respuesta, pdf_url
+                    "SELECT id, numero_cotizacion, descripcion_respuesta, pdf_url, audio_respuesta_url
                      FROM cotizaciones WHERE pedido_id = ? LIMIT 1",
                     [$id]
                 );

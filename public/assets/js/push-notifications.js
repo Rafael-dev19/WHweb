@@ -266,12 +266,13 @@ function _mostrarGateInstrucciones(container, destino) {
   document.getElementById('pgBtnOmitir2').addEventListener('click', () => _pgIr(destino));
 }
 
-/* Vista 3: iOS/iPadOS en Safari normal (no instalado a pantalla de inicio) */
+/* Vista 3: iOS/iPadOS en Safari normal (no instalado a pantalla de inicio) —
+   único camino posible para push en iOS, ver nota en initPushGate(). */
 function _mostrarGateIOS(container, destino) {
   _pgRender(container, {
     icono: 'smartphone',
     titulo: 'Instala el panel para recibir notificaciones',
-    cuerpo: 'En iPhone/iPad: toca <i data-lucide="share"></i> Compartir → "Agregar a pantalla de inicio", y vuelve a abrir el panel desde ese ícono (no desde Safari).',
+    cuerpo: 'En iPhone/iPad, Apple solo permite avisos si el panel está instalado a la pantalla de inicio. Toca <i data-lucide="share"></i> Compartir → "Agregar a pantalla de inicio", y vuelve a abrir el panel desde ese ícono (no desde Safari).',
     acciones: `<button type="button" class="pg-btn pg-btn-primary" id="pgBtnEntendido">Continuar al panel</button>`,
   });
   document.getElementById('pgBtnEntendido').addEventListener('click', () => _pgIr(destino));
@@ -340,12 +341,21 @@ async function initPushGate(containerId, destino) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
-  if (!('Notification' in window)) { _pgIr(destino); return; } // sin soporte, no molestar
-
+  // En iOS, `Notification` no existe en window fuera de una PWA instalada a
+  // pantalla de inicio (ni siquiera en Safari normal) — Apple no entrega Web
+  // Push a una pestaña normal bajo ninguna circunstancia, así que instalar
+  // es la única vía posible ahí. El intento anterior de guiar a esto rompía
+  // el login y congelaba la interfaz porque el manifest tenía `scope`
+  // limitado a /admin o /empleado — cualquier navegación fuera de ese scope
+  // (login en /inicio, este mismo módulo en /notificaciones-push.php) sacaba
+  // a la app de su ventana standalone. Corregido en admin/manifest.json y
+  // empleado/manifest.json (scope: "/"), así que este flujo ya es seguro.
   if (_esIOS() && !_esStandalone()) {
     _mostrarGateIOS(container, destino);
     return;
   }
+
+  if (!('Notification' in window)) { _pgIr(destino); return; } // sin soporte real, no molestar
 
   if (Notification.permission === 'denied') {
     _mostrarGateInstrucciones(container, destino);

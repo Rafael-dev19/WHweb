@@ -180,6 +180,9 @@ unset($_usuario);
         <div class="section">
           <div class="section-header">
             <h2 class="section-title">Pedidos</h2>
+            <?php if ($_esDisenador): ?>
+            <button class="btn btn-primary" data-call="abrirModalCrearPedido"><i data-lucide="package-plus"></i> Crear pedido</button>
+            <?php endif; ?>
           </div>
 
           <div class="table-container">
@@ -234,6 +237,8 @@ unset($_usuario);
       </div>
     </div>
   </div>
+
+  <?php if ($_esDisenador): include dirname(__DIR__) . '/_modal_pedido_manual.php'; endif; ?>
 
   <!-- ═══ MODAL: DETALLE CITA (empleado) ═════════════════════════ -->
   <div class="modal" id="empCitaDetalleModal">
@@ -519,6 +524,10 @@ unset($_usuario);
   <script src="../assets/<?= av('js/theme-toggle.js') ?>"></script>
   <script src="../assets/<?= av('js/firebase-config.js') ?>"></script>
   <script src="../assets/<?= av('js/panel_empleado.js') ?>"></script>
+<?php if ($_esDisenador): ?>
+  <script src="../assets/<?= av('js/voice-recorder.js') ?>"></script>
+  <script src="../assets/<?= av('js/pedido-manual.js') ?>"></script>
+<?php endif; ?>
   <script src="../assets/<?= av('js/event-delegation.js') ?>"></script>
   <script src="../assets/<?= av('js/animations.js') ?>"></script>
   <script src="../assets/<?= av('js/push-notifications.js') ?>"></script>

@@ -2,7 +2,7 @@
   "name": "Wooden House — Panel de Gestión",
   "short_name": "WH Panel",
   "start_url": "/admin",
-  "scope": "/admin",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#1a1a1a",
   "theme_color": "#8b7355",

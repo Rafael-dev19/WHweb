@@ -426,6 +426,13 @@ switch ($method) {
 
         if (isset($body['notas_admin']))          $update['notas_admin']          = sanitize($body['notas_admin']);
         if (isset($body['descripcion_respuesta'])) $update['descripcion_respuesta'] = sanitize($body['descripcion_respuesta']);
+        if (isset($body['audio_respuesta_url'])) {
+            $audioResp = trim((string)$body['audio_respuesta_url']);
+            if ($audioResp !== '' && strpos($audioResp, 'https://firebasestorage.googleapis.com/') !== 0) {
+                jsonError('audio_respuesta_url inválido', 422);
+            }
+            $update['audio_respuesta_url'] = $audioResp !== '' ? sanitize(mb_substr($audioResp, 0, 350)) : null;
+        }
         if (isset($body['fecha_entrega_estimada'])) {
             $fe = trim($body['fecha_entrega_estimada']);
             $update['fecha_entrega_estimada'] = preg_match('/^\d{4}-\d{2}-\d{2}$/', $fe) ? $fe : null;

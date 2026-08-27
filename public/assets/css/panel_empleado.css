@@ -91,7 +91,12 @@
   /* HEADER */
   .header{
     background:var(--panel);
-    padding:10px 14px;
+    /* status-bar-style="black-translucent" (ver panel_empleado.php) hace que
+       el contenido se extienda bajo el notch/isla dinámica en iOS instalado
+       a pantalla de inicio — sin este padding el menú/logo quedaban
+       parcialmente tapados ahí. env() cae a 0 en cualquier otro contexto
+       (navegador normal, Android, escritorio). */
+    padding:calc(10px + env(safe-area-inset-top, 0px)) 14px 10px;
     display:flex;
     justify-content:space-between;
     align-items:center;
@@ -185,7 +190,7 @@
 
   .notif-panel{
     position:fixed;
-    top:58px;
+    top:calc(58px + env(safe-area-inset-top, 0px));
     right:14px;
     width:350px;
     background:var(--panel);
@@ -721,7 +726,7 @@
   .nav-links{
     display:none;
     position:fixed;
-    top:56px;
+    top:calc(56px + env(safe-area-inset-top, 0px));
     left:12px;
     right:12px;
     background:var(--panel);

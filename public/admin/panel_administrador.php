@@ -277,6 +277,9 @@ unset($_usuario);
         <div class="section">
           <div class="section-header">
             <h2 class="section-title">Todos los Pedidos</h2>
+            <?php if ($_esJefe): ?>
+            <button class="btn btn-primary" data-call="abrirModalCrearPedido"><i data-lucide="package-plus"></i> Crear pedido</button>
+            <?php endif; ?>
           </div>
 
           <div class="table-container">
@@ -1130,6 +1133,8 @@ unset($_usuario);
     </div>
   </div>
 
+  <?php if ($_esJefe): include dirname(__DIR__) . '/_modal_pedido_manual.php'; endif; ?>
+
   <!-- ═══ MODAL: DETALLE CITA (admin) ════════════════════════════ -->
   <div class="modal" id="adminCitaDetalleModal">
     <div class="modal-content" style="max-width:600px;">
@@ -1205,6 +1210,10 @@ unset($_usuario);
   </div>
 
   <script src="../assets/<?= av('js/panel_administrador.js') ?>"></script>
+  <script src="../assets/<?= av('js/voice-recorder.js') ?>"></script>
+<?php if ($_esJefe): ?>
+  <script src="../assets/<?= av('js/pedido-manual.js') ?>"></script>
+<?php endif; ?>
   <script src="../assets/<?= av('js/event-delegation.js') ?>"></script>
   <script src="../assets/<?= av('js/animations.js') ?>"></script>
   <script src="../assets/<?= av('js/sse-notificaciones.js') ?>"></script>

@@ -2502,6 +2502,10 @@ async function verDetallePedidoAdmin(id) {
     if (p.tipo_entrega === 'recoger') {
       entrega = '🏪 Recoge en tienda';
     } else {
+      // Pedidos cargados a mano (ver pedido-manual.js) suelen traer un link de
+      // ubicación pegado directo en direccion_envio en vez de texto — usarlo
+      // tal cual como link del mapa en lugar de re-envolverlo en una búsqueda.
+      const esLinkDireccion = /^https?:\/\//i.test((p.direccion_envio || '').trim());
       const partesDireccion = [
         p.direccion_envio,
         p.colonia_envio   ? `Col. ${p.colonia_envio}` : '',
@@ -2513,13 +2517,17 @@ async function verDetallePedidoAdmin(id) {
       let mapsUrl;
       if (p.lat && p.lng) {
         mapsUrl = `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`;
+      } else if (esLinkDireccion) {
+        mapsUrl = p.direccion_envio.trim();
       } else if (partesDireccion) {
         mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(partesDireccion)}`;
       }
       const mapsBtn = mapsUrl
         ? ` <a href="${mapsUrl}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;margin-left:8px;padding:3px 10px;background:#4285F420;border:1px solid #4285F460;border-radius:6px;color:#4285F4;font-size:11px;text-decoration:none;vertical-align:middle;"><i data-lucide="map-pinned"></i> Ver en mapa${p.lat ? ' 📍' : ''}</a>`
         : '';
-      entrega = `🚚 Envío — ${partesDireccion || 'Sin dirección'}${mapsBtn}`;
+      entrega = esLinkDireccion
+        ? `🚚 Envío${mapsBtn}`
+        : `🚚 Envío — ${partesDireccion || 'Sin dirección'}${mapsBtn}`;
     }
     const instalacion = parseInt(p.incluye_instalacion) ? '✅ Incluye instalación' : '❌ Sin instalación';
 
@@ -2600,6 +2608,15 @@ async function verDetallePedidoAdmin(id) {
 
       ${saldoHtml}
 
+      ${p.adjuntos?.length ? `
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:14px;">
+        <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i data-lucide="paperclip"></i> Adjuntos del pedido</div>
+        ${p.adjuntos.filter(a=>a.tipo==='foto').length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:${p.adjuntos.some(a=>a.tipo==='audio')?'10px':'0'};">
+          ${p.adjuntos.filter(a=>a.tipo==='foto').map(a => `<a href="${a.url}" target="_blank" rel="noopener"><img src="${a.url}" alt="Foto de referencia" style="width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}
+        </div>` : ''}
+        ${p.adjuntos.filter(a=>a.tipo==='audio').map(a => `<audio controls src="${a.url}" style="width:100%;height:36px;"></audio>`).join('')}
+      </div>` : ''}
+
       ${(p.imagenes_diseno?.length || p.mensaje_disenador) ? `
       <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:14px;">
         <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i data-lucide="ruler"></i> Diseño (SketchUp / VCarve)</div>
@@ -2616,6 +2633,7 @@ async function verDetallePedidoAdmin(id) {
           <tbody>${p.cotizacion_origen.items.map(it => `<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 4px;color:var(--muted2);">${escapeHtml(it.nombre_item)}</td><td style="padding:5px 4px;text-align:center;color:var(--muted2);">${it.cantidad} ${escapeHtml(it.unidad)}</td><td style="padding:5px 4px;text-align:right;color:var(--accent);font-weight:700;">${money(it.subtotal)}</td></tr>`).join('')}</tbody>
         </table>` : ''}
         ${p.cotizacion_origen.descripcion_respuesta ? `<div style="font-size:12px;color:var(--muted2);margin-bottom:8px;">${escapeHtml(p.cotizacion_origen.descripcion_respuesta)}</div>` : ''}
+        ${p.cotizacion_origen.audio_respuesta_url ? `<audio controls src="${p.cotizacion_origen.audio_respuesta_url}" style="width:100%;height:36px;margin-bottom:8px;"></audio>` : ''}
         ${p.cotizacion_origen.imagenes?.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;">${p.cotizacion_origen.imagenes.map(im => `<a href="${im.url_imagen}" target="_blank" rel="noopener"><img src="${im.url_imagen}" alt="Referencia" style="width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}</div>` : ''}
         ${p.cotizacion_origen.pdf_url ? `<p style="margin-top:8px;"><a href="${p.cotizacion_origen.pdf_url}" target="_blank" rel="noopener" style="color:var(--accent);font-size:12px;"><i data-lucide="file-text"></i> Ver PDF de la propuesta</a></p>` : ''}
       </div>` : ''}
@@ -3004,6 +3022,22 @@ async function verDetalleCotAdmin(id) {
                 placeholder="Ej: Closet de 2.5m x 2m en melamina nogal, 4 cajones, 6 repisas, puertas corredizas con espejo...">${escapeHtml(cot.descripcion_respuesta || '')}</textarea>
             </div>
             <div style="margin-bottom:10px;">
+              <label style="color:var(--muted);font-size:10px;display:block;margin-bottom:4px;">NOTA DE VOZ PARA EL DISEÑADOR (opcional)</label>
+              <div id="cot_audio_zona" style="display:${cot.audio_respuesta_url ? 'none' : 'block'};">
+                <button type="button" class="btn btn-secondary btn-small" id="cot_btn_grabar">
+                  <i data-lucide="mic"></i> Grabar nota de voz
+                </button>
+                <span id="cot_audio_tiempo" style="display:none;margin-left:10px;color:var(--danger,#e57373);font-weight:700;font-size:12px;">● 00:00</span>
+              </div>
+              <div id="cot_audio_preview" style="display:${cot.audio_respuesta_url ? 'block' : 'none'};margin-top:8px;">
+                <audio id="cot_audio_player" controls style="width:100%;height:36px;" src="${cot.audio_respuesta_url || ''}"></audio>
+                <button type="button" class="btn btn-secondary btn-small" id="cot_btn_borrar_audio" style="margin-top:6px;">
+                  <i data-lucide="trash-2"></i> Eliminar y regrabar
+                </button>
+              </div>
+              <div class="help">Complementa (o reemplaza) el mensaje escrito para que el diseñador la escuche al preparar el pedido — el cliente solo recibe el PDF con el texto.</div>
+            </div>
+            <div style="margin-bottom:10px;">
               <label style="color:var(--muted);font-size:10px;display:block;margin-bottom:4px;">NOTAS INTERNAS (solo visibles aquí)</label>
               <textarea id="cot_notas" rows="2"
                 style="width:100%;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:12px;resize:vertical;"
@@ -3030,6 +3064,11 @@ async function verDetalleCotAdmin(id) {
 
     renderCotizadorPartidas();
     renderCotizadorImagenesJefe();
+    window._cotGrabador = crearGrabadorAudio({
+      btnGrabarId: 'cot_btn_grabar', tiempoId: 'cot_audio_tiempo',
+      zonaId: 'cot_audio_zona', previewId: 'cot_audio_preview',
+      playerId: 'cot_audio_player', btnBorrarId: 'cot_btn_borrar_audio',
+    });
   } catch(e) {
     body.innerHTML = `<div style="color:var(--danger);padding:20px;text-align:center;"><i data-lucide="circle-alert"></i> Error: ${e.message}</div>`;
   }
@@ -3135,6 +3174,24 @@ async function subirImagenesCotizador(files, cotId, carpeta) {
   return urls;
 }
 
+// ── Sube la nota de voz si se grabó una nueva; si no, decide si hay que
+// enviar el campo: undefined = sin cambios (no tocar lo guardado), '' = el
+// jefe la borró y no regrabó (limpiar), url = nueva grabación subida. ──
+async function _cotObtenerAudioUrl(id) {
+  const blob = window._cotGrabador?.getBlob();
+  if (blob) {
+    if (!firebaseStorage && typeof initFirebase === 'function') initFirebase();
+    const ext = (blob.type.split('/')[1] || 'webm').split(';')[0];
+    const ref = firebaseStorage.ref(`cotizaciones/${id}/jefe/audio-${Date.now()}.${ext}`);
+    const snap = await ref.put(blob);
+    return await snap.ref.getDownloadURL();
+  }
+  const teniaAudio = !!(window._cotizadorCot?.audio_respuesta_url);
+  const preview = document.getElementById('cot_audio_preview');
+  if (teniaAudio && preview && preview.style.display === 'none') return '';
+  return undefined;
+}
+
 // ── Guardar borrador (sin cambiar de estado) ──────────────────
 async function guardarCamposCotizacion(id) {
   const fechaEnt = document.getElementById('cot_fecha_entrega')?.value || '';
@@ -3162,6 +3219,7 @@ async function guardarCamposCotizacion(id) {
   // para "perfeccionar" una cotización ya aceptada por el cliente (ajustar
   // partidas/precio) sin cambiar el estado ni volver a notificarlo.
   const items = (window._cotizadorItems || []).filter(it => it.nombre && it.cantidad > 0);
+  const audioUrl = await _cotObtenerAudioUrl(id);
 
   const data = await apiFetch(`${API_BASE}/cotizaciones.php?id=${id}`, {
     method: 'PUT',
@@ -3170,6 +3228,7 @@ async function guardarCamposCotizacion(id) {
       notas_admin: notas || null,
       fecha_entrega_estimada: fechaEnt || null,
       items: items.length ? items.map(it => ({ clave: it.clave || it.nombre, nombre: it.nombre, cantidad: it.cantidad, unidad: it.unidad, precio_unitario: it.precio_unitario })) : undefined,
+      audio_respuesta_url: audioUrl,
     }),
   });
   if (data.success) showNotification('<i data-lucide="save"></i> Borrador guardado', 'success');
@@ -3255,6 +3314,7 @@ async function generarPDFCotizacion(id) {
     const path = `cotizaciones/${id}/propuesta_${cot.numero_cotizacion || id}.pdf`;
     const snap = await firebaseStorage.ref(path).put(pdfBlob, { contentType: 'application/pdf' });
     const pdfUrl = await snap.ref.getDownloadURL();
+    const audioUrl = await _cotObtenerAudioUrl(id);
 
     // ── Guardar todo y disparar el email al cliente ──
     const data = await apiFetch(`${API_BASE}/cotizaciones.php?id=${id}`, {
@@ -3269,6 +3329,7 @@ async function generarPDFCotizacion(id) {
         requiere_instalacion: instalacion,
         fecha_entrega_estimada: fechaEnt || null,
         pdf_url: pdfUrl,
+        audio_respuesta_url: audioUrl,
       }),
     });
     if (data.success) {

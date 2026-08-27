@@ -1296,6 +1296,10 @@ async function verDetallePedidoEmp(id) {
     if (p.tipo_entrega === 'recoger') {
       entrega = '🏪 Recoge en tienda';
     } else {
+      // Pedidos cargados a mano (ver pedido-manual.js) suelen traer un link de
+      // ubicación pegado directo en direccion_envio en vez de texto — usarlo
+      // tal cual como link del mapa en lugar de re-envolverlo en una búsqueda.
+      const esLinkDireccion = /^https?:\/\//i.test((p.direccion_envio || '').trim());
       const partesDireccion = [
         p.direccion_envio,
         p.colonia_envio   ? `Col. ${p.colonia_envio}` : '',
@@ -1306,13 +1310,17 @@ async function verDetallePedidoEmp(id) {
       let mapsUrl;
       if (p.lat && p.lng) {
         mapsUrl = `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`;
+      } else if (esLinkDireccion) {
+        mapsUrl = p.direccion_envio.trim();
       } else if (partesDireccion) {
         mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(partesDireccion)}`;
       }
       const mapsBtn = mapsUrl
         ? ` <a href="${mapsUrl}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;margin-left:8px;padding:3px 10px;background:#4285F420;border:1px solid #4285F460;border-radius:6px;color:#4285F4;font-size:11px;text-decoration:none;vertical-align:middle;"><i data-lucide="map-pinned"></i> Ver en mapa${p.lat ? ' 📍' : ''}</a>`
         : '';
-      entrega = `🚚 Envío — ${partesDireccion || 'Sin dirección'}${mapsBtn}`;
+      entrega = esLinkDireccion
+        ? `🚚 Envío${mapsBtn}`
+        : `🚚 Envío — ${partesDireccion || 'Sin dirección'}${mapsBtn}`;
     }
     const instalacion = parseInt(p.incluye_instalacion) ? '✅ Incluye instalación' : '❌ Sin instalación';
 
@@ -1392,6 +1400,15 @@ async function verDetallePedidoEmp(id) {
 
       ${saldoHtml}
 
+      ${p.adjuntos?.length ? `
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:14px;">
+        <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i data-lucide="paperclip"></i> Adjuntos del pedido</div>
+        ${p.adjuntos.filter(a=>a.tipo==='foto').length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:${p.adjuntos.some(a=>a.tipo==='audio')?'10px':'0'};">
+          ${p.adjuntos.filter(a=>a.tipo==='foto').map(a => `<a href="${a.url}" target="_blank" rel="noopener"><img src="${a.url}" alt="Foto de referencia" style="width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}
+        </div>` : ''}
+        ${p.adjuntos.filter(a=>a.tipo==='audio').map(a => `<audio controls src="${a.url}" style="width:100%;height:36px;"></audio>`).join('')}
+      </div>` : ''}
+
       ${(p.imagenes_diseno?.length || p.mensaje_disenador) ? `
       <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:14px;">
         <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i data-lucide="ruler"></i> Diseño (SketchUp / VCarve)</div>
@@ -1408,6 +1425,7 @@ async function verDetallePedidoEmp(id) {
           <tbody>${p.cotizacion_origen.items.map(it => `<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 4px;color:var(--muted2);">${escapeHtml(it.nombre_item)}</td><td style="padding:5px 4px;text-align:center;color:var(--muted2);">${it.cantidad} ${escapeHtml(it.unidad)}</td><td style="padding:5px 4px;text-align:right;color:var(--accent);font-weight:700;">${money(it.subtotal)}</td></tr>`).join('')}</tbody>
         </table>` : ''}
         ${p.cotizacion_origen.descripcion_respuesta ? `<div style="font-size:12px;color:var(--muted2);margin-bottom:8px;">${escapeHtml(p.cotizacion_origen.descripcion_respuesta)}</div>` : ''}
+        ${p.cotizacion_origen.audio_respuesta_url ? `<audio controls src="${p.cotizacion_origen.audio_respuesta_url}" style="width:100%;height:36px;margin-bottom:8px;"></audio>` : ''}
         ${p.cotizacion_origen.imagenes?.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;">${p.cotizacion_origen.imagenes.map(im => `<a href="${im.url_imagen}" target="_blank" rel="noopener"><img src="${im.url_imagen}" alt="Referencia" style="width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}</div>` : ''}
         ${p.cotizacion_origen.pdf_url ? `<p style="margin-top:8px;"><a href="${p.cotizacion_origen.pdf_url}" target="_blank" rel="noopener" style="color:var(--accent);font-size:12px;"><i data-lucide="file-text"></i> Ver PDF de la propuesta</a></p>` : ''}
       </div>` : ''}

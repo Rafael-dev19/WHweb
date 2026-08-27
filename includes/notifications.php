@@ -159,6 +159,24 @@ function _obtenerTokensPushPorRol(array $roles): array {
     }
 }
 
+// Tokens de dispositivo activos de un usuario de personal específico (para
+// avisar solo al diseñador asignado, no a todo el rol — ver
+// notificarPedidoManualAsignado).
+function _obtenerTokensPushPorUsuario(int $usuarioId): array {
+    try {
+        $rows = dbRows(
+            "SELECT dp.fcm_token
+             FROM dispositivos_push dp
+             INNER JOIN usuarios_personal up ON up.id = dp.usuario_personal_id
+             WHERE dp.activo = 1 AND up.activo = 1 AND up.id = ?",
+            [$usuarioId]
+        );
+        return array_column($rows, 'fcm_token');
+    } catch (\Throwable $e) {
+        return [];
+    }
+}
+
 // Notificación push genérica: reutiliza el mismo documento de Firestore que ya
 // dispara la Cloud Function, agregando los campos push_* que ésta lee para
 // mandar el Web Push. El contenido del push es SIEMPRE genérico (nunca datos
@@ -236,6 +254,36 @@ function notificarNuevoPedido(array $pedido, bool $desdeConversionCotizacion = f
         'Hay un nuevo pedido, ingresa al sitio para revisarlo.',
         '/empleado#pedidos',
         $desdeCarrito
+    );
+}
+
+// Pedido cargado a mano por jefe/diseñador (encargo que llegó por WhatsApp).
+// Si un diseñador lo cargó para sí mismo, push solo a él; si lo cargó el
+// jefe queda sin asignar y se avisa a todo el rol (puede haber varios
+// diseñadores activos) — el que lo tome lo abre desde su panel.
+function notificarPedidoManualCreado(int $pedidoId, string $numeroPedido, ?int $disenadorId): void {
+    if ($disenadorId) {
+        $tokens = _obtenerTokensPushPorUsuario($disenadorId);
+        if (empty($tokens)) return;
+        crearNotificacionFirestore(
+            'push_pedido_manual_creado',
+            'Nuevo pedido para diseñar',
+            "Pedido $numeroPedido cargado, ingresa al sitio para revisarlo.",
+            [
+                'push_titulo'      => 'Nuevo pedido para diseñar',
+                'push_mensaje'     => 'Cargaste un nuevo pedido, ingresa al sitio para revisarlo.',
+                'push_url'         => '/empleado#pedidos',
+                'push_tokens_json' => json_encode($tokens),
+            ]
+        );
+        return;
+    }
+    crearNotificacionPush(
+        'push_pedido_manual_creado',
+        ['disenador'],
+        'Nuevo pedido para diseñar',
+        'Hay un nuevo pedido cargado a mano, ingresa al sitio para revisarlo.',
+        '/empleado#pedidos'
     );
 }
 
