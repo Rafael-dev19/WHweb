@@ -59,7 +59,7 @@ async function enviarPush(tokens, titulo, cuerpo, clickUrl) {
       notification: { title: titulo, body: cuerpo },
       webpush: {
         fcmOptions: { link: clickUrl || '/' },
-        notification: { icon: '/favicon.ico' },
+        notification: { icon: 'https://muebleswh.com/assets/img/logo-header.png' },
       },
     });
     console.log(`[CF] push enviado: ${resp.successCount}/${tokens.length} ok`);
@@ -206,6 +206,7 @@ function emailWrapper(titulo, contenido) {
            style="width:600px;max-width:600px;background:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.12);">
       <tr>
         <td align="center" bgcolor="${gold}" style="background-color:${gold};padding:28px 40px;">
+          <img src="https://muebleswh.com/assets/img/logo-header.png" alt="Wooden House" width="48" height="49" style="display:block;margin:0 auto 10px;">
           <p style="margin:0;font-size:11px;letter-spacing:3px;color:rgba(255,255,255,.70);font-family:Arial,sans-serif;text-transform:uppercase;">WOODEN HOUSE</p>
           <div style="width:48px;height:2px;background:rgba(255,255,255,.40);margin:10px auto;"></div>
           <h1 style="margin:0;color:#ffffff;font-size:22px;letter-spacing:1px;font-family:Georgia,'Times New Roman',serif;font-weight:normal;">${titulo}</h1>
@@ -698,7 +699,7 @@ exports.onNuevaNotificacion = onDocumentCreated(
         const correosJefe = JSON.parse(data.correos_jefe_json);
         const clickUrl = data.push_url ? `${process.env.APP_URL || ''}${data.push_url}` : (process.env.APP_URL || '');
         if (Array.isArray(correosJefe)) {
-          correosJefe.forEach(correoJefe => {
+          await Promise.all(correosJefe.map(correoJefe =>
             sendEmail({
               from: emails.admin, fromName: 'WOODEN HOUSE',
               to:      correoJefe,
@@ -711,8 +712,8 @@ exports.onNuevaNotificacion = onDocumentCreated(
                 </div>`),
               text:    `${data.push_mensaje || 'Ingresa al sitio para ver los detalles.'} ${clickUrl}`,
             }).then(() => console.log(`[CF] emailJefe (${tipo}) → ${correoJefe}`))
-              .catch(e => console.error('[CF] Error emailJefe:', e.message));
-          });
+              .catch(e => console.error('[CF] Error emailJefe:', e.message))
+          ));
         }
       } catch (e) {
         console.error('[CF] Error procesando correos_jefe_json:', e.message);
@@ -892,6 +893,7 @@ exports.onNuevaNotificacion = onDocumentCreated(
         html: `
 <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:560px;margin:0 auto;background:#faf6f0;border-radius:12px;overflow:hidden;border:1px solid #e5ddd4;">
   <div style="background:#5C3D11;padding:28px 32px;text-align:center;">
+    <img src="https://muebleswh.com/assets/img/logo-header.png" alt="Wooden House" width="44" height="45" style="display:block;margin:0 auto 8px;">
     <h1 style="color:#e8dcc8;margin:0;font-size:22px;font-weight:700;letter-spacing:1px;">WOODEN HOUSE</h1>
   </div>
   <div style="padding:32px;">

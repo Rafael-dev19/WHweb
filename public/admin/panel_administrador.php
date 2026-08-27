@@ -31,7 +31,7 @@ unset($_usuario);
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="WH Panel">
-  <link rel="apple-touch-icon" href="/assets/img/logo-header.png">
+  <link rel="apple-touch-icon" href="/assets/img/logo-icon-maskable.png">
   <meta name="description" content="Panel de administración de Wooden House. Gestión de productos, pedidos, empleados y reportes.">
   <meta name="robots" content="noindex, nofollow">
 

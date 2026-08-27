@@ -31,8 +31,8 @@ messaging.onBackgroundMessage((payload) => {
 
   self.registration.showNotification(titulo, {
     body: cuerpo,
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
+    icon: '/assets/img/logo-icon.png',
+    badge: '/assets/img/logo-icon.png',
     data: { url },
   });
 });
