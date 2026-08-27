@@ -9,7 +9,10 @@ service cloud.firestore {
                          'nuevo_pedido','estado_pedido',
                          'nueva_cotizacion','cotizacion_respondida','nueva_cita',
                          'cotizacion_en_produccion','cotizacion_lista','cotizacion_entregada',
-                         'invitacion_personal'
+                         'invitacion_personal',
+                         'push_nuevo_pedido','push_pedido_manual_creado',
+                         'push_nueva_cotizacion','push_confirmacion_cotizacion',
+                         'push_pedido_listo_produccion','push_nueva_cita'
                        ]
                     && request.resource.data.leida == false
                     && request.resource.data.titulo is string
