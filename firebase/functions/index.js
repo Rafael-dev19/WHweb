@@ -234,6 +234,38 @@ function emailWrapper(titulo, contenido) {
 </body></html>`;
 }
 
+// ── Iconos inline (estilo Lucide, sin depender de imágenes externas) ────
+const ICON_PATHS = {
+  home:          '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+  truck:         '<path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/>',
+  mapPin:        '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+  wrench:        '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
+  checkCircle:   '<path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/>',
+  package:       '<path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><polyline points="3.29 7 12 12 20.71 7"/><path d="m7.5 4.27 9 5.15"/>',
+  creditCard:    '<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>',
+  calendar:      '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/>',
+  receipt:       '<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6"/><path d="M16 12h-6"/><path d="M12 17h-2"/>',
+  clipboardList: '<rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/>',
+  ruler:         '<path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.4 2.4 0 0 1 0-3.4l2.6-2.6a2.4 2.4 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2"/><path d="m11.5 9.5 2-2"/><path d="m8.5 6.5 2-2"/><path d="m17.5 15.5 2-2"/>',
+  paperclip:     '<path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/>',
+  phone:         '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>',
+  messageCircle: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+  hammer:        '<path d="m15 12-8.5 8.5a2.12 2.12 0 1 1-3-3L12 9"/><path d="M17.64 15 22 10.64"/><path d="m20.91 11.7-1.25-1.25c-.6-.6-.93-1.4-.93-2.25v-.86L16.01 4.6a5.56 5.56 0 0 0-3.94-1.64H9l.92.82A6.18 6.18 0 0 1 12 8.4v1.56l2 2h2.47l2.26 1.91"/>',
+  xCircle:       '<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>',
+  clock:         '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+};
+
+// Icono inline estilo Lucide (sin imágenes externas, para que se vea igual en
+// el correo sin depender de que el cliente cargue recursos remotos). No se
+// renderiza en Outlook de escritorio clásico (motor Word) — ahí el texto
+// queda sin icono, sin romper el layout.
+function icon(name, opts = {}) {
+  const { size = 15, color = '#8B6914', strokeWidth = 2, margin = '0 5px 0 0' } = opts;
+  const body = ICON_PATHS[name];
+  if (!body) return '';
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;display:inline-block;margin:${margin};">${body}</svg>`;
+}
+
 // ── emailPedidoConfirmado ─────────────────────────────────────────
 function emailPedidoConfirmado(pedido) {
   const folio    = pedido.numero_pedido  || '';
@@ -246,7 +278,9 @@ function emailPedidoConfirmado(pedido) {
 
   const tipoEntrega     = pedido.tipo_entrega || 'envio';
   const costoEnvio      = Number(pedido.costo_envio || 0);
-  const etiquetaEntrega = tipoEntrega === 'recoger' ? '🏠 Recoger en tienda' : '🚚 Envío a domicilio';
+  const etiquetaEntrega = tipoEntrega === 'recoger'
+    ? `${icon('home', { size: 15, color: '#5C3D11' })}Recoger en tienda`
+    : `${icon('truck', { size: 15, color: '#5C3D11' })}Envío a domicilio`;
   const direccion = pedido.direccion_envio || '';
   const coloniaDireccion = [
     pedido.colonia_envio   ? `Col. ${pedido.colonia_envio}` : '',
@@ -255,7 +289,7 @@ function emailPedidoConfirmado(pedido) {
     pedido.cp_envio        ? `CP ${pedido.cp_envio}` : '',
   ].filter(Boolean).join(', ');
   const entregaDetalle  = tipoEntrega === 'envio' && direccion
-    ? `<p style="margin:4px 0 0;font-size:13px;color:#777;">📍 ${[direccion, coloniaDireccion].filter(Boolean).join(', ')}</p>` : '';
+    ? `<p style="margin:4px 0 0;font-size:13px;color:#777;">${icon('mapPin', { size: 12, color: '#999' })}${[direccion, coloniaDireccion].filter(Boolean).join(', ')}</p>` : '';
   const entregaCosto    = tipoEntrega === 'recoger'
     ? `<span style="color:#3d8b3d;font-weight:600;">Sin costo</span>`
     : `<span style="font-weight:600;">${fmt(costoEnvio)}</span>`;
@@ -264,11 +298,11 @@ function emailPedidoConfirmado(pedido) {
   const costoInstalacion   = Number(pedido.costo_instalacion || 0);
   const instalacionRow     = incluyeInstalacion
     ? `<tr>
-        <td style="padding:10px 12px;border-bottom:1px solid #f0e8d8;">🔧 Instalación profesional</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #f0e8d8;">${icon('wrench', { size: 14, color: '#5C3D11' })}Instalación profesional</td>
         <td style="padding:10px 12px;border-bottom:1px solid #f0e8d8;text-align:right;font-weight:600;">${fmt(costoInstalacion)}</td>
        </tr>`
     : `<tr>
-        <td style="padding:10px 12px;border-bottom:1px solid #f0e8d8;color:#888;">🔧 Instalación</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #f0e8d8;color:#888;">${icon('wrench', { size: 14, color: '#aaa' })}Instalación</td>
         <td style="padding:10px 12px;border-bottom:1px solid #f0e8d8;text-align:right;color:#888;">No incluida</td>
        </tr>`;
 
@@ -291,7 +325,7 @@ function emailPedidoConfirmado(pedido) {
     ? `<tr><td colspan="3" style="padding:8px 12px;text-align:right;color:#3d8b3d;">Descuento:</td><td style="padding:8px 12px;text-align:right;color:#3d8b3d;font-weight:600;">-${fmt(descuento)}</td></tr>` : '';
 
   const contenido = `
-<h2 style="color:#8B6914;margin-top:0;">¡Pedido confirmado, ${nombre}! 🎉</h2>
+<h2 style="color:#8B6914;margin-top:0;">¡Pedido confirmado, ${nombre}! ${icon('checkCircle', { size: 18, color: '#8B6914', margin: '0 0 0 6px' })}</h2>
 <p style="color:#555;line-height:1.7;">Hemos recibido tu pedido. Nos pondremos en contacto para coordinar los detalles de entrega.</p>
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:25px 0;">
@@ -304,7 +338,7 @@ function emailPedidoConfirmado(pedido) {
 </table>
 
 <!-- Productos -->
-<h3 style="color:#5C3D11;font-size:15px;margin:24px 0 8px;">📦 Productos</h3>
+<h3 style="color:#5C3D11;font-size:15px;margin:24px 0 8px;">${icon('package', { size: 15, color: '#5C3D11' })}Productos</h3>
 <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:20px;">
   <tr style="background:#f0e8d8;">
     <th style="padding:10px 12px;text-align:left;color:#5C3D11;">Producto</th>
@@ -316,7 +350,7 @@ function emailPedidoConfirmado(pedido) {
 </table>
 
 <!-- Entrega e Instalación -->
-<h3 style="color:#5C3D11;font-size:15px;margin:24px 0 8px;">🚚 Entrega e Instalación</h3>
+<h3 style="color:#5C3D11;font-size:15px;margin:24px 0 8px;">${icon('truck', { size: 15, color: '#5C3D11' })}Entrega e Instalación</h3>
 <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:20px;background:#faf6f0;border-radius:6px;">
   <tr>
     <td style="padding:12px;border-bottom:1px solid #f0e8d8;">
@@ -352,18 +386,18 @@ ${esAnticipo ? `
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:20px;background:#faf6f0;border-left:4px solid #8B6914;border-radius:4px;">
   <tr>
     <td style="padding:14px 18px;">
-      <strong style="color:#5C3D11;">💳 Pagaste un anticipo del 50%</strong><br>
+      <strong style="color:#5C3D11;">${icon('creditCard', { size: 14, color: '#5C3D11' })}Pagaste un anticipo del 50%</strong><br>
       <span style="color:#666;font-size:13px;">Pagado ahora: <strong>${fmt(montoPagado)}</strong> · Saldo pendiente: <strong style="color:#8B6914;">${fmt(saldoPendiente)}</strong></span><br>
       <span style="color:#888;font-size:12px;">El saldo se liquida antes de la entrega — puedes pagarlo en línea desde tu página de seguimiento o al recibir tu pedido.</span>
     </td>
   </tr>
 </table>` : ''}
 
-<p style="color:#555;"><strong>📅 Semana estimada de entrega:</strong> ${fecha}</p>
+<p style="color:#555;"><strong>${icon('calendar', { size: 14, color: '#8B6914' })}Semana estimada de entrega:</strong> ${fecha}</p>
 
 <!-- Ticket de pago -->
 ${(pedido.metodo_pago || pedido.referencia_pago) ? `
-<h3 style="color:#5C3D11;font-size:15px;margin:24px 0 8px;">🧾 Comprobante de pago</h3>
+<h3 style="color:#5C3D11;font-size:15px;margin:24px 0 8px;">${icon('receipt', { size: 15, color: '#5C3D11' })}Comprobante de pago</h3>
 <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:20px;background:#faf6f0;border-radius:6px;">
   <tr>
     <td style="padding:10px 14px;border-bottom:1px solid #f0e8d8;color:#666;width:40%;">Método de pago</td>
@@ -401,11 +435,11 @@ function emailEstadoPedido(pedido, estadoAnterior) {
   const estadoLabels = {
     pendiente:        'Pendiente de pago',
     anticipo_pagado:  'Anticipo pagado (50%)',
-    pagado:           'Pago confirmado ✓',
-    en_produccion:    'En producción 🔨',
-    listo:            'Listo para entrega 📦',
-    entregado:        'Entregado ✅',
-    cancelado:        'Cancelado ❌',
+    pagado:           `Pago confirmado ${icon('checkCircle', { size: 17, color: '#8B6914', margin: '0 0 0 6px' })}`,
+    en_produccion:    `En producción ${icon('hammer', { size: 17, color: '#8B6914', margin: '0 0 0 6px' })}`,
+    listo:            `Listo para entrega ${icon('package', { size: 17, color: '#8B6914', margin: '0 0 0 6px' })}`,
+    entregado:        `Entregado ${icon('checkCircle', { size: 17, color: '#8B6914', margin: '0 0 0 6px' })}`,
+    cancelado:        `Cancelado ${icon('xCircle', { size: 17, color: '#8B6914', margin: '0 0 0 6px' })}`,
   };
 
   const estadoActual       = pedido.estado || '';
@@ -461,7 +495,7 @@ function emailCotizacionRecibida(cot) {
   const tipo = tipoMap[cot.modelo_mueble || ''] || cot.modelo_mueble || 'Mueble personalizado';
 
   const contenido = `
-<h2 style="color:#8B6914;margin-top:0;">¡Solicitud de cotización recibida! ✓</h2>
+<h2 style="color:#8B6914;margin-top:0;">¡Solicitud de cotización recibida! ${icon('checkCircle', { size: 18, color: '#8B6914', margin: '0 0 0 6px' })}</h2>
 <p style="color:#555;line-height:1.7;">Hola <strong>${nombre}</strong>, hemos recibido correctamente tu solicitud para <strong>${tipo}</strong>.</p>
 
 <div style="background:#faf6f0;border-left:4px solid #8B6914;padding:20px;margin:25px 0;border-radius:4px;">
@@ -498,7 +532,7 @@ function emailCotizacionRespondida(cot) {
   const trackUrl = token ? `https://muebleswh.com/seguimiento?token=${token}&cotizacion=${folio}` : '';
 
   const contenido = `
-<h2 style="color:#8B6914;margin-top:0;">Tu propuesta de cotización está lista 📋</h2>
+<h2 style="color:#8B6914;margin-top:0;">Tu propuesta de cotización está lista ${icon('clipboardList', { size: 18, color: '#8B6914', margin: '0 0 0 6px' })}</h2>
 <p style="color:#555;line-height:1.7;">Hola <strong>${nombre}</strong>, hemos revisado tu solicitud y preparamos esta propuesta personalizada para ti.</p>
 
 <div style="background:#faf6f0;border-left:4px solid #8B6914;padding:20px;margin:25px 0;border-radius:4px;">
@@ -510,24 +544,24 @@ function emailCotizacionRespondida(cot) {
 <div style="background:#fff8f0;border:2px solid #c9a96e;border-radius:10px;padding:20px;margin:20px 0;text-align:center;">
   <div style="color:#7a5a1a;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Precio total de tu proyecto</div>
   <div style="font-size:32px;font-weight:700;color:#5C3D11;">${precioFmt}</div>
-  ${fechaEnt ? `<div style="color:#888;font-size:13px;margin-top:6px;">📅 Entrega estimada: <strong>${fechaEnt}</strong></div>` : ''}
+  ${fechaEnt ? `<div style="color:#888;font-size:13px;margin-top:6px;">${icon('calendar', { size: 12, color: '#999' })}Entrega estimada: <strong>${fechaEnt}</strong></div>` : ''}
 </div>
 
 ${fechaVisita ? `
 <div style="background:#eef5fb;border-left:4px solid #4a7c8b;padding:16px 20px;margin:20px 0;border-radius:4px;">
   <p style="margin:0;color:#2a4a55;font-size:14px;line-height:1.7;">
-    <strong>📍 Visita para confirmar medidas y detalles</strong><br>
+    <strong>${icon('mapPin', { size: 14, color: '#2a4a55' })}Visita para confirmar medidas y detalles</strong><br>
     ${fechaVisita}${horaVisita ? ` — ${horaVisita}` : ''}
   </p>
 </div>` : ''}
 
 ${desc ? `
-<h3 style="color:#5C3D11;font-size:15px;margin:24px 0 8px;">📐 Descripción de tu proyecto</h3>
+<h3 style="color:#5C3D11;font-size:15px;margin:24px 0 8px;">${icon('ruler', { size: 15, color: '#5C3D11' })}Descripción de tu proyecto</h3>
 <div style="background:#fff;border:1px solid #e5ddd4;border-radius:6px;padding:20px;line-height:1.8;color:#3a3a3a;">
   ${desc.replace(/\n/g, '<br>')}
 </div>` : ''}
 
-<p style="color:#888;font-size:13px;margin:16px 0;">📎 Adjuntamos el PDF con el detalle completo de tu propuesta.</p>
+<p style="color:#888;font-size:13px;margin:16px 0;">${icon('paperclip', { size: 12, color: '#999' })}Adjuntamos el PDF con el detalle completo de tu propuesta.</p>
 
 <div style="background:#f0f7f0;border-left:4px solid #4a8b5a;padding:16px 20px;margin:24px 0;border-radius:4px;">
   <p style="margin:0;color:#2a5a2a;font-size:14px;line-height:1.7;">
@@ -538,13 +572,13 @@ ${desc ? `
 
 <div style="text-align:center;margin:30px 0;">
   ${trackUrl ? `<a href="${trackUrl}" style="background:#4a8b5a;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:6px;font-size:15px;font-weight:bold;display:inline-block;font-family:Georgia,serif;margin-right:12px;margin-bottom:10px;">
-    ✅ Confirmar cotización
+    ${icon('checkCircle', { size: 15, color: '#ffffff' })}Confirmar cotización
   </a>` : ''}
   <a href="tel:3317054017" style="background:#8B6914;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:6px;font-size:15px;font-weight:bold;display:inline-block;font-family:Georgia,serif;margin-right:12px;margin-bottom:10px;">
-    📞 Llamar ahora
+    ${icon('phone', { size: 15, color: '#ffffff' })}Llamar ahora
   </a>
   <a href="https://wa.me/523317054017?text=Hola%2C%20acepto%20la%20cotizaci%C3%B3n%20${folio}" style="background:#25D366;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:6px;font-size:15px;font-weight:bold;display:inline-block;font-family:Georgia,serif;margin-bottom:10px;">
-    💬 WhatsApp
+    ${icon('messageCircle', { size: 15, color: '#ffffff' })}WhatsApp
   </a>
 </div>`;
 
@@ -561,13 +595,13 @@ function emailCotizacionEnProduccion(cot) {
   const trackUrl = token ? `https://muebleswh.com/seguimiento?token=${token}&cotizacion=${folio}` : '';
 
   const contenido = `
-<h2 style="color:#8B6914;margin-top:0;">¡Tu mueble está en fabricación! 🔨</h2>
+<h2 style="color:#8B6914;margin-top:0;">¡Tu mueble está en fabricación! ${icon('hammer', { size: 18, color: '#8B6914', margin: '0 0 0 6px' })}</h2>
 <p style="color:#555;line-height:1.7;">Hola <strong>${nombre}</strong>, ¡excelente noticia! Tu proyecto personalizado ha comenzado el proceso de fabricación en nuestro taller.</p>
 
 <div style="background:#faf6f0;border-left:4px solid #8B6914;padding:20px;margin:25px 0;border-radius:4px;">
   <strong style="font-size:18px;color:#5C3D11;display:block;margin-bottom:4px;">${folio}</strong>
   <span style="color:#888;font-size:13px;">Número de cotización — guárdalo para dar seguimiento</span>
-  ${fechaEnt ? `<p style="margin:8px 0 0;color:#5C3D11;font-size:14px;">📅 Fecha estimada de entrega: <strong>${fechaEnt}</strong></p>` : ''}
+  ${fechaEnt ? `<p style="margin:8px 0 0;color:#5C3D11;font-size:14px;">${icon('calendar', { size: 13, color: '#5C3D11' })}Fecha estimada de entrega: <strong>${fechaEnt}</strong></p>` : ''}
 </div>
 
 ${desc ? `
@@ -596,7 +630,7 @@ function emailCotizacionLista(cot) {
   const trackUrl = token ? `https://muebleswh.com/seguimiento?token=${token}&cotizacion=${folio}` : '';
 
   const contenido = `
-<h2 style="color:#8B6914;margin-top:0;">¡Tu mueble está listo! ✅</h2>
+<h2 style="color:#8B6914;margin-top:0;">¡Tu mueble está listo! ${icon('checkCircle', { size: 18, color: '#8B6914', margin: '0 0 0 6px' })}</h2>
 <p style="color:#555;line-height:1.7;">Hola <strong>${nombre}</strong>, tu mueble personalizado ha sido fabricado y está listo para entrega. Nos pondremos en contacto para coordinar los detalles.</p>
 
 <div style="background:#faf6f0;border-left:4px solid #4a8b5a;padding:20px;margin:25px 0;border-radius:4px;">
@@ -606,7 +640,7 @@ function emailCotizacionLista(cot) {
 
 <div style="background:#f0f7f0;border-left:4px solid #4a8b5a;padding:16px 20px;margin:20px 0;border-radius:4px;">
   <p style="margin:0;color:#2a5a2a;font-size:14px;line-height:1.7;">
-    📞 Nos comunicaremos contigo en las próximas horas para agendar la entrega o instalación.
+    ${icon('phone', { size: 13, color: '#2a5a2a' })}Nos comunicaremos contigo en las próximas horas para agendar la entrega o instalación.
   </p>
 </div>
 
@@ -621,7 +655,7 @@ function emailCotizacionEntregada(cot) {
   const nombre = cot.nombre_cliente    || '';
 
   const contenido = `
-<h2 style="color:#8B6914;margin-top:0;">¡Entrega completada! 🎉</h2>
+<h2 style="color:#8B6914;margin-top:0;">¡Entrega completada! ${icon('checkCircle', { size: 18, color: '#8B6914', margin: '0 0 0 6px' })}</h2>
 <p style="color:#555;line-height:1.7;">Hola <strong>${nombre}</strong>, tu mueble personalizado ha sido entregado. Esperamos que lo disfrutes mucho.</p>
 
 <div style="background:#faf6f0;border-left:4px solid #8B6914;padding:20px;margin:25px 0;border-radius:4px;">
@@ -649,13 +683,13 @@ function emailCitaConfirmada(cita) {
   const tipo   = cita.tipo           || 'medición';
 
   const contenido = `
-<h2 style="color:#8B6914;margin-top:0;">Cita confirmada 📅</h2>
+<h2 style="color:#8B6914;margin-top:0;">Cita confirmada ${icon('calendar', { size: 18, color: '#8B6914', margin: '0 0 0 6px' })}</h2>
 <p style="color:#555;line-height:1.7;">Hola <strong>${nombre}</strong>, tu cita de <strong>${tipo}</strong> ha sido confirmada.</p>
 
 <div style="background:#faf6f0;border-left:4px solid #8B6914;padding:20px;margin:25px 0;border-radius:4px;">
-  <p style="margin:4px 0;"><strong style="color:#5C3D11;">📅 Fecha:</strong> ${fecha}</p>
-  <p style="margin:4px 0;"><strong style="color:#5C3D11;">🕐 Horario:</strong> ${hora}</p>
-  <p style="margin:4px 0;"><strong style="color:#5C3D11;">📋 Tipo:</strong> ${tipo}</p>
+  <p style="margin:4px 0;"><strong style="color:#5C3D11;">${icon('calendar', { size: 13, color: '#5C3D11' })}Fecha:</strong> ${fecha}</p>
+  <p style="margin:4px 0;"><strong style="color:#5C3D11;">${icon('clock', { size: 13, color: '#5C3D11' })}Horario:</strong> ${hora}</p>
+  <p style="margin:4px 0;"><strong style="color:#5C3D11;">${icon('clipboardList', { size: 13, color: '#5C3D11' })}Tipo:</strong> ${tipo}</p>
   <p style="margin:8px 0 0;font-size:13px;color:#888;">Folio: ${folio}</p>
 </div>
 
