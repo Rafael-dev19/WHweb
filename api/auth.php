@@ -41,9 +41,7 @@ switch ($action) {
 
         _crearSesion($usuario);
 
-        $redirect    = in_array($usuario['rol'], ['jefe', 'administrador', 'ventas'], true)
-            ? '/admin/panel_administrador.php'
-            : '/empleado/panel_empleado.php';
+        $redirect    = panelPhpPathParaRol($usuario['rol']);
 
         jsonSuccess([
             'usuario' => [
@@ -149,7 +147,7 @@ switch ($action) {
             $usuario = obtenerUsuarioPorFirebaseUid($uid);
             if (!$usuario) jsonError('Tu cuenta de personal no está activa. Contacta al administrador.', 403);
             _crearSesion($usuario);
-            $redirect   = in_array($usuario['rol'], ['jefe', 'administrador', 'ventas'], true) ? '/admin' : '/empleado';
+            $redirect   = panelUrlParaRol($usuario['rol']);
             jsonSuccess([
                 'redirect' => $redirect,
                 'tipo'     => 'personal',

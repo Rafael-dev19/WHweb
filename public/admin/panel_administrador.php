@@ -7,20 +7,17 @@ require_once dirname(__DIR__, 2) . "/includes/functions.php";
 require_once dirname(__DIR__, 2) . "/includes/auth.php";
 
 $_usuario = sesionActiva();
-if (!$_usuario || !in_array($_usuario["rol"], ["jefe", "administrador", "ventas"], true)) {
+if (!$_usuario || !in_array($_usuario["rol"], ["jefe", "administrador"], true)) {
     header("Location: /acceso-denegado?area=admin");
     exit;
 }
 // Solo se conserva el rol (no el resto de datos de sesión) para poder ocultar
 // server-side las secciones exclusivas de jefe (financiero, ofertas, reportes).
+// Ventas ya no comparte este panel — tiene el suyo propio en /ventas.
 $_rolPanel = $_usuario["rol"];
 $_esJefe   = $_rolPanel === "jefe";
-// Ventas comparte este panel pero con una vista muy recortada: solo
-// Cotizaciones y Pedidos (incluida la carga manual) — nada de catálogo,
-// empleados, clientes, capacidad ni los módulos exclusivos de jefe.
-$_esVentas      = $_rolPanel === "ventas";
-$_vistaCompleta = in_array($_rolPanel, ["jefe", "administrador"], true);
-$_puedeCrearPedidoManual = in_array($_rolPanel, ["jefe", "ventas"], true);
+$_vistaCompleta = $_esJefe || $_rolPanel === "administrador";
+$_puedeCrearPedidoManual = $_esJefe;
 unset($_usuario);
 ?>
 
@@ -227,56 +224,6 @@ unset($_usuario);
         </div>
 
         <div class="section">
-          <div class="section-header">
-            <h2 class="section-title"><i data-lucide="calendar"></i> Agenda del Mes</h2>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;align-items:center;">
-              <button class="btn btn-secondary" data-call="prevMonth"><i data-lucide="chevron-left"></i></button>
-              <button class="btn btn-secondary" data-call="nextMonth"><i data-lucide="chevron-right"></i></button>
-              <button class="btn btn-secondary" data-call="refrescarCalendarioAdmin" title="Actualizar calendario" id="admCalRefreshBtn"><i data-lucide="refresh-cw"></i></button>
-            </div>
-          </div>
-
-          <div class="calendar-wrap">
-            <div class="calendar-toolbar">
-              <div class="cal-title" id="calTitle">Cargando...</div>
-              <div style="color:var(--muted); font-size:12px;">Toca un día para ver detalles</div>
-            </div>
-
-            <div class="calendar-grid" id="calendarDow">
-              <div class="cal-dow">Lun</div><div class="cal-dow">Mar</div><div class="cal-dow">Mié</div>
-              <div class="cal-dow">Jue</div><div class="cal-dow">Vie</div><div class="cal-dow">Sáb</div><div class="cal-dow">Dom</div>
-            </div>
-
-            <div class="calendar-grid" id="calendarGrid"></div>
-
-            <div class="row g-3 cal-side">
-              <div class="col-md-8">
-                <div class="cal-list">
-                  <div class="cal-list-head" id="dayHead" style="display:flex;justify-content:space-between;align-items:center;">
-                    <span id="dayHeadLabel">Selecciona un día</span>
-                    <button id="admRutaDiaBtn" class="btn btn-primary btn-small" style="display:none;" data-call="generarRutaDiaAdmin" data-args='[]'>
-                      <i data-lucide="route"></i> Ruta
-                    </button>
-                  </div>
-                  <div class="cal-list-body" id="dayList">
-                    <div class="cal-item">
-                      <div class="t">Toca un día del calendario</div>
-                      <div class="m">Aquí verás las citas y asignaciones.</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div class="cal-list">
-                  <div class="cal-list-head">Próximas (vista rápida)</div>
-                  <div class="cal-list-body" id="nextList"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="section">
           <div class="section-header"><h2 class="section-title">Actividad Reciente</h2></div>
           <div id="actividadReciente" style="color:var(--muted); font-size:13px;">
             <i class="wh-icon-spin" data-lucide="loader-circle"></i> Cargando actividad...
@@ -328,11 +275,61 @@ unset($_usuario);
         </div>
       </div>
 
-      <!-- CITAS / AGENDA (jefe/administrador — ventas no gestiona citas) -->
-      <?php if ($_vistaCompleta): ?>
+      <!-- CITAS / AGENDA — visible para jefe/administrador en este panel
+           (ventas tiene su propia copia de esta misma sección en /ventas). -->
       <div id="citas-section" class="content-section hidden">
         <h1 class="page-title">Citas Programadas</h1>
-        <p class="page-subtitle">Historial y gestión de todas las citas</p>
+        <p class="page-subtitle">Calendario visual y listado de todas las citas</p>
+
+        <div class="section">
+          <div class="section-header">
+            <h2 class="section-title"><i data-lucide="calendar"></i> Agenda del Mes</h2>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;align-items:center;">
+              <button class="btn btn-secondary" data-call="prevMonth"><i data-lucide="chevron-left"></i></button>
+              <button class="btn btn-secondary" data-call="nextMonth"><i data-lucide="chevron-right"></i></button>
+              <button class="btn btn-secondary" data-call="refrescarCalendarioAdmin" title="Actualizar calendario" id="admCalRefreshBtn"><i data-lucide="refresh-cw"></i></button>
+            </div>
+          </div>
+
+          <div class="calendar-wrap">
+            <div class="calendar-toolbar">
+              <div class="cal-title" id="calTitle">Cargando...</div>
+              <div style="color:var(--muted); font-size:12px;">Toca un día para ver detalles</div>
+            </div>
+
+            <div class="calendar-grid" id="calendarDow">
+              <div class="cal-dow">Lun</div><div class="cal-dow">Mar</div><div class="cal-dow">Mié</div>
+              <div class="cal-dow">Jue</div><div class="cal-dow">Vie</div><div class="cal-dow">Sáb</div><div class="cal-dow">Dom</div>
+            </div>
+
+            <div class="calendar-grid" id="calendarGrid"></div>
+
+            <div class="row g-3 cal-side">
+              <div class="col-md-8">
+                <div class="cal-list">
+                  <div class="cal-list-head" id="dayHead" style="display:flex;justify-content:space-between;align-items:center;">
+                    <span id="dayHeadLabel">Selecciona un día</span>
+                    <button id="admRutaDiaBtn" class="btn btn-primary btn-small" style="display:none;" data-call="generarRutaDiaAdmin" data-args='[]'>
+                      <i data-lucide="route"></i> Ruta
+                    </button>
+                  </div>
+                  <div class="cal-list-body" id="dayList">
+                    <div class="cal-item">
+                      <div class="t">Toca un día del calendario</div>
+                      <div class="m">Aquí verás las citas y asignaciones.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="cal-list">
+                  <div class="cal-list-head">Próximas (vista rápida)</div>
+                  <div class="cal-list-body" id="nextList"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <div class="section">
           <div class="section-header">
@@ -360,7 +357,6 @@ unset($_usuario);
           </div>
         </div>
       </div>
-      <?php endif; ?>
 
       <!-- COTIZACIONES -->
       <div id="cotizaciones-section" class="content-section hidden">
@@ -406,7 +402,7 @@ unset($_usuario);
         </div>
       </div>
 
-      <!-- CATÁLOGO (jefe/administrador — ventas usa el catálogo de precios del cotizador) -->
+      <!-- CATÁLOGO (jefe/administrador) -->
       <?php if ($_vistaCompleta): ?>
       <div id="catalogo-section" class="content-section hidden">
         <h1 class="page-title">Gestionar Catálogo</h1>

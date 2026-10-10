@@ -18,8 +18,12 @@ Options -Indexes -ExecCGI
     RewriteRule ^sitemap\.xml$               sitemap.php                     [L]
 
     # Rutas directas a paneles (sin condiciones para evitar conflicto con directorios reales)
-    RewriteRule ^admin/?$                    admin/panel_administrador.php   [L,QSA]
-    RewriteRule ^empleado/?$                 empleado/panel_empleado.php     [L,QSA]
+    # Un panel por rol: jefe/administrador siguen en /admin, empleado en /empleado;
+    # ventas y disenador ahora tienen su propio panel separado.
+    RewriteRule ^admin/?$                    admin/panel_administrador.php       [L,QSA]
+    RewriteRule ^empleado/?$                 empleado/panel_empleado.php         [L,QSA]
+    RewriteRule ^ventas/?$                   ventas/panel_ventas.php             [L,QSA]
+    RewriteRule ^disenador/?$                disenador/panel_disenador.php       [L,QSA]
 
     # No reescribir si el archivo o directorio ya existe
     RewriteCond %{REQUEST_FILENAME} !-f

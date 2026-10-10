@@ -261,6 +261,30 @@ function requerirVentasOGestion(): array {
     return $usuario;
 }
 
+// Cada rol de personal tiene su propio panel (ver public/.htaccess para las
+// rutas limpias /admin, /empleado, /ventas, /disenador).
+function panelUrlParaRol(string $rol): string {
+    switch ($rol) {
+        case 'jefe':
+        case 'administrador': return '/admin';
+        case 'ventas':        return '/ventas';
+        case 'disenador':     return '/disenador';
+        default:               return '/empleado';
+    }
+}
+
+// Variante con ruta completa al .php (login directo, antes de que el
+// navegador tenga oportunidad de pasar por las rutas limpias del .htaccess).
+function panelPhpPathParaRol(string $rol): string {
+    switch ($rol) {
+        case 'jefe':
+        case 'administrador': return '/admin/panel_administrador.php';
+        case 'ventas':        return '/ventas/panel_ventas.php';
+        case 'disenador':     return '/disenador/panel_disenador.php';
+        default:               return '/empleado/panel_empleado.php';
+    }
+}
+
 function requerirDisenador(): array {
     $usuario = requerirAutenticacion();
     if ($usuario['rol'] !== 'disenador') {

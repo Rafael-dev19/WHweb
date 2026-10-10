@@ -245,15 +245,25 @@ function notificarNuevoPedido(array $pedido, bool $desdeConversionCotizacion = f
     // Push: al diseñador siempre (tiene que diseñarlo); al jefe solo si el
     // pedido vino directo del carrito (si vino de una cotización, el jefe ya
     // recibió el push+email de confirmación — evita avisarle dos veces).
+    // Jefe y diseñador tienen paneles distintos (/admin vs /disenador), así
+    // que cada quien necesita su propia URL de destino — dos llamadas, no una.
     $desdeCarrito = !$desdeConversionCotizacion;
-    $roles = $desdeCarrito ? ['jefe', 'disenador'] : ['disenador'];
+    if ($desdeCarrito) {
+        crearNotificacionPush(
+            'push_nuevo_pedido',
+            ['jefe'],
+            'Nuevo pedido',
+            'Hay un nuevo pedido, ingresa al sitio para revisarlo.',
+            '/admin#pedidos',
+            true
+        );
+    }
     crearNotificacionPush(
         'push_nuevo_pedido',
-        $roles,
+        ['disenador'],
         'Nuevo pedido',
         'Hay un nuevo pedido, ingresa al sitio para revisarlo.',
-        '/empleado#pedidos',
-        $desdeCarrito
+        '/disenador#pedidos'
     );
 }
 
@@ -272,7 +282,7 @@ function notificarPedidoManualCreado(int $pedidoId, string $numeroPedido, ?int $
             [
                 'push_titulo'      => 'Nuevo pedido para diseñar',
                 'push_mensaje'     => 'Cargaste un nuevo pedido, ingresa al sitio para revisarlo.',
-                'push_url'         => '/empleado#pedidos',
+                'push_url'         => '/disenador#pedidos',
                 'push_tokens_json' => json_encode($tokens),
             ]
         );
@@ -283,7 +293,7 @@ function notificarPedidoManualCreado(int $pedidoId, string $numeroPedido, ?int $
         ['disenador'],
         'Nuevo pedido para diseñar',
         'Hay un nuevo pedido cargado a mano, ingresa al sitio para revisarlo.',
-        '/empleado#pedidos'
+        '/disenador#pedidos'
     );
 }
 

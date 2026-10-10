@@ -16,6 +16,14 @@ if ($area === 'admin') {
     $titulo  = 'Área exclusiva de empleados';
     $mensaje = 'Esta sección es exclusiva para el personal de Wooden House.';
     $detalle = 'Si eres parte del equipo, inicia sesión con tu cuenta de personal para continuar.';
+} elseif ($area === 'ventas') {
+    $titulo  = 'Área exclusiva de ventas';
+    $mensaje = 'Esta sección es exclusiva para el equipo de ventas.';
+    $detalle = 'Si perteneces al equipo de ventas, inicia sesión con tu cuenta de personal para continuar.';
+} elseif ($area === 'disenador') {
+    $titulo  = 'Área exclusiva de diseño';
+    $mensaje = 'Esta sección es exclusiva para el equipo de diseño.';
+    $detalle = 'Si perteneces al equipo de diseño, inicia sesión con tu cuenta de personal para continuar.';
 }
 ?>
 <!DOCTYPE html>

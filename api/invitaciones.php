@@ -160,9 +160,7 @@ switch ($action) {
         $usuario = dbRow("SELECT * FROM usuarios_personal WHERE id = ? LIMIT 1", [$empId]);
         if ($usuario) _crearSesion($usuario);
 
-        // Ventas comparte panel_administrador.php (vista recortada: solo
-        // cotizaciones y pedidos) igual que jefe/administrador.
-        $redirect = in_array($inv['rol'], ['jefe', 'administrador', 'ventas'], true) ? '/admin' : '/empleado';
+        $redirect = panelUrlParaRol($inv['rol']);
         jsonSuccess([
             'activado' => true,
             'redirect' => $redirect,
