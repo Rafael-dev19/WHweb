@@ -1,0 +1,680 @@
+/* === RESET === */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+body {
+  font-family: var(--font-main, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif);
+  background: var(--color-bg-main, #1a1a1a);
+  color: var(--color-text-main, #e0e0e0);
+  line-height: var(--line-height-base, 1.6);
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* ── Transición suave al cambiar de tema (feedback de cambio de estado,
+   no decorativa): sin esto el toggle claro/oscuro se siente como un
+   parpadeo brusco en vez de un cambio intencional. `*` es seguro aquí:
+   es la especificidad más baja posible, así que nunca pisa una transición
+   más específica ya definida en otro selector, y el navegador no hace
+   trabajo real salvo cuando el valor computado de verdad cambia. ── */
+* {
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
+
+img, video {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* ── Feedback táctil e interacción por teclado, sitio completo ──────
+   El feedback vive en :active (respuesta instantánea al toque, no en
+   click/release) y respeta prefers-reduced-motion (ver animations.css). ── */
+button:not(:disabled),
+.btn-primary, .btn-secondary, .cart-icon, .btn-cuenta-nav, .btn-back {
+  transition: transform 0.12s ease, opacity 0.12s ease, filter 0.12s ease;
+}
+button:not(:disabled):active,
+a.btn-primary:active, a.btn-secondary:active {
+  transform: scale(0.97);
+}
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-primary, #8b7355);
+  outline-offset: 3px;
+}
+
+/* === HEADER === */
+.header-nav {
+  background: var(--color-bg-panel, #2d2d2d);
+  padding: 20px 40px;
+  padding-top: calc(20px + env(safe-area-inset-top, 0px));
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: var(--shadow-md, 0 5px 20px rgba(0,0,0,0.3));
+  position: sticky;
+  top: 0;
+  z-index: var(--z-header, 1000);
+  flex-wrap: wrap;
+}
+
+.logo {
+  font-size: 28px;
+  font-weight: var(--font-weight-black, bold);
+  color: var(--color-primary, #8b7355);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* El logo (logo-header.png) es un mark gris claro pensado para fondo oscuro.
+   Sin un asset aparte para tema claro, se invierte por CSS para que siga
+   siendo legible sobre el header claro en vez de casi desaparecer. */
+[data-theme="light"] img[src*="logo-header"] {
+  filter: invert(1) brightness(0.85);
+}
+
+.nav-links {
+  display: flex;
+  gap: 30px;
+  align-items: center;
+}
+
+.nav-links a {
+  color: var(--color-text-main, #e0e0e0);
+  transition: color var(--transition-normal, 0.3s);
+  font-weight: var(--font-weight-medium, 500);
+}
+
+.nav-links a:hover {
+  color: var(--color-primary, #8b7355);
+}
+
+.login-btn {
+  background: var(--color-primary, #8b7355);
+  color: white;
+  padding: 10px 25px;
+  border-radius: var(--border-radius-sm, 8px);
+  border: none;
+  transition: all var(--transition-normal, 0.3s);
+  font-weight: var(--font-weight-bold, 600);
+  display: inline-block;
+}
+
+.login-btn:hover {
+  background: var(--color-primary-hover, #a0865f);
+  transform: scale(1.05);
+}
+
+.cart-icon {
+  position: relative;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.cart-icon svg { width: 22px; height: 22px; stroke-width: 1.75; }
+
+.cart-badge {
+  position: absolute;
+  top: -6px;
+  right: -10px;
+  background: var(--color-error, red);
+  color: white;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 50%;
+  font-weight: var(--font-weight-bold, 600);
+}
+
+/* === BOTÓN CUENTA NAV (fallback si modal-auth.css no está cargado) === */
+.btn-cuenta-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: transparent;
+  border: 1.5px solid var(--color-primary, #8b7355);
+  color: var(--color-accent, #c9a96e);
+  padding: 7px 16px;
+  border-radius: var(--border-radius-sm, 8px);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast, 0.15s), color var(--transition-fast, 0.15s);
+  white-space: nowrap;
+  font-family: inherit;
+}
+.btn-cuenta-nav svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2;
+}
+.btn-cuenta-nav:hover, .btn-cuenta-nav.autenticado {
+  background: var(--color-primary, #8b7355);
+  color: #fff;
+}
+
+.menu-toggle {
+  display: none;
+  background: transparent;
+  border: 2px solid var(--color-bg-card, #3d3d3d);
+  color: var(--color-text-main, #e0e0e0);
+  font-size: 22px;
+  padding: 8px 12px;
+  border-radius: var(--border-radius-md, 10px);
+  cursor: pointer;
+  transition: var(--transition-normal, 0.3s);
+}
+
+.menu-toggle:hover {
+  border-color: var(--color-primary, #8b7355);
+  color: var(--color-primary, #8b7355);
+}
+
+/* === BREADCRUMB === */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 40px;
+  background: var(--color-bg-panel, #2d2d2d);
+  border-bottom: 1px solid var(--color-border, #3d3d3d);
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
+.breadcrumb a {
+  color: var(--color-text-muted, #a0a0a0);
+  text-decoration: none;
+  transition: color var(--transition-fast, 0.15s);
+}
+.breadcrumb a:hover { color: var(--color-primary, #8b7355); }
+
+.breadcrumb-sep {
+  color: var(--color-border-light, #4a4a4a);
+  font-size: 11px;
+}
+
+.breadcrumb-current {
+  color: var(--color-accent, #c9a96e);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+}
+
+.btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-muted, #a0a0a0);
+  font-size: 13px;
+  text-decoration: none;
+  transition: color var(--transition-fast, 0.15s);
+  padding: 4px 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+.btn-back:hover { color: var(--color-primary, #8b7355); }
+.btn-back svg { width: 13px; height: 13px; stroke-width: 2; }
+
+@media (max-width: 576px) {
+  .breadcrumb { padding: 10px 16px; }
+  .breadcrumb-current { max-width: 160px; }
+}
+
+/* === FOOTER === */
+.footer {
+  background: var(--color-bg-panel, #2d2d2d);
+  padding: var(--spacing-lg, 40px) var(--spacing-md, 20px);
+  text-align: center;
+  margin-top: var(--spacing-xl, 60px);
+  border-top: 3px solid var(--color-primary, #8b7355);
+}
+
+.footer p {
+  color: var(--color-text-muted, #a0a0a0);
+  font-size: var(--font-size-sm, 14px);
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 900px) {
+  /* Header compacto — barra inferior maneja la navegación en móvil */
+  .header-nav { padding: 10px 16px; }
+  .nav-links { display: none; }
+  .footer { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
+}
+
+@media (max-width: 640px) {
+  .header-nav { padding: 8px 12px; }
+  .breadcrumb { padding: 8px 12px; font-size: 12px; gap: 6px; }
+  .breadcrumb-current { max-width: 140px; }
+  .footer { padding: 20px 14px; padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
+}
+
+@media (max-width: 576px) {
+  .header-nav { padding: 8px 12px; }
+  .logo { font-size: 22px; }
+  .breadcrumb { padding: 8px 12px; }
+  .breadcrumb-current { max-width: 130px; }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   SISTEMA GLOBAL DE AYUDA / TOOLTIPS
+   Uso: <span class="wh-help" data-tip="Texto de ayuda">?</span>
+   ════════════════════════════════════════════════════════════════ */
+
+/* Icono de ayuda ─────────────────────────────────────────────── */
+.wh-help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(201,169,110,0.18);
+  border: 1px solid rgba(201,169,110,0.45);
+  color: #c9a96e;
+  font-size: 10px;
+  font-weight: 700;
+  font-style: normal;
+  cursor: help;
+  user-select: none;
+  position: relative;
+  vertical-align: middle;
+  margin-left: 5px;
+  flex-shrink: 0;
+  transition: background 0.2s, border-color 0.2s;
+}
+.wh-help:hover,
+.wh-help.wh-help--open {
+  background: rgba(201,169,110,0.35);
+  border-color: #c9a96e;
+}
+
+/* Burbuja del tooltip ────────────────────────────────────────── */
+.wh-help::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #242424;
+  color: #e8d9c0;
+  border: 1px solid #555;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 400;
+  font-style: normal;
+  white-space: normal;
+  width: clamp(160px, 80vw, 230px);
+  line-height: 1.55;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.6);
+  z-index: 2000;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.18s ease, visibility 0.18s ease;
+}
+/* Flechita */
+.wh-help::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #555;
+  z-index: 2001;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.18s ease, visibility 0.18s ease;
+}
+.wh-help:hover::after,
+.wh-help:hover::before,
+.wh-help.wh-help--open::after,
+.wh-help.wh-help--open::before {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Variante hacia arriba del tooltip para iconos en la parte inferior */
+.wh-help.wh-help--up::after  { bottom: auto; top: calc(100% + 10px); }
+.wh-help.wh-help--up::before { bottom: auto; top: calc(100% + 4px); border-top-color: transparent; border-bottom-color: #555; }
+
+/* Variante izquierda — cuando el icono está en el borde derecho */
+.wh-help.wh-help--left::after  { left: auto; right: 0; transform: none; }
+.wh-help.wh-help--left::before { left: auto; right: 5px; transform: none; }
+
+/* Caja de información (bloque, no inline) ────────────────────── */
+.wh-info-box {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: rgba(201,169,110,0.1);
+  border-radius: 8px;
+  padding: 11px 14px;
+  font-size: 13px;
+  color: var(--color-text-muted, #b09878);
+  line-height: 1.55;
+  margin: 10px 0;
+}
+.wh-info-box svg { color: var(--color-accent, #c9a96e); margin-top: 1px; flex-shrink: 0; width: 18px; height: 18px; stroke-width: 1.75; }
+.wh-info-box strong { color: var(--color-accent, #d4b98a); }
+
+/* Soporte touch (móvil) — JS activa/desactiva .wh-help--open */
+@media (hover: none) {
+  .wh-help { cursor: pointer; }
+}
+
+/* Toast/notificación global (creada por showNotification() en utils.js) */
+.wh-notification svg { width: 18px; height: 18px; stroke-width: 1.75; flex-shrink: 0; }
+
+/* Ícono girando (loader de pantalla completa, botones "Guardando...", etc.)
+   Autocontenido con su propio tamaño y keyframe — no depende de que la
+   página cargue animations.css. */
+.wh-icon-spin { display: inline-flex; }
+.wh-icon-spin svg { width: 1em; height: 1em; stroke-width: 1.75; animation: wh-icon-spin-kf .8s linear infinite; }
+@keyframes wh-icon-spin-kf { to { transform: rotate(360deg); } }
+
+/* Callout tintado (sin border-left de color) para notas destacadas dentro
+   de texto largo — p.ej. el aviso de Google Sign-In en la home. */
+.wh-callout {
+  padding: 16px 20px;
+  background: var(--color-primary-light, rgba(139,115,85,0.1));
+  border-radius: var(--border-radius-md, 10px);
+  font-size: 14px;
+  color: var(--color-text-muted, #ccc);
+  line-height: 1.8;
+}
+.wh-callout-lead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-accent, #c9a96e);
+  margin-bottom: 4px;
+}
+.wh-callout-link { color: var(--color-accent, #c9a96e); }
+
+
+/* ── Alerta de redirección (flash message) ─────────────────────── */
+.wh-alerta {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  background: var(--color-bg-card, #1e1e1e);
+  border: 1px solid var(--color-accent, #c9a96e);
+  color: var(--color-text-main, #e0e0e0);
+  padding: 14px 48px 14px 20px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 500;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+  max-width: 90vw;
+  width: max-content;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: whAlertaIn .3s ease;
+}
+.wh-alerta svg { color: var(--color-accent, #c9a96e); width: 20px; height: 20px; stroke-width: 1.75; flex-shrink: 0; }
+.wh-alerta-cerrar {
+  position: absolute;
+  top: 8px; right: 10px;
+  background: none; border: none;
+  color: var(--color-text-muted); font-size: 18px;
+  cursor: pointer; line-height: 1;
+}
+.wh-alerta-cerrar:hover { color: var(--color-text-muted); }
+@keyframes whAlertaIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-16px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   GUÍA DE COMPRA FLOTANTE
+   ════════════════════════════════════════════════════════════════ */
+
+.wh-guide-btn {
+  position: fixed;
+  bottom: 90px;
+  right: 20px;
+  background: var(--color-primary, #8b7355);
+  color: #fff;
+  border: none;
+  border-radius: 50px;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 22px rgba(0,0,0,0.45);
+  z-index: 890;
+  transition: all 0.2s;
+  white-space: nowrap;
+  font-family: inherit;
+  animation: whGuidePop 0.5s ease 1.5s both;
+}
+.wh-guide-btn:hover {
+  background: var(--color-primary-hover, #a0865f);
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 6px 28px rgba(0,0,0,0.5);
+}
+.wh-guide-btn svg { width: 18px; height: 18px; stroke-width: 1.75; }
+
+@keyframes whGuidePop {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.wh-guide-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.72);
+  z-index: 9990;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.wh-guide-modal.open { display: flex; }
+
+.wh-guide-content {
+  background: var(--color-bg-card, #2d2d2d);
+  border-radius: 18px;
+  padding: 34px 30px 28px;
+  max-width: 520px;
+  width: 100%;
+  position: relative;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+  animation: whGuideSlideIn 0.25s ease;
+}
+@keyframes whGuideSlideIn {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.wh-guide-close {
+  position: absolute;
+  top: 14px;
+  right: 18px;
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 26px;
+  cursor: pointer;
+  line-height: 1;
+  font-family: inherit;
+}
+.wh-guide-close:hover { color: #fff; }
+
+.wh-guide-title {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--color-accent, #c9a96e);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.wh-guide-title svg { width: 22px; height: 22px; stroke-width: 1.75; }
+.wh-guide-subtitle {
+  font-size: 15px;
+  color: var(--color-text-muted);
+  margin-bottom: 22px;
+}
+
+.wh-guide-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.wh-guide-step {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.wh-step-num {
+  background: var(--color-primary, #8b7355);
+  color: #fff;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+.wh-step-icon {
+  color: var(--color-accent, #c9a96e);
+  flex-shrink: 0;
+  width: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wh-step-icon svg { width: 22px; height: 22px; stroke-width: 1.75; }
+.wh-step-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.wh-step-info strong {
+  color: var(--color-text-main, #e0e0e0);
+  font-size: 15px;
+}
+.wh-step-info span {
+  color: var(--color-text-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.wh-guide-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.wh-guide-cta {
+  flex: 1;
+  background: var(--color-primary, #8b7355);
+  color: #fff;
+  padding: 13px 16px;
+  border-radius: 10px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+  transition: background 0.2s;
+  min-width: 130px;
+}
+.wh-guide-cta svg { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
+.wh-guide-cta:hover { background: var(--color-primary-hover, #a0865f); color: #fff; }
+.wh-guide-cta--alt {
+  background: transparent;
+  border: 2px solid var(--color-primary, #8b7355);
+  color: var(--color-accent, #c9a96e);
+}
+.wh-guide-cta--alt:hover { background: var(--color-primary, #8b7355); color: #fff; }
+
+.wh-guide-note {
+  font-size: 12px;
+  color: #666;
+  text-align: center;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.wh-guide-note svg { width: 14px; height: 14px; stroke-width: 1.75; }
+
+/* Etiqueta de navegación con subtítulo */
+.nav-link-desc {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.nav-link-desc small {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+@media (max-width: 480px) {
+  .wh-guide-btn-label { display: none; }
+  .wh-guide-btn { padding: 13px; border-radius: 50%; bottom: 80px; }
+  .wh-guide-content { padding: 24px 18px 20px; }
+  .wh-guide-title { font-size: 19px; }
+  .wh-guide-step { padding: 11px 12px; gap: 10px; }
+}
