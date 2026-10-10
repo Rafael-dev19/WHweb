@@ -1,6 +1,6 @@
 <!-- _modal_pedido_manual.php — Modal "Crear pedido" compartido por
-     panel_administrador.php (jefe) y panel_empleado.php (diseñador). Incluir
-     solo detrás de un guardia de rol — nunca para administrador/empleado. -->
+     panel_administrador.php (jefe/ventas) y panel_empleado.php (diseñador).
+     Incluir solo detrás de un guardia de rol — nunca para administrador/empleado. -->
 <div class="modal" id="pedidoManualModal">
   <div class="modal-content" style="max-width:640px;width:min(640px,96vw);">
     <div class="modal-header">

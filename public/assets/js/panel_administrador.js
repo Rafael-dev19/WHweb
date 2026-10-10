@@ -2055,7 +2055,8 @@
       // No pisar un aviso ya visible (ej. de push-notifications.js) — "Bienvenido"
       // es decorativo, un aviso real (permisos, errores) importa más y debe leerse.
       setTimeout(() => {
-        if (!document.querySelector('.notification')) showNotification(window.WH_ES_JEFE ? 'Bienvenido, Jefe' : 'Bienvenido, Administrador', 'success');
+        const bienvenidaRol = { jefe: 'Jefe', administrador: 'Administrador', ventas: 'Ventas' }[window.WH_ROL] || 'Administrador';
+        if (!document.querySelector('.notification')) showNotification('Bienvenido, ' + bienvenidaRol, 'success');
       }, 450);
       if (typeof firebaseAuth !== 'undefined') {
         firebaseAuth.onAuthStateChanged(async (user) => {
@@ -2371,7 +2372,8 @@ async function actualizarEstadoPedido(id, estado) {
 }
 
 // ── EMPLEADOS - API real ──────────────────────────────
-const ROL_LABELS = { jefe: 'Jefe', administrador: 'Administrador', empleado: 'Empleado', disenador: 'Diseñador' };
+const ROL_LABELS = { jefe: 'Jefe', administrador: 'Administrador', empleado: 'Empleado', disenador: 'Diseñador', ventas: 'Ventas' };
+const AREA_LABELS = { taller: 'Taller', instalacion: 'Instalación' };
 
 async function cargarEmpleadosAPI() {
   const tbody = document.getElementById('empleadosTable');
@@ -2394,14 +2396,15 @@ async function cargarEmpleadosAPI() {
         <td>${e.id}</td>
         <td>${escapeHtml(e.nombre_completo)}</td>
         <td>${escapeHtml(e.correo)}</td>
-        <td>${ROL_LABELS[e.rol] || e.rol}</td>
+        <td>${ROL_LABELS[e.rol] || e.rol}${e.area ? ' · ' + (AREA_LABELS[e.area] || e.area) : ''}</td>
         <td><span class="status-badge ${e.activo ? 'status-completed' : 'status-disabled'}">${e.activo ? 'Activo' : 'Inactivo'}</span></td>
         <td>
           <button class="btn btn-secondary btn-small btn-editar-emp"
             data-id="${e.id}"
             data-nombre="${escapeHtml(e.nombre_completo)}"
             data-correo="${escapeHtml(e.correo)}"
-            data-rol="${e.rol}">
+            data-rol="${e.rol}"
+            data-area="${e.area || ''}">
             <i data-lucide="pen"></i>
           </button>
           <button class="btn btn-danger btn-small" data-call="desactivarEmpleado" data-args="[${e.id}]">
@@ -2420,7 +2423,8 @@ async function cargarEmpleadosAPI() {
           parseInt(this.dataset.id),
           this.dataset.nombre,
           this.dataset.correo,
-          this.dataset.rol
+          this.dataset.rol,
+          this.dataset.area
         );
       });
     });
@@ -3598,6 +3602,7 @@ async function guardarEmpleado() {
   const nombre = document.getElementById('emp_nombre')?.value.trim() || '';
   const correo = document.getElementById('emp_correo')?.value.trim().toLowerCase() || '';
   const rol    = document.getElementById('emp_rol')?.value || 'empleado';
+  const area   = rol === 'empleado' ? (document.getElementById('emp_area')?.value || '') : '';
   const errBox = document.getElementById('emp_error');
   const infoBox= document.getElementById('emp_info');
   const btn    = document.getElementById('emp_btn_guardar');
@@ -3620,7 +3625,7 @@ async function guardarEmpleado() {
       // Edición: solo nombre y rol (el correo no se cambia para no romper Firebase)
       const data = await apiFetch(`${API_BASE}/empleados.php?id=${empId}`, {
         method: 'PUT',
-        body: JSON.stringify({ nombre_completo: nombre, correo, rol }),
+        body: JSON.stringify({ nombre_completo: nombre, correo, rol, area }),
       });
       if (!data.success) throw new Error(data.error || 'Error al actualizar');
       showNotification('<i data-lucide="circle-check"></i> Empleado actualizado', 'success');
@@ -3631,7 +3636,7 @@ async function guardarEmpleado() {
       // Invitación: el admin NO toca contraseñas — el empleado la crea por su cuenta
       const data = await apiFetch(`${API_BASE}/invitaciones.php?action=crear`, {
         method: 'POST',
-        body: JSON.stringify({ nombre_completo: nombre, correo, rol }),
+        body: JSON.stringify({ nombre_completo: nombre, correo, rol, area }),
       });
       if (!data.success) throw new Error(data.error || 'Error al enviar la invitación');
 
@@ -3656,22 +3661,34 @@ async function guardarEmpleado() {
   }
 }
 
-function abrirEditarEmpleado(id, nombre, correo, rol) {
+function sincronizarAreaGroupVisible() {
+  const rolSelect = document.getElementById('emp_rol');
+  const grupo = document.getElementById('emp_area_group');
+  if (!rolSelect || !grupo) return;
+  grupo.style.display = rolSelect.value === 'empleado' ? '' : 'none';
+}
+
+function abrirEditarEmpleado(id, nombre, correo, rol, area) {
   document.getElementById('emp_mode').value   = 'edit';
   document.getElementById('emp_id').value     = id;
   document.getElementById('emp_nombre').value = nombre;
   document.getElementById('emp_correo').value = correo;
   const rolSelect = document.getElementById('emp_rol');
-  rolSelect.querySelector('option[data-temp-admin]')?.remove();
+  rolSelect.querySelectorAll('option[data-temp-admin]').forEach(o => o.remove());
   rolSelect.value = rol;
-  // El <select> no trae la opción "administrador" si quien ve el panel es jefe
-  // (jefe no puede asignar ese rol) — pero si la cuenta que se edita YA es
-  // administrador, hay que poder mostrarla igual sin degradarla por accidente
-  // al guardar. Se agrega la opción solo para reflejar el valor actual.
-  if (rolSelect.value !== rol && rol === 'administrador') {
+  const areaSelect = document.getElementById('emp_area');
+  if (areaSelect) areaSelect.value = area || '';
+  sincronizarAreaGroupVisible();
+  // El <select> no trae la opción "administrador" si quien ve el panel no es
+  // administrador, ni "jefe" si quien lo ve no es jefe (nadie puede otorgar
+  // un rol por encima o igual al suyo salvo esos dos casos) — pero si la
+  // cuenta que se edita YA tiene ese rol, hay que poder mostrarla igual sin
+  // degradarla por accidente al guardar. Se agrega la opción solo para
+  // reflejar el valor actual, deshabilitada (no se puede reasignar desde aquí).
+  if (rolSelect.value !== rol && (rol === 'administrador' || rol === 'jefe')) {
     const opt = document.createElement('option');
-    opt.value = 'administrador';
-    opt.textContent = 'Administrador (no puedes reasignar este rol)';
+    opt.value = rol;
+    opt.textContent = (rol === 'administrador' ? 'Administrador' : 'Jefe') + ' (no puedes reasignar este rol)';
     opt.disabled = true;
     opt.dataset.tempAdmin = '1';
     rolSelect.appendChild(opt);
@@ -3696,6 +3713,9 @@ function abrirNuevoEmpleado() {
   document.getElementById('emp_correo').readOnly = false;
   document.getElementById('emp_rol').querySelector('option[data-temp-admin]')?.remove();
   document.getElementById('emp_rol').value    = 'empleado';
+  const areaSelect = document.getElementById('emp_area');
+  if (areaSelect) areaSelect.value = '';
+  sincronizarAreaGroupVisible();
   document.getElementById('empModalTitle').textContent = 'Invitar Empleado';
   const help = document.getElementById('emp_correo_help');
   if (help) help.textContent = 'Se enviará un enlace de activación a este correo.';
@@ -3710,6 +3730,7 @@ window.desactivarEmpleado       = desactivarEmpleado;
 window.guardarEmpleado          = guardarEmpleado;
 window.abrirEditarEmpleado      = abrirEditarEmpleado;
 window.abrirNuevoEmpleado       = abrirNuevoEmpleado;
+document.getElementById('emp_rol')?.addEventListener('change', sincronizarAreaGroupVisible);
 
 // ── CAPACIDAD DEL TALLER ─────────────────────────────────────────
 const API_DISP = `${API_BASE}/disponibilidad.php`;

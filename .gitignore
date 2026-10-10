@@ -152,3 +152,4 @@ draft/
 !public/.htaccess
 !database/schema.sql
 !database/seed.sql
+/RECURSOS

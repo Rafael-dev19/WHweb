@@ -10,7 +10,7 @@ $action = $_GET['action'] ?? '';
 // ── Asociar una imagen ya subida a Firebase Storage con la cotización ──
 // (referencia del jefe en el cotizador — Fase 6; fotos del cliente — Fase 8)
 if ($method === 'POST' && $action === 'agregar_imagen') {
-    requerirGestion();
+    requerirVentasOGestion();
     requerirCsrf();
     if (!$id) jsonError('ID requerido', 400);
     if (!dbRow("SELECT id FROM cotizaciones WHERE id = ?", [$id])) jsonError('Cotización no encontrada', 404);
@@ -80,7 +80,7 @@ if ($method === 'POST' && $action === 'confirmar') {
 // Crea el pedido real; el precio ya negociado (precio_cotizado) se hereda tal
 // cual, la ubicación se hereda intacta (se pasa hasta producción/entrega).
 if ($method === 'POST' && $action === 'convertir_pedido') {
-    requerirGestion();
+    requerirVentasOGestion();
     requerirCsrf();
     if (!$id) jsonError('ID requerido', 400);
     $cot = dbRow("SELECT * FROM cotizaciones WHERE id = ?", [$id]);
@@ -186,7 +186,7 @@ switch ($method) {
             jsonSuccess(['cotizacion' => $cot]);
         }
 
-        requerirGestion();
+        requerirVentasOGestion();
         if ($id) {
             $cot = dbRow("SELECT * FROM cotizaciones WHERE id = ?", [$id]);
             if (!$cot) jsonError('Cotización no encontrada', 404);
@@ -339,7 +339,7 @@ switch ($method) {
         break;
 
     case 'PUT':
-        requerirGestion();   // solo jefe/administrador gestionan cotizaciones
+        requerirVentasOGestion();   // jefe/administrador/ventas gestionan cotizaciones
         requerirCsrf();
         if (!$id) jsonError('ID requerido', 400);
         $cotActual = dbRow("SELECT * FROM cotizaciones WHERE id = ?", [$id]);

@@ -7,13 +7,14 @@ $id     = isset($_GET['id'])     ? sanitizeInt($_GET['id'])    : null;
 $token  = isset($_GET['token'])  ? trim($_GET['token'])         : null;
 $numero = isset($_GET['numero']) ? trim($_GET['numero'])        : null;
 
-// ── Pedido cargado a mano por jefe/diseñador (encargo que hoy llega por
-// WhatsApp y se pasaba de palabra) — sin catálogo/precio, con descripción
-// libre y/o nota de voz + fotos para el diseñador. Antes del switch porque
-// no encaja en el POST de checkout de abajo (ese exige items de catálogo).
+// ── Pedido cargado a mano por jefe/diseñador/ventas (encargo que hoy llega
+// por WhatsApp/teléfono y se pasaba de palabra) — sin catálogo/precio, con
+// descripción libre y/o nota de voz + fotos para el diseñador. Antes del
+// switch porque no encaja en el POST de checkout de abajo (ese exige items
+// de catálogo).
 if ($method === 'POST' && $action === 'crear_manual') {
     $usuario = requerirPersonal();
-    if (!in_array($usuario['rol'], ['jefe', 'disenador'], true)) {
+    if (!in_array($usuario['rol'], ['jefe', 'disenador', 'ventas'], true)) {
         jsonError('Acceso denegado', 403);
     }
     requerirCsrf();
@@ -498,29 +499,62 @@ switch ($method) {
                 if ((float)($pedido['monto_pagado'] ?? 0) <= 0) {
                     jsonError('No se puede marcar listo para producción sin al menos el anticipo o pago registrado', 422);
                 }
-                // El diseñador (flujo normal, no el override de jefe/administrador) debe
-                // adjuntar al menos una imagen de su diseño.
-                if ($usuarioActual['rol'] === 'disenador') {
-                    $imagenes = $body['imagenes'] ?? [];
-                    if (!is_array($imagenes) || count($imagenes) < 1) {
-                        jsonError('Adjunta al menos una imagen del diseño antes de marcar listo para producción', 422);
-                    }
-                    foreach ($imagenes as $urlImg) {
-                        if (!is_string($urlImg) || !filter_var($urlImg, FILTER_VALIDATE_URL)) {
-                            jsonError('Una de las imágenes de diseño no es una URL válida', 422);
+                // Normaliza 'imagenes': acepta tanto el formato viejo (array de URLs,
+                // todas se guardaban como tipo 'otro') como el nuevo {url, tipo}, donde
+                // tipo distingue el render (sketchup) del archivo de corte (vcarve) —
+                // antes esa distinción existía en la tabla pero nunca se usaba de verdad.
+                $imagenesRaw = $body['imagenes'] ?? [];
+                $archivosDiseno = [];
+                if (is_array($imagenesRaw)) {
+                    foreach ($imagenesRaw as $img) {
+                        if (is_string($img)) {
+                            $url = $img; $tipo = 'otro';
+                        } elseif (is_array($img)) {
+                            $url = (string)($img['url'] ?? '');
+                            $tipo = in_array($img['tipo'] ?? '', ['sketchup', 'vcarve', 'otro'], true) ? $img['tipo'] : 'otro';
+                        } else {
+                            continue;
                         }
+                        if (!filter_var($url, FILTER_VALIDATE_URL)) {
+                            jsonError('Una de las imágenes/archivos de diseño no es una URL válida', 422);
+                        }
+                        $archivosDiseno[] = ['url' => $url, 'tipo' => $tipo];
                     }
-                    foreach ($imagenes as $urlImg) {
+                }
+
+                // El diseñador (flujo normal, no el override de jefe/administrador) debe
+                // entregar los DOS deliverables: al menos un render (sketchup) y al
+                // menos un archivo de corte (vcarve) — un solo adjunto genérico ya no
+                // basta, porque taller/instalación necesitan saber cuál es cuál.
+                if ($usuarioActual['rol'] === 'disenador') {
+                    $tieneRender = count(array_filter($archivosDiseno, fn($a) => $a['tipo'] === 'sketchup')) > 0;
+                    $tieneCorte  = count(array_filter($archivosDiseno, fn($a) => $a['tipo'] === 'vcarve')) > 0;
+                    if (!$tieneRender || !$tieneCorte) {
+                        jsonError('Adjunta al menos un render (SketchUp) y al menos un archivo de corte (DXF/VCarve) antes de marcar listo para producción', 422);
+                    }
+                    foreach ($archivosDiseno as $a) {
                         dbInsert('pedido_imagenes_diseno', [
                             'pedido_id'  => $id,
-                            'url_imagen' => $urlImg,
-                            'tipo'       => 'otro',
+                            'url_imagen' => $a['url'],
+                            'tipo'       => $a['tipo'],
                             'subido_por' => (int)$usuarioActual['id'],
                         ]);
                     }
                     $update['disenador_id'] = (int)$usuarioActual['id'];
                     if (isset($body['mensaje_disenador'])) {
                         $update['mensaje_disenador'] = sanitize($body['mensaje_disenador']);
+                    }
+                } elseif (!empty($archivosDiseno)) {
+                    // Override de jefe/administrador: si adjuntan archivos, se guardan
+                    // con su tipo real (no forzados a 'otro'); si no adjuntan nada, se
+                    // permite el override igual que antes (caso de excepción).
+                    foreach ($archivosDiseno as $a) {
+                        dbInsert('pedido_imagenes_diseno', [
+                            'pedido_id'  => $id,
+                            'url_imagen' => $a['url'],
+                            'tipo'       => $a['tipo'],
+                            'subido_por' => (int)$usuarioActual['id'],
+                        ]);
                     }
                 }
             } elseif ($usuarioActual['rol'] === 'disenador') {

@@ -9,7 +9,10 @@ $id     = isset($_GET['id']) ? sanitizeInt($_GET['id']) : null;
 
 switch ($method) {
     case 'GET':
-        requerirGestion();
+        // Lectura: también ventas, para armar cotizaciones con precios reales.
+        // Agregar/editar/borrar partidas del catálogo maestro sigue siendo solo
+        // jefe/administrador (ver POST/PUT/DELETE abajo).
+        requerirVentasOGestion();
         $items = dbRows(
             "SELECT id, clave, nombre, unidad, precio_unitario_default, activo, orden
              FROM cotizador_items_catalogo WHERE activo = 1 ORDER BY orden ASC, nombre ASC"

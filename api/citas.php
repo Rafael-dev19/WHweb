@@ -11,7 +11,7 @@ $action = $_GET['action'] ?? '';
 // cotización — se abre el mismo cotizador de dos columnas para llenarla y
 // mandarla, con el mismo flujo de confirmación del cliente que cualquier otra.
 if ($method === 'POST' && $action === 'generar_cotizacion') {
-    requerirGestion();
+    requerirVentasOGestion();
     requerirCsrf();
     if (!$id) jsonError('ID requerido', 400);
     $cita = dbRow("SELECT * FROM citas WHERE id = ?", [$id]);
@@ -59,13 +59,19 @@ switch ($method) {
         }
 
         $consultaPublica = !empty($_GET['fecha']) && !$id && empty($_GET['estado']) && empty($_GET['tipo']);
-        if (!$consultaPublica) requerirGestion();
 
         if ($id) {
+            // El calendario es visible para todo el personal (jefe, administrador,
+            // ventas, empleado, disenador) — ver qué citas hay agendadas le sirve
+            // a cualquier rol para planear su día, aunque solo jefe/administrador/
+            // ventas puedan agendarlas/editarlas (ver PUT/DELETE abajo).
+            requerirPersonal();
             $cita = dbRow("SELECT * FROM citas WHERE id = ?", [$id]);
             if (!$cita) jsonError('Cita no encontrada', 404);
             jsonSuccess(['cita' => $cita]);
         }
+
+        if (!$consultaPublica) requerirPersonal();
 
         if ($consultaPublica) {
             $fecha = $_GET['fecha'];
@@ -212,7 +218,7 @@ switch ($method) {
         break;
 
     case 'PUT':
-        requerirGestion();
+        requerirVentasOGestion();
         requerirCsrf();
         if (!$id) jsonError('ID requerido', 400);
         if (!dbRow("SELECT id FROM citas WHERE id = ?", [$id])) jsonError('Cita no encontrada', 404);
@@ -231,7 +237,7 @@ switch ($method) {
         break;
 
     case 'DELETE':
-        requerirGestion();
+        requerirVentasOGestion();
         requerirCsrf();
         if (!$id) jsonError('ID requerido', 400);
         dbUpdate('citas', ['estado' => 'cancelada'], 'id = ?', [$id]);

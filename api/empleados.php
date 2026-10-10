@@ -40,7 +40,7 @@ switch ($method) {
     case 'GET':
         requerirGestion();
         if ($id) {
-            $emp = dbRow("SELECT id, firebase_uid, nombre_completo, correo, rol, activo, fecha_creacion FROM usuarios_personal WHERE id = ?", [$id]);
+            $emp = dbRow("SELECT id, firebase_uid, nombre_completo, correo, rol, area, activo, fecha_creacion FROM usuarios_personal WHERE id = ?", [$id]);
             if (!$emp) jsonError('Empleado no encontrado', 404);
             jsonSuccess(['empleado' => $emp]);
         }
@@ -50,7 +50,7 @@ switch ($method) {
         $where = ['1=1']; $params = [];
         if (isset($_GET['activo'])) { $where[] = 'activo = ?'; $params[] = sanitizeInt($_GET['activo']); }
         if (!empty($_GET['rol'])) {
-            if (!in_array($_GET['rol'], ['jefe', 'administrador', 'empleado', 'disenador'], true)) jsonError('rol inválido', 422);
+            if (!in_array($_GET['rol'], ['jefe', 'administrador', 'empleado', 'disenador', 'ventas'], true)) jsonError('rol inválido', 422);
             $where[] = 'rol = ?'; $params[] = $_GET['rol'];
         }
         if (!empty($_GET['busqueda'])) {
@@ -61,7 +61,7 @@ switch ($method) {
         $whereStr = 'WHERE ' . implode(' AND ', $where);
         $total = (int)(dbRow("SELECT COUNT(*) AS n FROM usuarios_personal $whereStr", $params)['n'] ?? 0);
         $params[] = $limit; $params[] = $offset;
-        $empleados = dbRows("SELECT id, firebase_uid, nombre_completo, correo, rol, activo, fecha_creacion FROM usuarios_personal $whereStr ORDER BY nombre_completo ASC LIMIT ? OFFSET ?", $params);
+        $empleados = dbRows("SELECT id, firebase_uid, nombre_completo, correo, rol, area, activo, fecha_creacion FROM usuarios_personal $whereStr ORDER BY nombre_completo ASC LIMIT ? OFFSET ?", $params);
         jsonSuccess(['empleados' => $empleados, 'paginacion' => getPaginacion($total, $page, $limit)]);
         break;
 
@@ -71,12 +71,22 @@ switch ($method) {
         $body = getJsonBody();
         requireFields($body, ['firebase_uid', 'nombre_completo', 'correo', 'rol']);
         if (!isValidEmail($body['correo'])) jsonError('correo inválido', 422);
-        $rolesValidos = ['jefe', 'administrador', 'empleado', 'disenador'];
+        $rolesValidos = ['jefe', 'administrador', 'empleado', 'disenador', 'ventas'];
         if (!in_array($body['rol'], $rolesValidos)) jsonError('rol inválido', 422);
-        // Jefe y administrador pueden crear cuentas de cualquier rol, salvo que
-        // el rol de administrador solo lo puede asignar otro administrador.
+        // El rol de administrador solo lo puede otorgar otro administrador, y el
+        // rol de jefe (el más alto, dueño del taller) solo lo puede otorgar otro
+        // jefe — un administrador NO puede crear cuentas jefe (antes sí podía,
+        // era un hueco de escalamiento de privilegios).
         if ($body['rol'] === 'administrador' && $usuarioActual['rol'] !== 'administrador') {
             jsonError('Solo un administrador puede crear cuentas de administrador.', 403);
+        }
+        if ($body['rol'] === 'jefe' && $usuarioActual['rol'] !== 'jefe') {
+            jsonError('Solo un jefe puede crear cuentas de jefe.', 403);
+        }
+        $area = null;
+        if ($body['rol'] === 'empleado' && !empty($body['area'])) {
+            if (!in_array($body['area'], ['taller', 'instalacion'], true)) jsonError('area inválida', 422);
+            $area = $body['area'];
         }
 
         if (dbRow("SELECT id FROM usuarios_personal WHERE correo = ?", [$body['correo']])) {
@@ -91,6 +101,7 @@ switch ($method) {
             'nombre_completo'=> sanitize($body['nombre_completo']),
             'correo'         => strtolower(trim($body['correo'])),
             'rol'            => $body['rol'],
+            'area'           => $area,
             'activo'         => 1,
         ]);
         jsonSuccess(['id' => $empId, 'mensaje' => 'Empleado creado'], 201);
@@ -110,13 +121,35 @@ switch ($method) {
             $update['correo'] = strtolower(trim($body['correo']));
         }
         if (isset($body['rol'])) {
-            if (!in_array($body['rol'], ['jefe', 'administrador', 'empleado', 'disenador'], true)) jsonError('rol inválido', 422);
-            // Jefe y administrador pueden asignar cualquier rol, salvo que el rol de
-            // administrador solo lo puede asignar otro administrador.
-            if ($body['rol'] === 'administrador' && $usuarioActual['rol'] !== 'administrador') {
-                jsonError('Solo un administrador puede asignar el rol de administrador.', 403);
+            if (!in_array($body['rol'], ['jefe', 'administrador', 'empleado', 'disenador', 'ventas'], true)) jsonError('rol inválido', 422);
+            // Mismo criterio que al crear: administrador solo lo otorga otro
+            // administrador, jefe solo lo otorga otro jefe. Solo se exige
+            // cuando el rol REALMENTE cambia — el formulario siempre reenvía
+            // el rol actual aunque solo se edite el nombre, y por ejemplo un
+            // jefe editando el nombre de un administrador no debe bloquearse
+            // solo porque él no puede *otorgar* el rol administrador.
+            if ($body['rol'] !== $objetivo['rol']) {
+                if ($body['rol'] === 'administrador' && $usuarioActual['rol'] !== 'administrador') {
+                    jsonError('Solo un administrador puede asignar el rol de administrador.', 403);
+                }
+                if ($body['rol'] === 'jefe' && $usuarioActual['rol'] !== 'jefe') {
+                    jsonError('Solo un jefe puede asignar el rol de jefe.', 403);
+                }
             }
             $update['rol'] = $body['rol'];
+            // Si deja de ser 'empleado', el área ya no aplica.
+            if ($body['rol'] !== 'empleado') $update['area'] = null;
+        }
+        if (array_key_exists('area', $body)) {
+            $rolFinal = $update['rol'] ?? $objetivo['rol'];
+            if ($rolFinal !== 'empleado') {
+                $update['area'] = null;
+            } elseif (empty($body['area'])) {
+                $update['area'] = null;
+            } else {
+                if (!in_array($body['area'], ['taller', 'instalacion'], true)) jsonError('area inválida', 422);
+                $update['area'] = $body['area'];
+            }
         }
         if (isset($body['activo'])) $update['activo'] = (int)(bool)$body['activo'];
         if ($update) dbUpdate('usuarios_personal', $update, 'id = ?', [$id]);

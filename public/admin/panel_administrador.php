@@ -7,7 +7,7 @@ require_once dirname(__DIR__, 2) . "/includes/functions.php";
 require_once dirname(__DIR__, 2) . "/includes/auth.php";
 
 $_usuario = sesionActiva();
-if (!$_usuario || !in_array($_usuario["rol"], ["jefe", "administrador"], true)) {
+if (!$_usuario || !in_array($_usuario["rol"], ["jefe", "administrador", "ventas"], true)) {
     header("Location: /acceso-denegado?area=admin");
     exit;
 }
@@ -15,6 +15,12 @@ if (!$_usuario || !in_array($_usuario["rol"], ["jefe", "administrador"], true)) 
 // server-side las secciones exclusivas de jefe (financiero, ofertas, reportes).
 $_rolPanel = $_usuario["rol"];
 $_esJefe   = $_rolPanel === "jefe";
+// Ventas comparte este panel pero con una vista muy recortada: solo
+// Cotizaciones y Pedidos (incluida la carga manual) — nada de catálogo,
+// empleados, clientes, capacidad ni los módulos exclusivos de jefe.
+$_esVentas      = $_rolPanel === "ventas";
+$_vistaCompleta = in_array($_rolPanel, ["jefe", "administrador"], true);
+$_puedeCrearPedidoManual = in_array($_rolPanel, ["jefe", "ventas"], true);
 unset($_usuario);
 ?>
 
@@ -47,7 +53,7 @@ unset($_usuario);
 </head>
 
 <body>
-  <script>window.WH_ES_JEFE = <?= json_encode($_esJefe) ?>;</script>
+  <script>window.WH_ES_JEFE = <?= json_encode($_esJefe) ?>; window.WH_ROL = <?= json_encode($_rolPanel) ?>; window.WH_VISTA_COMPLETA = <?= json_encode($_vistaCompleta) ?>;</script>
   <div class="header">
     <div class="header-left">
     <button class="menu-toggle" id="menuToggle" aria-label="Abrir menú" aria-expanded="false">
@@ -100,13 +106,17 @@ unset($_usuario);
     <a href="#" data-section="citas"><span class="icon"><i data-lucide="calendar"></i></span> Calendario de Citas</a>
     <a href="#" data-section="cotizaciones"><span class="icon"><i data-lucide="briefcase"></i></span> Cotizaciones</a>
 
+    <?php if ($_vistaCompleta): ?>
     <a href="#" data-section="catalogo"><span class="icon"><i data-lucide="settings"></i></span> Gestionar Catálogo</a>
     <a href="#" data-section="empleados"><span class="icon"><i data-lucide="briefcase"></i></span> Gestionar Empleados</a>
+    <?php endif; ?>
     <?php if ($_esJefe): ?>
     <a href="#" data-section="reportes"><span class="icon"><i data-lucide="chart-column"></i></span> Reportes Avanzados</a>
     <a href="#" data-section="financiero"><span class="icon"><i data-lucide="tag"></i></span> Análisis Financiero</a>
     <?php endif; ?>
+    <?php if ($_vistaCompleta): ?>
     <a href="#" data-section="clientes"><span class="icon"><i data-lucide="users"></i></span> Clientes Registrados</a>
+    <?php endif; ?>
     <?php if ($_esJefe): ?>
     <a href="#" data-section="ofertas"><span class="icon"><i data-lucide="tag"></i></span> Ofertas & Marketing</a>
     <?php endif; ?>
@@ -125,22 +135,28 @@ unset($_usuario);
       <div class="sidebar-item" data-section="citas"><span class="icon"><i data-lucide="calendar"></i></span><span>Calendario de Citas</span></div>
       <div class="sidebar-item" data-section="cotizaciones"><span class="icon"><i data-lucide="briefcase"></i></span><span>Cotizaciones</span></div>
 
+      <?php if ($_vistaCompleta): ?>
       <div class="sidebar-section">ADMIN</div>
       <div class="sidebar-item" data-section="catalogo"><span class="icon"><i data-lucide="settings"></i></span><span>Gestionar Catálogo</span></div>
       <div class="sidebar-item" data-section="empleados"><span class="icon"><i data-lucide="briefcase"></i></span><span>Gestionar Empleados</span></div>
+      <?php endif; ?>
       <?php if ($_esJefe): ?>
       <div class="sidebar-item" data-section="reportes"><span class="icon"><i data-lucide="chart-column"></i></span><span>Reportes Avanzados</span></div>
       <div class="sidebar-item" data-section="financiero"><span class="icon"><i data-lucide="tag"></i></span><span>Análisis Financiero</span></div>
       <?php endif; ?>
 
+      <?php if ($_vistaCompleta): ?>
       <div class="sidebar-section">CLIENTES & MARKETING</div>
       <div class="sidebar-item" data-section="clientes"><span class="icon"><i data-lucide="users"></i></span><span>Clientes Registrados</span></div>
+      <?php endif; ?>
       <?php if ($_esJefe): ?>
       <div class="sidebar-item" data-section="ofertas"><span class="icon"><i data-lucide="tag"></i></span><span>Ofertas & Marketing</span></div>
       <?php endif; ?>
 
+      <?php if ($_vistaCompleta): ?>
       <div class="sidebar-section">PRODUCCIÓN</div>
       <div class="sidebar-item" data-section="capacidad"><span class="icon"><i data-lucide="factory"></i></span><span>Capacidad del Taller</span></div>
+      <?php endif; ?>
     </aside>
 
     <main class="main-content">
@@ -277,7 +293,7 @@ unset($_usuario);
         <div class="section">
           <div class="section-header">
             <h2 class="section-title">Todos los Pedidos</h2>
-            <?php if ($_esJefe): ?>
+            <?php if ($_puedeCrearPedidoManual): ?>
             <button class="btn btn-primary" data-call="abrirModalCrearPedido"><i data-lucide="package-plus"></i> Crear pedido</button>
             <?php endif; ?>
           </div>
@@ -312,7 +328,8 @@ unset($_usuario);
         </div>
       </div>
 
-      <!-- CITAS / AGENDA -->
+      <!-- CITAS / AGENDA (jefe/administrador — ventas no gestiona citas) -->
+      <?php if ($_vistaCompleta): ?>
       <div id="citas-section" class="content-section hidden">
         <h1 class="page-title">Citas Programadas</h1>
         <p class="page-subtitle">Historial y gestión de todas las citas</p>
@@ -343,6 +360,7 @@ unset($_usuario);
           </div>
         </div>
       </div>
+      <?php endif; ?>
 
       <!-- COTIZACIONES -->
       <div id="cotizaciones-section" class="content-section hidden">
@@ -388,7 +406,8 @@ unset($_usuario);
         </div>
       </div>
 
-      <!-- CATÁLOGO -->
+      <!-- CATÁLOGO (jefe/administrador — ventas usa el catálogo de precios del cotizador) -->
+      <?php if ($_vistaCompleta): ?>
       <div id="catalogo-section" class="content-section hidden">
         <h1 class="page-title">Gestionar Catálogo</h1>
         <p class="page-subtitle">Administra productos y servicios (basado en tu catálogo y detalle)</p>
@@ -436,8 +455,10 @@ unset($_usuario);
           </p>
         </div>
       </div>
+      <?php endif; ?>
 
-      <!-- EMPLEADOS -->
+      <!-- EMPLEADOS (jefe/administrador) -->
+      <?php if ($_vistaCompleta): ?>
       <div id="empleados-section" class="content-section hidden">
         <h1 class="page-title">Gestionar Empleados</h1>
         <p class="page-subtitle">Usuarios y permisos del sistema</p>
@@ -463,6 +484,7 @@ unset($_usuario);
 
         </div>
       </div>
+      <?php endif; ?>
 
       <!-- REPORTES (solo jefe) -->
       <?php if ($_esJefe): ?>
@@ -776,11 +798,24 @@ unset($_usuario);
             <select class="form-select" id="emp_rol">
               <option value="empleado">Empleado</option>
               <option value="disenador">Diseñador</option>
-              <option value="jefe">Jefe</option>
+              <option value="ventas">Ventas</option>
               <?php if ($_rolPanel === 'administrador'): ?>
               <option value="administrador">Administrador</option>
               <?php endif; ?>
+              <?php if ($_esJefe): ?>
+              <option value="jefe">Jefe</option>
+              <?php endif; ?>
             </select>
+          </div>
+
+          <div class="form-group" id="emp_area_group" style="display:none;">
+            <label class="form-label">Área (solo para rol Empleado)</label>
+            <select class="form-select" id="emp_area">
+              <option value="">— Sin especificar —</option>
+              <option value="taller">Taller (corta/arma/entrega listo)</option>
+              <option value="instalacion">Instalación (entrega/instala en sitio)</option>
+            </select>
+            <div class="help">Define qué pedidos ve por defecto en su panel.</div>
           </div>
 
           <div id="emp_info" style="display:none;background:#0a1a0a;border:1px solid #1a4a1a;border-radius:6px;padding:10px;font-size:12px;color:#70c070;margin-bottom:12px;">
@@ -794,7 +829,8 @@ unset($_usuario);
         </div>
       </div>
 
-      <!-- CAPACIDAD DEL TALLER -->
+      <!-- CAPACIDAD DEL TALLER (jefe/administrador) -->
+      <?php if ($_vistaCompleta): ?>
       <div id="capacidad-section" class="content-section hidden">
         <h1 class="page-title"><i data-lucide="factory"></i> Capacidad del Taller</h1>
         <p class="page-subtitle">Demanda de producción en tiempo real · Gestión de días bloqueados</p>
@@ -904,8 +940,10 @@ unset($_usuario);
 
         </div>
       </div>
+      <?php endif; ?>
 
-      <!-- CLIENTES REGISTRADOS -->
+      <!-- CLIENTES REGISTRADOS (jefe/administrador) -->
+      <?php if ($_vistaCompleta): ?>
       <div id="clientes-section" class="content-section hidden">
         <h1 class="page-title"><i data-lucide="users"></i> Clientes Registrados</h1>
         <p class="page-subtitle">Clientes con cuenta en la tienda, su historial y datos de contacto</p>
@@ -964,6 +1002,7 @@ unset($_usuario);
           <div id="clientesPaginacion" style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap;"></div>
         </div>
       </div>
+      <?php endif; ?>
 
       <!-- MODAL: DETALLE CLIENTE -->
       <div class="modal" id="clienteDetalleModal">
@@ -1133,7 +1172,7 @@ unset($_usuario);
     </div>
   </div>
 
-  <?php if ($_esJefe): include dirname(__DIR__) . '/_modal_pedido_manual.php'; endif; ?>
+  <?php if ($_puedeCrearPedidoManual): include dirname(__DIR__) . '/_modal_pedido_manual.php'; endif; ?>
 
   <!-- ═══ MODAL: DETALLE CITA (admin) ════════════════════════════ -->
   <div class="modal" id="adminCitaDetalleModal">
@@ -1211,7 +1250,7 @@ unset($_usuario);
 
   <script src="../assets/<?= av('js/panel_administrador.js') ?>"></script>
   <script src="../assets/<?= av('js/voice-recorder.js') ?>"></script>
-<?php if ($_esJefe): ?>
+<?php if ($_puedeCrearPedidoManual): ?>
   <script src="../assets/<?= av('js/pedido-manual.js') ?>"></script>
 <?php endif; ?>
   <script src="../assets/<?= av('js/event-delegation.js') ?>"></script>

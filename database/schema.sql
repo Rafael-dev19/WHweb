@@ -747,3 +747,24 @@ CREATE TABLE IF NOT EXISTS pedido_adjuntos (
   CONSTRAINT fk_pedido_adjunto_subido_por FOREIGN KEY (subido_por) REFERENCES usuarios_personal(id),
   INDEX idx_pedido (pedido_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ================================================================
+-- Rol 'ventas' (empleado de mostrador/ventas: cotiza y carga pedidos
+-- manuales, igual que hoy jefe/disenador) + 'area' dentro del rol
+-- 'empleado' para distinguir taller (corta/arma) de instalación
+-- (entrega/instala) — ambos comparten panel_empleado.php pero ya no
+-- comparten vista por defecto. Ver database/migration_roles_v2.sql.
+-- ================================================================
+ALTER TABLE usuarios_personal
+  MODIFY COLUMN rol ENUM('jefe','administrador','empleado','disenador','ventas')
+  NOT NULL DEFAULT 'empleado';
+
+ALTER TABLE invitaciones_personal
+  MODIFY COLUMN rol ENUM('jefe','administrador','empleado','disenador','ventas')
+  NOT NULL DEFAULT 'empleado';
+
+ALTER TABLE usuarios_personal
+  ADD COLUMN area ENUM('taller','instalacion') NULL DEFAULT NULL AFTER rol;
+
+ALTER TABLE invitaciones_personal
+  ADD COLUMN area ENUM('taller','instalacion') NULL DEFAULT NULL AFTER rol;

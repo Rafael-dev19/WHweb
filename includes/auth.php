@@ -177,7 +177,7 @@ function obtenerUsuarioPorFirebaseUid(string $uid): ?array {
     if (!preg_match('/^[a-zA-Z0-9]{20,128}$/', $uid)) return null;
 
     return dbRow(
-        "SELECT id, firebase_uid, nombre_completo, correo, rol, activo
+        "SELECT id, firebase_uid, nombre_completo, correo, rol, area, activo
          FROM usuarios_personal
          WHERE firebase_uid = ? AND activo = 1
          LIMIT 1",
@@ -201,7 +201,7 @@ function requerirAutenticacion(): array {
         $_SESSION['_last_activity'] = $now;
 
         $usuario = dbRow(
-            "SELECT id, firebase_uid, nombre_completo, correo, rol
+            "SELECT id, firebase_uid, nombre_completo, correo, rol, area
              FROM usuarios_personal WHERE id = ? AND activo = 1 LIMIT 1",
             [$_SESSION['usuario_id']]
         );
@@ -227,7 +227,9 @@ function requerirAutenticacion(): array {
 
 // Roles de personal: 'jefe' (dueño del taller, acceso total), 'administrador'
 // (soporte técnico del sitio: todo excepto financiero/ofertas/reportes avanzados),
-// 'empleado' (solo pedidos ya liberados a producción) y 'disenador' (SketchUp/VCarve).
+// 'empleado' (solo pedidos ya liberados a producción — con 'area' taller/instalación
+// para distinguir corte-y-armado de entrega-e-instalación), 'disenador'
+// (SketchUp/VCarve) y 'ventas' (cotiza y carga pedidos manuales, mostrador/campo).
 
 function requerirJefe(): array {
     $usuario = requerirAutenticacion();
@@ -237,11 +239,23 @@ function requerirJefe(): array {
     return $usuario;
 }
 
-// Módulos de gestión del negocio (pedidos, cotizaciones, citas, catálogo,
-// personal, clientes, capacidad): jefe y administrador.
+// Módulos de gestión del negocio (pedidos, catálogo, personal, clientes,
+// capacidad): jefe y administrador. 'ventas' NO entra aquí — su alcance es
+// solo cotizaciones/pedidos (ver requerirVentasOGestion).
 function requerirGestion(): array {
     $usuario = requerirAutenticacion();
     if (!in_array($usuario['rol'], ['jefe', 'administrador'], true)) {
+        jsonError('Acceso denegado', 403);
+    }
+    return $usuario;
+}
+
+// Cotizaciones y pedidos manuales: jefe, administrador y ventas. Ventas es
+// quien habla con el cliente y cotiza/levanta el pedido — no debe poder tocar
+// catálogo, empleados, clientes ni capacidad (eso sigue siendo requerirGestion).
+function requerirVentasOGestion(): array {
+    $usuario = requerirAutenticacion();
+    if (!in_array($usuario['rol'], ['jefe', 'administrador', 'ventas'], true)) {
         jsonError('Acceso denegado', 403);
     }
     return $usuario;
@@ -255,10 +269,10 @@ function requerirDisenador(): array {
     return $usuario;
 }
 
-// Cualquiera de los 4 roles de personal (ver pedidos, notificaciones propias).
+// Cualquiera de los 5 roles de personal (ver pedidos, notificaciones propias).
 function requerirPersonal(): array {
     $usuario = requerirAutenticacion();
-    if (!in_array($usuario['rol'], ['jefe', 'administrador', 'empleado', 'disenador'], true)) {
+    if (!in_array($usuario['rol'], ['jefe', 'administrador', 'empleado', 'disenador', 'ventas'], true)) {
         jsonError('Acceso denegado', 403);
     }
     return $usuario;
@@ -267,7 +281,7 @@ function requerirPersonal(): array {
 function sesionActiva(): ?array {
     if (!empty($_SESSION['usuario_id'])) {
         return dbRow(
-            "SELECT id, nombre_completo, correo, rol
+            "SELECT id, nombre_completo, correo, rol, area
              FROM usuarios_personal
              WHERE id = ? AND activo = 1 LIMIT 1",
             [$_SESSION['usuario_id']]

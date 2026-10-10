@@ -27,12 +27,21 @@ switch ($action) {
             jsonError('Nombre demasiado corto', 422);
         if (!isValidEmail($correo))
             jsonError('Correo inválido', 422);
-        if (!in_array($rol, ['jefe', 'administrador', 'empleado', 'disenador'], true))
+        if (!in_array($rol, ['jefe', 'administrador', 'empleado', 'disenador', 'ventas'], true))
             jsonError('Rol inválido', 422);
-        // Jefe y administrador pueden invitar cualquier rol, salvo que el rol de
-        // administrador solo lo puede otorgar otro administrador.
+        // El rol de administrador solo lo puede otorgar otro administrador, y el
+        // rol de jefe (el más alto) solo lo puede otorgar otro jefe — antes un
+        // administrador podía invitar cuentas jefe, era un hueco de escalamiento.
         if ($rol === 'administrador' && $usuarioActual['rol'] !== 'administrador')
             jsonError('Solo un administrador puede invitar cuentas de administrador.', 403);
+        if ($rol === 'jefe' && $usuarioActual['rol'] !== 'jefe')
+            jsonError('Solo un jefe puede invitar cuentas de jefe.', 403);
+
+        $area = null;
+        if ($rol === 'empleado' && !empty($body['area'])) {
+            if (!in_array($body['area'], ['taller', 'instalacion'], true)) jsonError('area inválida', 422);
+            $area = $body['area'];
+        }
 
         // Verificar que el correo no esté ya en uso
         if (dbRow("SELECT id FROM usuarios_personal WHERE correo = ?", [$correo]))
@@ -51,6 +60,7 @@ switch ($action) {
             'correo'         => $correo,
             'nombre_completo'=> $nombre,
             'rol'            => $rol,
+            'area'           => $area,
             'creada_por'     => $adminId,
             'expira_en'      => $expira,
         ]);
@@ -107,7 +117,7 @@ switch ($action) {
         if (empty($firebaseToken))  jsonError('firebase_token requerido', 422);
 
         $inv = dbRow(
-            "SELECT id, nombre_completo, correo, rol, expira_en, usada_en
+            "SELECT id, nombre_completo, correo, rol, area, expira_en, usada_en
              FROM invitaciones_personal WHERE token = ? LIMIT 1",
             [$token]
         );
@@ -136,6 +146,7 @@ switch ($action) {
             'nombre_completo' => $inv['nombre_completo'],
             'correo'          => $inv['correo'],
             'rol'             => $inv['rol'],
+            'area'            => $inv['area'] ?? null,
             'activo'          => 1,
         ]);
 
@@ -149,7 +160,9 @@ switch ($action) {
         $usuario = dbRow("SELECT * FROM usuarios_personal WHERE id = ? LIMIT 1", [$empId]);
         if ($usuario) _crearSesion($usuario);
 
-        $redirect = in_array($inv['rol'], ['jefe', 'administrador'], true) ? '/admin' : '/empleado';
+        // Ventas comparte panel_administrador.php (vista recortada: solo
+        // cotizaciones y pedidos) igual que jefe/administrador.
+        $redirect = in_array($inv['rol'], ['jefe', 'administrador', 'ventas'], true) ? '/admin' : '/empleado';
         jsonSuccess([
             'activado' => true,
             'redirect' => $redirect,

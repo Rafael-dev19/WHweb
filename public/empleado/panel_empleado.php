@@ -11,9 +11,12 @@ if (!$_usuario || !in_array($_usuario["rol"], ["empleado", "disenador"], true)) 
     exit;
 }
 // Se conserva el rol para diferenciar la vista de "disenador" (Fase 3) del
-// resto del panel; el resto de datos de sesión no se expone en el HTML.
-$_rolPanel   = $_usuario["rol"];
+// resto del panel; el area (taller/instalacion) distingue, dentro de
+// "empleado", corte-y-armado de entrega-e-instalación — el resto de datos de
+// sesión no se expone en el HTML.
+$_rolPanel    = $_usuario["rol"];
 $_esDisenador = $_rolPanel === "disenador";
+$_area        = $_usuario["area"] ?? null;
 unset($_usuario);
 ?>
 
@@ -46,7 +49,7 @@ unset($_usuario);
 </head>
 
 <body>
-  <script>window.WH_ROL = <?= json_encode($_rolPanel) ?>;</script>
+  <script>window.WH_ROL = <?= json_encode($_rolPanel) ?>; window.WH_AREA = <?= json_encode($_area) ?>;</script>
   <div class="header">
     <div class="header-left">
     <button class="menu-toggle" id="menuToggle" aria-label="Abrir menú" aria-expanded="false">
@@ -187,7 +190,15 @@ unset($_usuario);
 
           <div class="table-container">
             <div class="table-filters">
+              <?php if ($_area === 'taller'): ?>
+              <button class="filter-btn active" data-filter="mia"><i data-lucide="hammer"></i> Mi etapa (taller)</button>
+              <button class="filter-btn" data-filter="all">Todos</button>
+              <?php elseif ($_area === 'instalacion'): ?>
+              <button class="filter-btn active" data-filter="mia"><i data-lucide="truck"></i> Mi etapa (instalación)</button>
+              <button class="filter-btn" data-filter="all">Todos</button>
+              <?php else: ?>
               <button class="filter-btn active" data-filter="all">Todos</button>
+              <?php endif; ?>
               <button class="filter-btn" data-filter="pending">Pendientes</button>
               <button class="filter-btn" data-filter="progress">En Proceso</button>
               <button class="filter-btn" data-filter="completed">Completados</button>

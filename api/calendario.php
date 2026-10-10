@@ -2,8 +2,10 @@
 require_once __DIR__ . '/_helpers.php';
 
 // Lectura combinada de citas+pedidos para el widget de calendario del dashboard.
-// Citas es un módulo exclusivo de jefe/administrador (matriz de permisos):
-// empleado/diseñador solo ven los eventos de pedidos, su calendario es "solo pedidos".
+// El calendario es visible para todo el personal (jefe, administrador, ventas,
+// empleado, disenador) — cualquiera puede necesitar ver qué hay agendado,
+// aunque gestionar citas (crear/editar/cancelar) siga limitado a
+// jefe/administrador/ventas (ver api/citas.php).
 $usuario = requerirPersonal();
 if (requestMethod() !== 'GET') jsonError('Método no permitido', 405);
 
@@ -15,14 +17,15 @@ $colorPedido = ['pendiente' => '#a855f7', 'anticipo_pagado' => '#a855f7', 'pagad
     'listo_para_produccion' => '#f97316', 'en_produccion' => '#f97316', 'alistando_pedido' => '#06b6d4',
     'en_camino_instalacion' => '#06b6d4', 'finalizado' => '#22c55e', 'cancelado' => '#ef4444'];
 
-$citas = in_array($usuario['rol'], ['jefe', 'administrador'], true) ? dbRows(
-    "SELECT id, numero_cita, nombre_cliente, fecha_cita, rango_horario, tipo, estado, direccion
+$citas = dbRows(
+    "SELECT id, numero_cita, nombre_cliente, telefono_cliente, fecha_cita, rango_horario, tipo, estado, direccion
      FROM citas WHERE DATE(fecha_cita) BETWEEN ? AND ?",
     [$desde, $hasta]
-) : [];
+);
 
 $pedidos = dbRows(
-    "SELECT id, numero_pedido, nombre_cliente, fecha_estimada, estado
+    "SELECT id, numero_pedido, nombre_cliente, telefono_cliente, direccion_envio, colonia_envio,
+            ciudad_envio, fecha_estimada, estado
      FROM pedidos WHERE fecha_estimada IS NOT NULL AND DATE(fecha_estimada) BETWEEN ? AND ?",
     [$desde, $hasta]
 );
@@ -40,6 +43,7 @@ foreach ($citas as $cita) {
             'tipo'         => 'cita',
             'numero'       => $cita['numero_cita'],
             'cliente'      => $cita['nombre_cliente'],
+            'telefono'     => $cita['telefono_cliente'],
             'estado'       => $cita['estado'],
             'rango_horario'=> $cita['rango_horario'],
             'direccion'    => $cita['direccion'],
@@ -56,10 +60,12 @@ foreach ($pedidos as $pedido) {
         'backgroundColor' => $colorPedido[$pedido['estado']] ?? '#6b7280',
         'borderColor'     => $colorPedido[$pedido['estado']] ?? '#6b7280',
         'extendedProps'   => [
-            'tipo'    => 'pedido',
-            'numero'  => $pedido['numero_pedido'],
-            'cliente' => $pedido['nombre_cliente'],
-            'estado'  => $pedido['estado'],
+            'tipo'      => 'pedido',
+            'numero'    => $pedido['numero_pedido'],
+            'cliente'   => $pedido['nombre_cliente'],
+            'telefono'  => $pedido['telefono_cliente'],
+            'direccion' => trim(($pedido['direccion_envio'] ?? '') . (!empty($pedido['colonia_envio']) ? ', ' . $pedido['colonia_envio'] : '') . (!empty($pedido['ciudad_envio']) ? ', ' . $pedido['ciudad_envio'] : '')),
+            'estado'    => $pedido['estado'],
         ],
     ];
 }

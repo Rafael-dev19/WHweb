@@ -19,6 +19,17 @@ service firebase.storage {
                         'image/jpeg', 'image/png', 'image/webp', 'image/gif'
                       ];
     }
+    // Diseñador: archivo de corte para CNC (VCarve → .dxf) adjunto a un
+    // pedido — no es imagen, por eso no entra en la regla de arriba. Se
+    // valida por extensión del nombre (el navegador no tiene un content-type
+    // estándar para DXF) y tamaño; ver api/pedidos.php para la validación
+    // de que el diseñador adjunte render+corte antes de liberar a producción.
+    match /proyectos/pedidos/{pedidoId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null
+                   && fileName.matches('.*[.]dxf')
+                   && request.resource.size < 25 * 1024 * 1024;
+    }
     // Cotizaciones - imágenes del cliente (Fase 8) y del jefe (Fase 6)
     match /cotizaciones/{cotId}/cliente/{allPaths=**} {
       allow read: if true;

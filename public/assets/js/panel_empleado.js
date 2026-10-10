@@ -363,12 +363,28 @@ const ESTADO_PEDIDO_CATEGORIA = {
   finalizado:             'completed',
   cancelado:              null, // solo visible en "Todos"
 };
+// Estados que le "tocan" a cada área dentro del rol empleado — taller corta/
+// arma (hasta dejarlo listo), instalación entrega/instala desde ahí. No es
+// una restricción de permisos (la API sigue regresando todos los pedidos),
+// es solo el filtro por defecto para que cada quien aterrice en lo suyo.
+const AREA_ESTADOS = {
+  taller:      ['listo_para_produccion', 'en_produccion', 'alistando_pedido'],
+  instalacion: ['alistando_pedido', 'en_camino_instalacion', 'finalizado'],
+};
+
 function filterTable(filter, ev){
   document.querySelectorAll('#pedidos-section .filter-btn').forEach(btn => btn.classList.remove('active'));
   const btnActivo = ev?.target || document.querySelector(`#pedidos-section .filter-btn[data-filter="${filter}"]`);
   btnActivo?.classList?.add('active');
 
   const rows = document.querySelectorAll('#pedidosTable tr');
+  if (filter === 'mia') {
+    const estadosMios = AREA_ESTADOS[window.WH_AREA] || [];
+    rows.forEach(row => {
+      row.style.display = estadosMios.includes(row.dataset.status) ? '' : 'none';
+    });
+    return;
+  }
   rows.forEach(row => {
     const categoria = ESTADO_PEDIDO_CATEGORIA[row.dataset.status];
     row.style.display = (filter === 'all' || categoria === filter) ? '' : 'none';
@@ -943,26 +959,40 @@ async function cargarCitasParaCalendario(silencioso = false) {
     const desde = `${anio}-01-01`;
     const hasta  = `${anio + 1}-12-31`;
 
-    // citas.php es exclusivo de jefe/administrador (ver matriz de permisos) —
-    // este panel es de empleado/disenador, así que nunca hay permiso: pedirlo
-    // solo ensucia la consola con 403 sin aportar nada al calendario.
+    // El calendario (citas + pedidos) es visible para todo el personal —
+    // calendario.php ya no filtra por rol ni por tipo de cita.
     const [dataCitas, dataPedidos] = await Promise.allSettled([
-      Promise.resolve({ success: false }),
+      apiFetch(`${API_BASE}/calendario.php?desde=${desde}&hasta=${hasta}`),
       apiFetch(`${API_BASE}/pedidos.php?limit=500&fecha_desde=${desde}&fecha_hasta=${hasta}`)
     ]);
 
     if (dataCitas.status === 'fulfilled' && dataCitas.value?.success) {
-      _empCitasApiCache = (dataCitas.value.citas || []).map(c => ({
-        id: 'ACITA-' + c.id,
-        eventoTipo: 'cita',
-        date: (c.fecha_cita || '').substring(0, 10),
-        time: c.rango_horario || '',
-        type: 'cita',
-        title: `${c.tipo === 'medicion' ? 'Medición' : c.tipo === 'instalacion' ? 'Instalación' : 'Cita'}: ${c.nombre_cliente}`,
-        notes: c.notas || '',
-        cliente_id: c.cliente_id || null,
-        datos: c
-      }));
+      _empCitasApiCache = (dataCitas.value.eventos || [])
+        .filter(ev => ev.extendedProps?.tipo === 'cita')
+        .map(ev => {
+          const p = ev.extendedProps;
+          return {
+            id: 'ACITA-' + ev.id,
+            eventoTipo: 'cita',
+            date: (ev.start || '').substring(0, 10),
+            time: p.rango_horario || '',
+            type: 'cita',
+            title: `${p.cita_tipo === 'medicion' ? 'Medición' : p.cita_tipo === 'instalacion' ? 'Instalación' : 'Cita'}: ${p.cliente}`,
+            notes: p.direccion || '',
+            cliente_id: null,
+            datos: {
+              id: parseInt(String(ev.id).replace('cita_', ''), 10),
+              numero_cita: p.numero,
+              nombre_cliente: p.cliente,
+              telefono_cliente: p.telefono,
+              fecha_cita: ev.start,
+              rango_horario: p.rango_horario,
+              tipo: p.cita_tipo,
+              estado: p.estado,
+              direccion: p.direccion,
+            },
+          };
+        });
     }
 
     if (dataPedidos.status === 'fulfilled' && dataPedidos.value?.success) {
@@ -1411,11 +1441,24 @@ async function verDetallePedidoEmp(id) {
 
       ${(p.imagenes_diseno?.length || p.mensaje_disenador) ? `
       <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:14px;">
-        <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i data-lucide="ruler"></i> Diseño (SketchUp / VCarve)</div>
-        ${p.imagenes_diseno?.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:${p.mensaje_disenador ? '10px' : '0'};">
-          ${p.imagenes_diseno.map(img => `<a href="${img.url_imagen}" target="_blank" rel="noopener"><img src="${img.url_imagen}" alt="Diseño" style="width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}
-        </div>` : ''}
-        ${p.mensaje_disenador ? `<div style="font-size:12px;color:var(--muted2);"><strong>Mensaje del diseñador:</strong> ${escapeHtml(p.mensaje_disenador)}</div>` : ''}
+        <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i data-lucide="ruler"></i> Diseño</div>
+        ${(() => {
+          const renders = (p.imagenes_diseno || []).filter(i => i.tipo === 'sketchup');
+          const cortes   = (p.imagenes_diseno || []).filter(i => i.tipo === 'vcarve');
+          const otros    = (p.imagenes_diseno || []).filter(i => i.tipo !== 'sketchup' && i.tipo !== 'vcarve');
+          let html = '';
+          if (renders.length) html += `<div style="margin-bottom:8px;"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Render (SketchUp)</div><div style="display:flex;gap:8px;flex-wrap:wrap;">
+            ${renders.map(img => `<a href="${img.url_imagen}" target="_blank" rel="noopener"><img src="${img.url_imagen}" alt="Render" style="width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}
+          </div></div>`;
+          if (cortes.length) html += `<div style="margin-bottom:8px;"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Corte para CNC (DXF / VCarve)</div><div style="display:flex;gap:8px;flex-wrap:wrap;">
+            ${cortes.map((f,i) => `<a href="${f.url_imagen}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:6px;background:var(--surface,#1a1a1a);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--accent);"><i data-lucide="file-text"></i> Corte DXF ${cortes.length>1?(i+1):''}</a>`).join('')}
+          </div></div>`;
+          if (otros.length) html += `<div style="display:flex;gap:8px;flex-wrap:wrap;">
+            ${otros.map(img => `<a href="${img.url_imagen}" target="_blank" rel="noopener"><img src="${img.url_imagen}" alt="Referencia" style="width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}
+          </div>`;
+          return html;
+        })()}
+        ${p.mensaje_disenador ? `<div style="font-size:12px;color:var(--muted2);margin-top:6px;"><strong>Mensaje del diseñador:</strong> ${escapeHtml(p.mensaje_disenador)}</div>` : ''}
       </div>` : ''}
 
       ${p.cotizacion_origen ? `
@@ -1444,8 +1487,14 @@ async function verDetallePedidoEmp(id) {
       <div style="padding-top:14px;border-top:1px solid var(--border);margin-bottom:14px;">
         <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i data-lucide="ruler"></i> Diseñar — marcar listo para producción</div>
         <div class="form-group" style="margin-bottom:8px;">
-          <label class="form-label" style="font-size:11px;">Imágenes de diseño (SketchUp / VCarve) *</label>
-          <input type="file" id="disenoImgInput" accept="image/jpeg,image/jpg,image/png,image/webp" multiple class="form-input">
+          <label class="form-label" style="font-size:11px;">Render (SketchUp) — imagen *</label>
+          <input type="file" id="disenoRenderInput" accept="image/jpeg,image/jpg,image/png,image/webp" multiple class="form-input">
+          <div class="help">Para que taller/instalación vean cómo debe quedar.</div>
+        </div>
+        <div class="form-group" style="margin-bottom:8px;">
+          <label class="form-label" style="font-size:11px;">Corte para CNC (VCarve) — archivo .dxf *</label>
+          <input type="file" id="disenoDxfInput" accept=".dxf" multiple class="form-input">
+          <div class="help">El archivo que taller manda a la CNC para cortar.</div>
         </div>
         <div class="form-group" style="margin-bottom:8px;">
           <label class="form-label" style="font-size:11px;">Mensaje para instaladores/taller (opcional)</label>
@@ -1476,11 +1525,12 @@ async function verDetallePedidoEmp(id) {
 }
 
 // ── Diseñador: subir imágenes de diseño y marcar listo para producción ──
+// Sube renders (imágenes) — validación real por magic bytes, igual que antes.
 async function subirImagenesDiseno(files, pedidoId) {
   if (!window.firebaseStorage && typeof initFirebase === 'function') initFirebase();
   if (!window.firebaseStorage) throw new Error('Firebase Storage no disponible. Verifica que hayas iniciado sesión correctamente.');
 
-  const urls = [];
+  const resultados = [];
   const ts = Date.now();
   const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp'];
 
@@ -1498,31 +1548,66 @@ async function subirImagenesDiseno(files, pedidoId) {
       throw new Error(`Archivo "${file.name}" no pasó la validación de imagen real.`);
     }
     const ext  = file.name.split('.').pop().toLowerCase() || 'jpg';
-    const path = `proyectos/pedidos/${pedidoId}/${ts}-${i}.${ext}`;
+    const path = `proyectos/pedidos/${pedidoId}/render-${ts}-${i}.${ext}`;
     const ref  = window.firebaseStorage.ref(path);
     const snap = await ref.put(file);
-    urls.push(await snap.ref.getDownloadURL());
+    resultados.push({ url: await snap.ref.getDownloadURL(), tipo: 'sketchup' });
   }
-  return urls;
+  return resultados;
+}
+
+// Sube archivos de corte DXF (VCarve → CNC) — no son imágenes, se validan por
+// extensión (.dxf) y un límite de tamaño razonable, no por magic bytes.
+async function subirDxfDiseno(files, pedidoId) {
+  if (!window.firebaseStorage && typeof initFirebase === 'function') initFirebase();
+  if (!window.firebaseStorage) throw new Error('Firebase Storage no disponible. Verifica que hayas iniciado sesión correctamente.');
+
+  const resultados = [];
+  const ts = Date.now();
+  const MAX_BYTES = 25 * 1024 * 1024; // 25MB
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    if (!/\.dxf$/i.test(file.name)) {
+      throw new Error(`Archivo "${file.name}" no es un .dxf.`);
+    }
+    if (file.size > MAX_BYTES) {
+      throw new Error(`Archivo "${file.name}" supera el tamaño máximo (25MB).`);
+    }
+    const path = `proyectos/pedidos/${pedidoId}/corte-${ts}-${i}.dxf`;
+    const ref  = window.firebaseStorage.ref(path);
+    const snap = await ref.put(file);
+    resultados.push({ url: await snap.ref.getDownloadURL(), tipo: 'vcarve' });
+  }
+  return resultados;
 }
 
 async function marcarListoParaProduccion(id) {
-  const filesInput = document.getElementById('disenoImgInput');
-  const files      = filesInput?.files;
-  const mensaje    = document.getElementById('disenoMensajeInput')?.value?.trim() || '';
-  if (!files || files.length === 0) {
-    showNotification('<i data-lucide="triangle-alert"></i> Adjunta al menos una imagen del diseño.', 'error');
+  const renderInput = document.getElementById('disenoRenderInput');
+  const dxfInput     = document.getElementById('disenoDxfInput');
+  const renderFiles  = renderInput?.files;
+  const dxfFiles     = dxfInput?.files;
+  const mensaje      = document.getElementById('disenoMensajeInput')?.value?.trim() || '';
+  if (!renderFiles || renderFiles.length === 0) {
+    showNotification('<i data-lucide="triangle-alert"></i> Adjunta al menos un render (SketchUp).', 'error');
+    return;
+  }
+  if (!dxfFiles || dxfFiles.length === 0) {
+    showNotification('<i data-lucide="triangle-alert"></i> Adjunta al menos un archivo de corte (.dxf) para VCarve/CNC.', 'error');
     return;
   }
   const btn = document.getElementById('btnMarcarListoProduccion');
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="wh-icon-spin" data-lucide="loader-circle"></i> Subiendo...'; }
   try {
-    const urls = await subirImagenesDiseno(files, id);
+    const [renders, cortes] = await Promise.all([
+      subirImagenesDiseno(renderFiles, id),
+      subirDxfDiseno(dxfFiles, id),
+    ]);
     const data = await apiFetch(`${API_BASE}/pedidos.php?id=${id}`, {
       method: 'PUT',
       body: JSON.stringify({
         estado: 'listo_para_produccion',
-        imagenes: urls,
+        imagenes: [...renders, ...cortes],
         mensaje_disenador: mensaje,
       }),
     });
@@ -1534,7 +1619,7 @@ async function marcarListoParaProduccion(id) {
       showNotification('<i data-lucide="circle-x"></i> ' + (data.error || 'Error'), 'error');
     }
   } catch (e) {
-    showNotification('<i data-lucide="circle-x"></i> ' + (e.message || 'Error al subir imágenes'), 'error');
+    showNotification('<i data-lucide="circle-x"></i> ' + (e.message || 'Error al subir los archivos'), 'error');
   } finally {
     if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="check"></i> Marcar listo para producción'; }
   }
