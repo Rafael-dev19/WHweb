@@ -437,6 +437,16 @@
     let _cotizacionesCalCache = [];
     let _calAdmLastLoaded     = 0;
 
+    // Color fijo por id (no por estado) — así dos pedidos distintos que se
+    // cruzan en el calendario se distinguen aunque tengan el mismo estado.
+    const _CAL_PALETTE = ['#e07a5f','#3d5a80','#81b29a','#9b5de5','#00bbf9','#f15bb5','#06d6a0','#ef476f','#118ab2','#ffb703','#8338ec','#43aa8b'];
+    function colorForId(id) {
+      const s = String(id);
+      let hash = 0;
+      for (let i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
+      return _CAL_PALETTE[hash % _CAL_PALETTE.length];
+    }
+
     function _todosEventos() {
       return [..._citasCache, ..._pedidosCalCache, ..._cotizacionesCalCache];
     }
@@ -463,21 +473,32 @@
           }));
         }
 
-        // Pedidos (fecha_estimada)
+        // Pedidos (fecha_estimada) — un color fijo por pedido, repetido cada
+        // día desde que se creó hasta la fecha de entrega, para que se note
+        // a simple vista cuando varios pedidos se cruzan en las mismas fechas.
         const dataPed = await apiFetch(`${API_BASE}/pedidos.php?limit=500&fecha_desde=${desde}&fecha_hasta=${hasta}`);
         if (dataPed.success && dataPed.pedidos) {
-          _pedidosCalCache = dataPed.pedidos
-            .filter(p => p.fecha_estimada)
-            .map(p => ({
-              id:         p.numero_pedido || p.id,
-              cliente:    p.nombre_cliente || '',
-              date:       (p.fecha_estimada || '').substring(0, 10),
-              time:       p.tipo_entrega === 'envio' ? '🚚 Envío' : '🏪 Recoger',
-              tipo:       'pedido',
-              eventoTipo: 'pedido',
-              estado:     p.estado || 'pendiente',
-              datos:      p,
-            }));
+          _pedidosCalCache = [];
+          dataPed.pedidos.filter(p => p.fecha_estimada).forEach(p => {
+            const color  = colorForId(p.id);
+            const inicio = new Date(((p.fecha_creacion || p.fecha_estimada).substring(0, 10)) + 'T00:00:00');
+            const fin    = new Date(p.fecha_estimada.substring(0, 10) + 'T00:00:00');
+            const dias   = Math.max(0, Math.min(60, Math.round((fin - inicio) / 86400000)));
+            for (let i = 0; i <= dias; i++) {
+              const d = new Date(inicio); d.setDate(d.getDate() + i);
+              _pedidosCalCache.push({
+                id:         p.numero_pedido || p.id,
+                cliente:    p.nombre_cliente || '',
+                date:       `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+                time:       p.tipo_entrega === 'envio' ? '🚚 Envío' : '🏪 Recoger',
+                tipo:       'pedido',
+                eventoTipo: 'pedido',
+                estado:     p.estado || 'pendiente',
+                color,
+                datos:      p,
+              });
+            }
+          });
         }
 
         // Cotizaciones (fecha_creacion como fecha de la cot)
@@ -493,6 +514,7 @@
               tipo:       'cot',
               eventoTipo: 'cotizacion',
               estado:     c.estado || 'nueva',
+              color:      colorForId(c.id),
               datos:      c,
             }));
         }
@@ -564,11 +586,13 @@
       const chips = dayEvts.slice(0, 2).map(e => {
         const chipClass = e.eventoTipo || e.tipo;
         const icon = e.eventoTipo === 'pedido' ? '📦' : e.eventoTipo === 'cotizacion' ? '📋' : '📅';
-        return `<div class="chip ${chipClass}">${icon} ${escapeHtml(e.time)} • ${escapeHtml(e.cliente)}</div>`;
+        const estilo = e.color ? ` style="background:${e.color}2a;color:${e.color};"` : '';
+        return `<div class="chip ${chipClass}"${estilo}>${icon} ${escapeHtml(e.time)} • ${escapeHtml(e.cliente)}</div>`;
       }).join('');
 
       const dots = dayEvts.slice(0, 4).map(e => {
-        return `<span class="dot ${e.eventoTipo || e.tipo}"></span>`;
+        const estilo = e.color ? ` style="background:${e.color};"` : '';
+        return `<span class="dot ${e.eventoTipo || e.tipo}"${estilo}></span>`;
       }).join('');
 
       cell.innerHTML = `
@@ -625,7 +649,7 @@
           el.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
               <div>
-                <div class="t">📦 ${escapeHtml(e.cliente)} <span style="background:#c9a96e20;color:var(--accent);border-radius:8px;padding:1px 7px;font-size:10px;font-weight:700;">Pedido</span></div>
+                <div class="t">${e.color?`<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${e.color};margin-right:3px;"></span>`:''}📦 ${escapeHtml(e.cliente)} <span style="background:#c9a96e20;color:var(--accent);border-radius:8px;padding:1px 7px;font-size:10px;font-weight:700;">Pedido</span></div>
                 <div class="m">${escapeHtml(e.time)} • ${estadoLabels[e.estado]||e.estado} • ${escapeHtml(e.id)}</div>
               </div>
               ${dbId ? `<button data-call="verDetallePedidoAdmin" data-args="[${dbId}]" class="btn btn-primary btn-small" style="flex-shrink:0;white-space:nowrap;"><i data-lucide='eye'></i> Ver</button>` : ''}
@@ -636,7 +660,7 @@
           el.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
               <div>
-                <div class="t">📋 ${escapeHtml(e.cliente)} <span style="background:#4a8b5a20;color:#4a8b5a;border-radius:8px;padding:1px 7px;font-size:10px;font-weight:700;">Cotización</span></div>
+                <div class="t">${e.color?`<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${e.color};margin-right:3px;"></span>`:''}📋 ${escapeHtml(e.cliente)} <span style="background:#4a8b5a20;color:#4a8b5a;border-radius:8px;padding:1px 7px;font-size:10px;font-weight:700;">Cotización</span></div>
                 <div class="m">${escapeHtml(e.time)} • ${cotEstados[e.estado]||e.estado} • ${escapeHtml(e.id)}</div>
               </div>
               ${dbId ? `<button data-call="verDetalleCotAdmin" data-args="[${dbId}]" class="btn btn-primary btn-small" style="flex-shrink:0;white-space:nowrap;"><i data-lucide='eye'></i> Ver</button>` : ''}
@@ -2612,35 +2636,77 @@ async function verDetallePedidoAdmin(id) {
 
       ${saldoHtml}
 
-      ${p.adjuntos?.length ? `
       <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:14px;">
-        <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i data-lucide="paperclip"></i> Adjuntos del pedido</div>
-        ${p.adjuntos.filter(a=>a.tipo==='foto').length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:${p.adjuntos.some(a=>a.tipo==='audio')?'10px':'0'};">
-          ${p.adjuntos.filter(a=>a.tipo==='foto').map(a => `<a href="${a.url}" target="_blank" rel="noopener"><img src="${a.url}" alt="Foto de referencia" style="width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}
-        </div>` : ''}
-        ${p.adjuntos.filter(a=>a.tipo==='audio').map(a => `<audio controls src="${a.url}" style="width:100%;height:36px;"></audio>`).join('')}
-      </div>` : ''}
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+          <div style="font-weight:700;color:var(--accent);font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i data-lucide="paperclip"></i> Adjuntos del pedido <span class="wh-collapse-count">(${(p.adjuntos||[]).length})</span></div>
+          <button class="btn btn-secondary btn-small" data-call="abrirAgregarAdjuntoPedido" data-args="[${id}]"><i data-lucide="image-plus"></i> Agregar foto</button>
+        </div>
+        <details class="wh-collapse" open>
+          <summary>Ver adjuntos</summary>
+          <div class="wh-collapse-body">
+            ${p.adjuntos?.filter(a=>a.tipo==='foto').length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:${p.adjuntos.some(a=>a.tipo==='audio')?'10px':'0'};">
+              ${p.adjuntos.filter(a=>a.tipo==='foto').map(a => `<a href="${a.url}" target="_blank" rel="noopener"><img src="${a.url}" alt="Foto de referencia" style="width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}
+            </div>` : '<div style="font-size:12px;color:var(--muted);">Sin fotos todavía.</div>'}
+            ${(p.adjuntos?.filter(a=>a.tipo==='audio')||[]).map(a => `<audio controls src="${a.url}" style="width:100%;height:36px;margin-top:8px;"></audio>`).join('')}
+          </div>
+        </details>
+        <input type="file" id="adjPedidoInput_${id}" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none">
+      </div>
 
       ${(p.imagenes_diseno?.length || p.mensaje_disenador) ? `
-      <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:14px;">
-        <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i data-lucide="ruler"></i> Diseño (SketchUp / VCarve)</div>
-        ${p.imagenes_diseno?.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:${p.mensaje_disenador ? '10px' : '0'};">
-          ${p.imagenes_diseno.map(img => `<a href="${img.url_imagen}" target="_blank" rel="noopener"><img src="${img.url_imagen}" alt="Diseño" style="width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}
-        </div>` : ''}
-        ${p.mensaje_disenador ? `<div style="font-size:12px;color:var(--muted2);"><strong>Mensaje del diseñador:</strong> ${escapeHtml(p.mensaje_disenador)}</div>` : ''}
-      </div>` : ''}
+      <details class="wh-collapse" open style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;">
+        <summary><i data-lucide="ruler"></i> Diseño <span class="wh-collapse-count">(${(p.imagenes_diseno||[]).length})</span></summary>
+        <div class="wh-collapse-body">
+        ${(() => {
+          const diseno = p.imagenes_diseno || [];
+          const renders = diseno.filter(i => i.tipo === 'sketchup');
+          const skp     = diseno.filter(i => i.tipo === 'skp');
+          const cortes  = diseno.filter(i => i.tipo === 'vcarve');
+          const otros   = diseno.filter(i => !['sketchup','skp','vcarve'].includes(i.tipo));
+          let html = '';
+          if (renders.length) html += `<div style="margin-bottom:8px;"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Render (SketchUp)</div><div style="display:flex;gap:8px;flex-wrap:wrap;">
+            ${renders.map(img => `<a href="${img.url_imagen}" target="_blank" rel="noopener"><img src="${img.url_imagen}" alt="Render" style="width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}
+          </div></div>`;
+          if (skp.length) html += `<div style="margin-bottom:8px;"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Proyecto SketchUp (.skp)</div><div style="display:flex;gap:8px;flex-wrap:wrap;">
+            ${skp.map((f,i) => `<a href="${f.url_imagen}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:6px;background:var(--surface,#1a1a1a);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--accent);"><i data-lucide="box"></i> Proyecto .skp ${skp.length>1?(i+1):''}</a>`).join('')}
+          </div></div>`;
+          if (cortes.length) {
+            const grupos = {};
+            cortes.forEach(c => { const g = c.grupo || 'Sin variante'; (grupos[g] = grupos[g] || []).push(c); });
+            html += `<div style="margin-bottom:8px;"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Cortes para CNC (DXF / VCarve)</div>`
+              + Object.entries(grupos).map(([g, files]) => `
+                <details class="wh-subcollapse" open>
+                  <summary><i data-lucide="folder"></i> ${escapeHtml(g)} <span class="wh-collapse-count">(${files.length})</span></summary>
+                  <div class="wh-collapse-body" style="display:flex;gap:8px;flex-wrap:wrap;">
+                    ${files.map((f,i) => `<a href="${f.url_imagen}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:6px;background:var(--surface,#1a1a1a);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--accent);"><i data-lucide="file-text"></i> Corte ${i+1}</a>`).join('')}
+                  </div>
+                </details>
+              `).join('') + `</div>`;
+          }
+          if (otros.length) html += `<div style="display:flex;gap:8px;flex-wrap:wrap;">
+            ${otros.map(img => `<a href="${img.url_imagen}" target="_blank" rel="noopener"><img src="${img.url_imagen}" alt="Referencia" style="width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}
+          </div>`;
+          return html;
+        })()}
+        ${p.mensaje_disenador ? `<div style="font-size:12px;color:var(--muted2);margin-top:6px;"><strong>Mensaje del diseñador:</strong> ${escapeHtml(p.mensaje_disenador)}</div>` : ''}
+        </div>
+      </details>
+      ` : ''}
 
       ${p.cotizacion_origen ? `
-      <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:14px;">
-        <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i data-lucide="receipt"></i> Partidas cotizadas (${escapeHtml(p.cotizacion_origen.numero_cotizacion)})</div>
-        ${p.cotizacion_origen.items?.length ? `<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">
-          <tbody>${p.cotizacion_origen.items.map(it => `<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 4px;color:var(--muted2);">${escapeHtml(it.nombre_item)}</td><td style="padding:5px 4px;text-align:center;color:var(--muted2);">${it.cantidad} ${escapeHtml(it.unidad)}</td><td style="padding:5px 4px;text-align:right;color:var(--accent);font-weight:700;">${money(it.subtotal)}</td></tr>`).join('')}</tbody>
-        </table>` : ''}
-        ${p.cotizacion_origen.descripcion_respuesta ? `<div style="font-size:12px;color:var(--muted2);margin-bottom:8px;">${escapeHtml(p.cotizacion_origen.descripcion_respuesta)}</div>` : ''}
-        ${p.cotizacion_origen.audio_respuesta_url ? `<audio controls src="${p.cotizacion_origen.audio_respuesta_url}" style="width:100%;height:36px;margin-bottom:8px;"></audio>` : ''}
-        ${p.cotizacion_origen.imagenes?.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;">${p.cotizacion_origen.imagenes.map(im => `<a href="${im.url_imagen}" target="_blank" rel="noopener"><img src="${im.url_imagen}" alt="Referencia" style="width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}</div>` : ''}
-        ${p.cotizacion_origen.pdf_url ? `<p style="margin-top:8px;"><a href="${p.cotizacion_origen.pdf_url}" target="_blank" rel="noopener" style="color:var(--accent);font-size:12px;"><i data-lucide="file-text"></i> Ver PDF de la propuesta</a></p>` : ''}
-      </div>` : ''}
+      <details class="wh-collapse" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;">
+        <summary><i data-lucide="receipt"></i> Partidas cotizadas (${escapeHtml(p.cotizacion_origen.numero_cotizacion)}) <span class="wh-collapse-count">— ver historial completo</span></summary>
+        <div class="wh-collapse-body">
+          ${p.cotizacion_origen.items?.length ? `<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">
+            <tbody>${p.cotizacion_origen.items.map(it => `<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 4px;color:var(--muted2);">${escapeHtml(it.nombre_item)}</td><td style="padding:5px 4px;text-align:center;color:var(--muted2);">${it.cantidad} ${escapeHtml(it.unidad)}</td><td style="padding:5px 4px;text-align:right;color:var(--accent);font-weight:700;">${money(it.subtotal)}</td></tr>`).join('')}</tbody>
+          </table>` : ''}
+          ${p.cotizacion_origen.descripcion_respuesta ? `<div style="font-size:12px;color:var(--muted2);margin-bottom:8px;">${escapeHtml(p.cotizacion_origen.descripcion_respuesta)}</div>` : ''}
+          ${p.cotizacion_origen.audio_respuesta_url ? `<audio controls src="${p.cotizacion_origen.audio_respuesta_url}" style="width:100%;height:36px;margin-bottom:8px;"></audio>` : ''}
+          ${p.cotizacion_origen.imagenes?.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;">${p.cotizacion_origen.imagenes.map(im => `<a href="${im.url_imagen}" target="_blank" rel="noopener"><img src="${im.url_imagen}" alt="Referencia" style="width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}</div>` : ''}
+          ${p.cotizacion_origen.pdf_url ? `<p style="margin-top:8px;"><a href="${p.cotizacion_origen.pdf_url}" target="_blank" rel="noopener" style="color:var(--accent);font-size:12px;"><i data-lucide="file-text"></i> Ver PDF de la propuesta</a></p>` : ''}
+        </div>
+      </details>
+      ` : ''}
 
       <div style="margin-bottom:14px;">
         <div style="font-weight:700;color:var(--accent);margin-bottom:6px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Productos del Pedido</div>
@@ -2668,6 +2734,45 @@ async function verDetallePedidoAdmin(id) {
     `;
   } catch(e) {
     body.innerHTML = `<div style="color:var(--danger);padding:20px;text-align:center;"><i data-lucide="circle-alert"></i> Error: ${e.message}</div>`;
+  }
+}
+
+// ── Agregar foto de referencia a un pedido ya existente (ventas/jefe) ──
+// Para que el diseñador tenga el panorama completo aunque la info original
+// haya llegado incompleta — mismo patrón de subida que pedido-manual.js,
+// mismo path de Storage (pedidos/{id}/adjuntos/...) para reusar sus reglas.
+function abrirAgregarAdjuntoPedido(id) {
+  const input = document.getElementById(`adjPedidoInput_${id}`);
+  if (!input) return;
+  input.onchange = () => _subirAdjuntoPedido(id, input.files?.[0]);
+  input.click();
+}
+
+async function _subirAdjuntoPedido(id, file) {
+  if (!file) return;
+  const TIPOS_VALIDOS = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  if (!TIPOS_VALIDOS.includes(file.type)) {
+    showNotification('Archivo no válido — usa JPEG, PNG, WEBP o GIF.', 'error');
+    return;
+  }
+  try {
+    if (!firebaseStorage && typeof initFirebase === 'function') initFirebase();
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    const ref = firebaseStorage.ref(`pedidos/${id}/adjuntos/foto-${Date.now()}.${ext}`);
+    const snap = await ref.put(file);
+    const url = await snap.ref.getDownloadURL();
+    const data = await apiFetch(`${API_BASE}/pedidos.php?action=agregar_adjunto&id=${id}`, {
+      method: 'POST',
+      body: JSON.stringify({ tipo: 'foto', url }),
+    });
+    if (data.success) {
+      showNotification('<i data-lucide="circle-check"></i> Foto agregada', 'success');
+      verDetallePedidoAdmin(id);
+    } else {
+      showNotification(data.error || 'Error al agregar la foto', 'error');
+    }
+  } catch (e) {
+    showNotification('Error: ' + e.message, 'error');
   }
 }
 

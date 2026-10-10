@@ -1033,3 +1033,19 @@
     border: 1px solid #444; box-shadow: 0 4px 16px rgba(0,0,0,0.5);
   }
   .wh-help:hover::after { opacity: 1; visibility: visible; }
+
+/* Colapsables (detalle de pedido): bloques/secciones que se cierran por
+   default y se expanden con un clic — nunca se borra nada, solo se oculta
+   visualmente (ver "historial completo"). */
+.wh-collapse { margin-bottom: 14px; }
+.wh-collapse > summary { cursor:pointer; font-weight:700; color:var(--accent); font-size:11px; text-transform:uppercase; letter-spacing:.8px; list-style:none; display:flex; align-items:center; gap:6px; user-select:none; }
+.wh-collapse > summary::-webkit-details-marker { display:none; }
+.wh-collapse > summary::before { content:"\25B8"; display:inline-block; transition: transform .15s; font-size:10px; }
+.wh-collapse[open] > summary::before { transform: rotate(90deg); }
+.wh-collapse .wh-collapse-count { color:var(--muted2); font-weight:400; text-transform:none; letter-spacing:normal; margin-left:4px; }
+.wh-collapse-body { padding-top:8px; }
+.wh-subcollapse { margin-bottom:6px; }
+.wh-subcollapse > summary { cursor:pointer; font-size:11px; font-weight:700; color:var(--muted2); list-style:none; display:flex; align-items:center; gap:5px; user-select:none; }
+.wh-subcollapse > summary::-webkit-details-marker { display:none; }
+.wh-subcollapse > summary::before { content:"\25B8"; display:inline-block; transition: transform .15s; font-size:9px; }
+.wh-subcollapse[open] > summary::before { transform: rotate(90deg); }

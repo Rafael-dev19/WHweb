@@ -678,6 +678,16 @@ function fmtMonthTitle(d){
 
 function mondayIndex(jsDay){ return (jsDay + 6) % 7; }
 
+// Color fijo por id (no por estado) — así dos pedidos distintos que se
+// cruzan en el calendario se distinguen aunque tengan el mismo estado.
+const _CAL_PALETTE = ['#e07a5f','#3d5a80','#81b29a','#9b5de5','#00bbf9','#f15bb5','#06d6a0','#ef476f','#118ab2','#ffb703','#8338ec','#43aa8b'];
+function colorForId(id) {
+  const s = String(id);
+  let hash = 0;
+  for (let i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
+  return _CAL_PALETTE[hash % _CAL_PALETTE.length];
+}
+
 function buildCalendar(){
   document.getElementById('calTitle').textContent = fmtMonthTitle(calCursor);
 
@@ -722,7 +732,8 @@ function buildCalendar(){
         ${dayEvents.map(e => {
           const chipClass = e.eventoTipo || e.type || 'cita';
           const icon = e.eventoTipo === 'pedido' ? '📦' : e.eventoTipo === 'cita' ? '📅' : '';
-          return `<div class="chip ${chipClass}">${icon} ${escapeHtml(e.time || '')} ${escapeHtml(e.title)}</div>`;
+          const estilo = e.color ? ` style="background:${e.color}2a;color:${e.color};"` : '';
+          return `<div class="chip ${chipClass}"${estilo}>${icon} ${escapeHtml(e.time || '')} ${escapeHtml(e.title)}</div>`;
         }).join('')}
       </div>
     `;
@@ -996,19 +1007,30 @@ async function cargarCitasParaCalendario(silencioso = false) {
     }
 
     if (dataPedidos.status === 'fulfilled' && dataPedidos.value?.success) {
-      _empPedidosApiCache = (dataPedidos.value.pedidos || [])
-        .filter(p => p.fecha_estimada)
-        .map(p => ({
-          id: 'APED-' + p.id,
-          eventoTipo: 'pedido',
-          date: (p.fecha_estimada || '').substring(0, 10),
-          time: '',
-          type: 'pedido',
-          title: `Entrega: ${p.nombre_cliente}`,
-          notes: `Pedido ${p.numero_pedido} • ${p.tipo_entrega === 'envio' ? 'Envío' : 'Recoger'}`,
-          cliente_id: p.cliente_id || null,
-          datos: p
-        }));
+      // Un color fijo por pedido, repetido cada día desde que se creó hasta
+      // la entrega, para distinguir a simple vista pedidos que se cruzan.
+      _empPedidosApiCache = [];
+      (dataPedidos.value.pedidos || []).filter(p => p.fecha_estimada).forEach(p => {
+        const color  = colorForId(p.id);
+        const inicio = new Date(((p.fecha_creacion || p.fecha_estimada).substring(0, 10)) + 'T00:00:00');
+        const fin    = new Date(p.fecha_estimada.substring(0, 10) + 'T00:00:00');
+        const dias   = Math.max(0, Math.min(60, Math.round((fin - inicio) / 86400000)));
+        for (let i = 0; i <= dias; i++) {
+          const d = new Date(inicio); d.setDate(d.getDate() + i);
+          _empPedidosApiCache.push({
+            id: 'APED-' + p.id,
+            eventoTipo: 'pedido',
+            date: isoDate(d),
+            time: '',
+            type: 'pedido',
+            title: `Entrega: ${p.nombre_cliente}`,
+            notes: `Pedido ${p.numero_pedido} • ${p.tipo_entrega === 'envio' ? 'Envío' : 'Recoger'}`,
+            cliente_id: p.cliente_id || null,
+            color,
+            datos: p
+          });
+        }
+      });
     }
 
     _calEmpLastLoaded = Date.now();
@@ -1300,6 +1322,7 @@ async function verDetallePedidoEmp(id) {
   openModal('empPedidoDetalleModal');
   body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);"><i class="wh-icon-spin icon-2x" data-lucide="loader-circle"></i></div>';
   window._empPedId = id;
+  _disenoDxfGrupos = []; // limpia carpetas acumuladas de un pedido anterior
 
   const tr = document.querySelector(`tr[data-id="${id}"]`);
   if (tr) currentPedidoRow = tr;
@@ -1431,47 +1454,71 @@ async function verDetallePedidoEmp(id) {
       ${saldoHtml}
 
       ${p.adjuntos?.length ? `
-      <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:14px;">
-        <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i data-lucide="paperclip"></i> Adjuntos del pedido</div>
-        ${p.adjuntos.filter(a=>a.tipo==='foto').length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:${p.adjuntos.some(a=>a.tipo==='audio')?'10px':'0'};">
-          ${p.adjuntos.filter(a=>a.tipo==='foto').map(a => `<a href="${a.url}" target="_blank" rel="noopener"><img src="${a.url}" alt="Foto de referencia" style="width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}
-        </div>` : ''}
-        ${p.adjuntos.filter(a=>a.tipo==='audio').map(a => `<audio controls src="${a.url}" style="width:100%;height:36px;"></audio>`).join('')}
-      </div>` : ''}
+      <details class="wh-collapse" open style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;">
+        <summary><i data-lucide="paperclip"></i> Adjuntos del pedido <span class="wh-collapse-count">(${p.adjuntos.length})</span></summary>
+        <div class="wh-collapse-body">
+          ${p.adjuntos.filter(a=>a.tipo==='foto').length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:${p.adjuntos.some(a=>a.tipo==='audio')?'10px':'0'};">
+            ${p.adjuntos.filter(a=>a.tipo==='foto').map(a => `<a href="${a.url}" target="_blank" rel="noopener"><img src="${a.url}" alt="Foto de referencia" style="width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}
+          </div>` : ''}
+          ${p.adjuntos.filter(a=>a.tipo==='audio').map(a => `<audio controls src="${a.url}" style="width:100%;height:36px;"></audio>`).join('')}
+        </div>
+      </details>
+      ` : ''}
 
       ${(p.imagenes_diseno?.length || p.mensaje_disenador) ? `
-      <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:14px;">
-        <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i data-lucide="ruler"></i> Diseño</div>
+      <details class="wh-collapse" open style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;">
+        <summary><i data-lucide="ruler"></i> Diseño <span class="wh-collapse-count">(${(p.imagenes_diseno||[]).length})</span></summary>
+        <div class="wh-collapse-body">
         ${(() => {
-          const renders = (p.imagenes_diseno || []).filter(i => i.tipo === 'sketchup');
-          const cortes   = (p.imagenes_diseno || []).filter(i => i.tipo === 'vcarve');
-          const otros    = (p.imagenes_diseno || []).filter(i => i.tipo !== 'sketchup' && i.tipo !== 'vcarve');
+          const diseno = p.imagenes_diseno || [];
+          const renders = diseno.filter(i => i.tipo === 'sketchup');
+          const skp     = diseno.filter(i => i.tipo === 'skp');
+          const cortes  = diseno.filter(i => i.tipo === 'vcarve');
+          const otros   = diseno.filter(i => !['sketchup','skp','vcarve'].includes(i.tipo));
           let html = '';
           if (renders.length) html += `<div style="margin-bottom:8px;"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Render (SketchUp)</div><div style="display:flex;gap:8px;flex-wrap:wrap;">
             ${renders.map(img => `<a href="${img.url_imagen}" target="_blank" rel="noopener"><img src="${img.url_imagen}" alt="Render" style="width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}
           </div></div>`;
-          if (cortes.length) html += `<div style="margin-bottom:8px;"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Corte para CNC (DXF / VCarve)</div><div style="display:flex;gap:8px;flex-wrap:wrap;">
-            ${cortes.map((f,i) => `<a href="${f.url_imagen}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:6px;background:var(--surface,#1a1a1a);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--accent);"><i data-lucide="file-text"></i> Corte DXF ${cortes.length>1?(i+1):''}</a>`).join('')}
+          if (skp.length) html += `<div style="margin-bottom:8px;"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Proyecto SketchUp (.skp)</div><div style="display:flex;gap:8px;flex-wrap:wrap;">
+            ${skp.map((f,i) => `<a href="${f.url_imagen}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:6px;background:var(--surface,#1a1a1a);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--accent);"><i data-lucide="box"></i> Proyecto .skp ${skp.length>1?(i+1):''}</a>`).join('')}
           </div></div>`;
+          if (cortes.length) {
+            const grupos = {};
+            cortes.forEach(c => { const g = c.grupo || 'Sin variante'; (grupos[g] = grupos[g] || []).push(c); });
+            html += `<div style="margin-bottom:8px;"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Cortes para CNC (DXF / VCarve)</div>`
+              + Object.entries(grupos).map(([g, files]) => `
+                <details class="wh-subcollapse" open>
+                  <summary><i data-lucide="folder"></i> ${escapeHtml(g)} <span class="wh-collapse-count">(${files.length})</span></summary>
+                  <div class="wh-collapse-body" style="display:flex;gap:8px;flex-wrap:wrap;">
+                    ${files.map((f,i) => `<a href="${f.url_imagen}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:6px;background:var(--surface,#1a1a1a);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--accent);"><i data-lucide="file-text"></i> Corte ${i+1}</a>`).join('')}
+                  </div>
+                </details>
+              `).join('') + `</div>`;
+          }
           if (otros.length) html += `<div style="display:flex;gap:8px;flex-wrap:wrap;">
             ${otros.map(img => `<a href="${img.url_imagen}" target="_blank" rel="noopener"><img src="${img.url_imagen}" alt="Referencia" style="width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}
           </div>`;
           return html;
         })()}
         ${p.mensaje_disenador ? `<div style="font-size:12px;color:var(--muted2);margin-top:6px;"><strong>Mensaje del diseñador:</strong> ${escapeHtml(p.mensaje_disenador)}</div>` : ''}
-      </div>` : ''}
+        </div>
+      </details>
+      ` : ''}
 
       ${p.cotizacion_origen ? `
-      <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:14px;">
-        <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i data-lucide="receipt"></i> Partidas cotizadas (${escapeHtml(p.cotizacion_origen.numero_cotizacion)})</div>
-        ${p.cotizacion_origen.items?.length ? `<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">
-          <tbody>${p.cotizacion_origen.items.map(it => `<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 4px;color:var(--muted2);">${escapeHtml(it.nombre_item)}</td><td style="padding:5px 4px;text-align:center;color:var(--muted2);">${it.cantidad} ${escapeHtml(it.unidad)}</td><td style="padding:5px 4px;text-align:right;color:var(--accent);font-weight:700;">${money(it.subtotal)}</td></tr>`).join('')}</tbody>
-        </table>` : ''}
-        ${p.cotizacion_origen.descripcion_respuesta ? `<div style="font-size:12px;color:var(--muted2);margin-bottom:8px;">${escapeHtml(p.cotizacion_origen.descripcion_respuesta)}</div>` : ''}
-        ${p.cotizacion_origen.audio_respuesta_url ? `<audio controls src="${p.cotizacion_origen.audio_respuesta_url}" style="width:100%;height:36px;margin-bottom:8px;"></audio>` : ''}
-        ${p.cotizacion_origen.imagenes?.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;">${p.cotizacion_origen.imagenes.map(im => `<a href="${im.url_imagen}" target="_blank" rel="noopener"><img src="${im.url_imagen}" alt="Referencia" style="width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}</div>` : ''}
-        ${p.cotizacion_origen.pdf_url ? `<p style="margin-top:8px;"><a href="${p.cotizacion_origen.pdf_url}" target="_blank" rel="noopener" style="color:var(--accent);font-size:12px;"><i data-lucide="file-text"></i> Ver PDF de la propuesta</a></p>` : ''}
-      </div>` : ''}
+      <details class="wh-collapse" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;">
+        <summary><i data-lucide="receipt"></i> Partidas cotizadas (${escapeHtml(p.cotizacion_origen.numero_cotizacion)}) <span class="wh-collapse-count">— ver historial completo</span></summary>
+        <div class="wh-collapse-body">
+          ${p.cotizacion_origen.items?.length ? `<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">
+            <tbody>${p.cotizacion_origen.items.map(it => `<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 4px;color:var(--muted2);">${escapeHtml(it.nombre_item)}</td><td style="padding:5px 4px;text-align:center;color:var(--muted2);">${it.cantidad} ${escapeHtml(it.unidad)}</td><td style="padding:5px 4px;text-align:right;color:var(--accent);font-weight:700;">${money(it.subtotal)}</td></tr>`).join('')}</tbody>
+          </table>` : ''}
+          ${p.cotizacion_origen.descripcion_respuesta ? `<div style="font-size:12px;color:var(--muted2);margin-bottom:8px;">${escapeHtml(p.cotizacion_origen.descripcion_respuesta)}</div>` : ''}
+          ${p.cotizacion_origen.audio_respuesta_url ? `<audio controls src="${p.cotizacion_origen.audio_respuesta_url}" style="width:100%;height:36px;margin-bottom:8px;"></audio>` : ''}
+          ${p.cotizacion_origen.imagenes?.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;">${p.cotizacion_origen.imagenes.map(im => `<a href="${im.url_imagen}" target="_blank" rel="noopener"><img src="${im.url_imagen}" alt="Referencia" style="width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}</div>` : ''}
+          ${p.cotizacion_origen.pdf_url ? `<p style="margin-top:8px;"><a href="${p.cotizacion_origen.pdf_url}" target="_blank" rel="noopener" style="color:var(--accent);font-size:12px;"><i data-lucide="file-text"></i> Ver PDF de la propuesta</a></p>` : ''}
+        </div>
+      </details>
+      ` : ''}
 
       <div style="margin-bottom:14px;">
         <div style="font-weight:700;color:var(--accent);margin-bottom:6px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Productos del Pedido</div>
@@ -1492,9 +1539,18 @@ async function verDetallePedidoEmp(id) {
           <div class="help">Para que taller/instalación vean cómo debe quedar.</div>
         </div>
         <div class="form-group" style="margin-bottom:8px;">
-          <label class="form-label" style="font-size:11px;">Corte para CNC (VCarve) — archivo .dxf *</label>
-          <input type="file" id="disenoDxfInput" accept=".dxf" multiple class="form-input">
-          <div class="help">El archivo que taller manda a la CNC para cortar.</div>
+          <label class="form-label" style="font-size:11px;">Proyecto SketchUp (.skp) — opcional</label>
+          <input type="file" id="disenoSkpInput" accept=".skp" class="form-input">
+          <div class="help">El archivo editable, por si hay que ajustarlo más adelante.</div>
+        </div>
+        <div class="form-group" style="margin-bottom:8px;">
+          <label class="form-label" style="font-size:11px;">Corte para CNC (VCarve) — carpeta(s) de .dxf *</label>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <input type="file" id="disenoDxfFolderInput" webkitdirectory multiple style="display:none">
+            <button type="button" class="btn btn-secondary btn-small" data-call="agregarCarpetaDxf"><i data-lucide="folder-plus"></i> Agregar carpeta de cortes</button>
+          </div>
+          <div id="disenoDxfGruposList" style="margin-top:8px;display:flex;flex-direction:column;gap:4px;"></div>
+          <div class="help">Cada carpeta = un acabado/variante (ej. "Ámbar", "Lino1"); el nombre de la carpeta se usa para etiquetarlo. Agrega una carpeta por cada acabado que cotizaste.</div>
         </div>
         <div class="form-group" style="margin-bottom:8px;">
           <label class="form-label" style="font-size:11px;">Mensaje para instaladores/taller (opcional)</label>
@@ -1557,14 +1613,17 @@ async function subirImagenesDiseno(files, pedidoId) {
 }
 
 // Sube archivos de corte DXF (VCarve → CNC) — no son imágenes, se validan por
-// extensión (.dxf) y un límite de tamaño razonable, no por magic bytes.
-async function subirDxfDiseno(files, pedidoId) {
+// extensión (.dxf) y un límite de tamaño razonable, no por magic bytes. Cada
+// archivo lleva su "grupo" (la carpeta/acabado de la que vino) para que
+// taller sepa qué juego de cortes corresponde a cuál variante.
+async function subirDxfDiseno(files, pedidoId, grupo) {
   if (!window.firebaseStorage && typeof initFirebase === 'function') initFirebase();
   if (!window.firebaseStorage) throw new Error('Firebase Storage no disponible. Verifica que hayas iniciado sesión correctamente.');
 
   const resultados = [];
   const ts = Date.now();
   const MAX_BYTES = 25 * 1024 * 1024; // 25MB
+  const grupoSlug = (grupo || '').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 40);
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
@@ -1574,40 +1633,96 @@ async function subirDxfDiseno(files, pedidoId) {
     if (file.size > MAX_BYTES) {
       throw new Error(`Archivo "${file.name}" supera el tamaño máximo (25MB).`);
     }
-    const path = `proyectos/pedidos/${pedidoId}/corte-${ts}-${i}.dxf`;
+    const path = `proyectos/pedidos/${pedidoId}/corte-${grupoSlug || 'sin-grupo'}-${ts}-${i}.dxf`;
     const ref  = window.firebaseStorage.ref(path);
     const snap = await ref.put(file);
-    resultados.push({ url: await snap.ref.getDownloadURL(), tipo: 'vcarve' });
+    resultados.push({ url: await snap.ref.getDownloadURL(), tipo: 'vcarve', grupo: grupo || null });
   }
   return resultados;
 }
 
+// Sube el proyecto de SketchUp (.skp) — opcional, no es imagen ni dxf.
+async function subirSkpDiseno(file, pedidoId) {
+  if (!file) return [];
+  if (!window.firebaseStorage && typeof initFirebase === 'function') initFirebase();
+  if (!window.firebaseStorage) throw new Error('Firebase Storage no disponible. Verifica que hayas iniciado sesión correctamente.');
+  if (!/\.skp$/i.test(file.name)) throw new Error(`Archivo "${file.name}" no es un .skp.`);
+  const MAX_BYTES = 60 * 1024 * 1024; // 60MB
+  if (file.size > MAX_BYTES) throw new Error(`"${file.name}" supera el tamaño máximo (60MB).`);
+  const path = `proyectos/pedidos/${pedidoId}/proyecto-${Date.now()}.skp`;
+  const ref  = window.firebaseStorage.ref(path);
+  const snap = await ref.put(file);
+  return [{ url: await snap.ref.getDownloadURL(), tipo: 'skp', grupo: null }];
+}
+
+// ── Carpetas de DXF acumuladas antes de enviar ──────────────────────────
+// webkitdirectory solo deja elegir UNA carpeta por interacción — se acumulan
+// aquí para poder agregar varias (una por acabado/variante) antes de subir.
+let _disenoDxfGrupos = [];
+
+function agregarCarpetaDxf() {
+  const input = document.getElementById('disenoDxfFolderInput');
+  if (!input) return;
+  input.onchange = () => {
+    const files = Array.from(input.files || []).filter(f => /\.dxf$/i.test(f.name));
+    if (!files.length) {
+      showNotification('<i data-lucide="triangle-alert"></i> Esa carpeta no tiene archivos .dxf.', 'warning');
+      return;
+    }
+    const nombreGrupo = (files[0].webkitRelativePath || '').split('/')[0] || `Variante ${_disenoDxfGrupos.length + 1}`;
+    const existente = _disenoDxfGrupos.find(g => g.grupo === nombreGrupo);
+    if (existente) existente.files = files;
+    else _disenoDxfGrupos.push({ grupo: nombreGrupo, files });
+    _renderDxfGruposList();
+    input.value = '';
+  };
+  input.click();
+}
+
+function quitarGrupoDxf(nombreGrupo) {
+  _disenoDxfGrupos = _disenoDxfGrupos.filter(g => g.grupo !== nombreGrupo);
+  _renderDxfGruposList();
+}
+
+function _renderDxfGruposList() {
+  const el = document.getElementById('disenoDxfGruposList');
+  if (!el) return;
+  el.innerHTML = _disenoDxfGrupos.map(g => `
+    <div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;">
+      <span><i data-lucide="folder"></i> <strong>${escapeHtml(g.grupo)}</strong> — ${g.files.length} archivo(s)</span>
+      <button type="button" class="btn-eliminar-img" data-call="quitarGrupoDxf" data-args='["${g.grupo.replace(/"/g,'')}"]' style="background:rgba(180,0,0,.85);border:none;color:#fff;border-radius:50%;width:20px;height:20px;font-size:13px;cursor:pointer;line-height:1;">×</button>
+    </div>
+  `).join('');
+  window.lucide?.createIcons();
+}
+
 async function marcarListoParaProduccion(id) {
   const renderInput = document.getElementById('disenoRenderInput');
-  const dxfInput     = document.getElementById('disenoDxfInput');
+  const skpInput     = document.getElementById('disenoSkpInput');
   const renderFiles  = renderInput?.files;
-  const dxfFiles     = dxfInput?.files;
   const mensaje      = document.getElementById('disenoMensajeInput')?.value?.trim() || '';
   if (!renderFiles || renderFiles.length === 0) {
     showNotification('<i data-lucide="triangle-alert"></i> Adjunta al menos un render (SketchUp).', 'error');
     return;
   }
-  if (!dxfFiles || dxfFiles.length === 0) {
-    showNotification('<i data-lucide="triangle-alert"></i> Adjunta al menos un archivo de corte (.dxf) para VCarve/CNC.', 'error');
+  if (_disenoDxfGrupos.length === 0) {
+    showNotification('<i data-lucide="triangle-alert"></i> Agrega al menos una carpeta de cortes (.dxf) para VCarve/CNC.', 'error');
     return;
   }
   const btn = document.getElementById('btnMarcarListoProduccion');
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="wh-icon-spin" data-lucide="loader-circle"></i> Subiendo...'; }
   try {
-    const [renders, cortes] = await Promise.all([
+    const [renders, skp, ...gruposCortes] = await Promise.all([
       subirImagenesDiseno(renderFiles, id),
-      subirDxfDiseno(dxfFiles, id),
+      subirSkpDiseno(skpInput?.files?.[0], id),
+      ..._disenoDxfGrupos.map(g => subirDxfDiseno(g.files, id, g.grupo)),
     ]);
+    const cortes = gruposCortes.flat();
     const data = await apiFetch(`${API_BASE}/pedidos.php?id=${id}`, {
       method: 'PUT',
       body: JSON.stringify({
         estado: 'listo_para_produccion',
-        imagenes: [...renders, ...cortes],
+        imagenes: [...renders, ...skp, ...cortes],
         mensaje_disenador: mensaje,
       }),
     });

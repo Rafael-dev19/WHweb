@@ -109,6 +109,38 @@ if ($method === 'POST' && $action === 'crear_manual') {
     jsonSuccess(['pedido_id' => $pedidoId, 'numero_pedido' => $numeroPedido]);
 }
 
+// ── Ventas/jefe/administrador agrega contexto a un pedido YA existente
+// (foto o nota de voz) — para que el diseñador tenga el panorama completo
+// sin depender de que todo se haya capturado en la creación inicial. Antes
+// del switch por la misma razón que crear_manual: no encaja en PUT (que es
+// para cambiar estado/fecha/notas, no para adjuntar archivos).
+if ($method === 'POST' && $action === 'agregar_adjunto') {
+    $usuario = requerirVentasOGestion();
+    requerirCsrf();
+    checkRateLimit('pedidos_agregar_adjunto', 30, 3600);
+    if (!$id) jsonError('ID requerido', 400);
+    if (!dbRow("SELECT id FROM pedidos WHERE id = ?", [$id])) jsonError('Pedido no encontrado', 404);
+
+    $body = getJsonBody();
+    $tipo = $body['tipo'] ?? '';
+    $url  = trim($body['url'] ?? '');
+    if (!in_array($tipo, ['foto', 'audio'], true)) jsonError('tipo inválido. Usa: foto, audio', 422);
+
+    $storageHost = 'https://firebasestorage.googleapis.com/';
+    if (strpos($url, $storageHost) !== 0) jsonError('url inválida', 422);
+
+    $totalAdjuntos = (int)(dbRow("SELECT COUNT(*) AS n FROM pedido_adjuntos WHERE pedido_id = ?", [$id])['n'] ?? 0);
+    if ($totalAdjuntos >= 20) jsonError('Este pedido ya alcanzó el máximo de adjuntos (20).', 422);
+
+    $adjId = dbInsert('pedido_adjuntos', [
+        'pedido_id'  => $id,
+        'tipo'       => $tipo,
+        'url'        => $url,
+        'subido_por' => (int)$usuario['id'],
+    ]);
+    jsonSuccess(['id' => $adjId, 'mensaje' => 'Adjunto agregado'], 201);
+}
+
 switch ($method) {
     case 'GET':
         if ($numero) {
@@ -179,7 +211,7 @@ switch ($method) {
             );
             try {
                 $pedido['imagenes_diseno'] = dbRows(
-                    "SELECT id, url_imagen, tipo, fecha_creacion FROM pedido_imagenes_diseno WHERE pedido_id = ? ORDER BY id",
+                    "SELECT id, url_imagen, tipo, grupo, fecha_creacion FROM pedido_imagenes_diseno WHERE pedido_id = ? ORDER BY grupo, id",
                     [$id]
                 );
             } catch (\Throwable $e) {
@@ -508,17 +540,19 @@ switch ($method) {
                 if (is_array($imagenesRaw)) {
                     foreach ($imagenesRaw as $img) {
                         if (is_string($img)) {
-                            $url = $img; $tipo = 'otro';
+                            $url = $img; $tipo = 'otro'; $grupo = null;
                         } elseif (is_array($img)) {
                             $url = (string)($img['url'] ?? '');
-                            $tipo = in_array($img['tipo'] ?? '', ['sketchup', 'vcarve', 'otro'], true) ? $img['tipo'] : 'otro';
+                            $tipo = in_array($img['tipo'] ?? '', ['sketchup', 'vcarve', 'skp', 'otro'], true) ? $img['tipo'] : 'otro';
+                            $grupo = isset($img['grupo']) ? sanitize(mb_substr((string)$img['grupo'], 0, 80)) : null;
+                            if ($grupo === '') $grupo = null;
                         } else {
                             continue;
                         }
                         if (!filter_var($url, FILTER_VALIDATE_URL)) {
                             jsonError('Una de las imágenes/archivos de diseño no es una URL válida', 422);
                         }
-                        $archivosDiseno[] = ['url' => $url, 'tipo' => $tipo];
+                        $archivosDiseno[] = ['url' => $url, 'tipo' => $tipo, 'grupo' => $grupo];
                     }
                 }
 
@@ -537,6 +571,7 @@ switch ($method) {
                             'pedido_id'  => $id,
                             'url_imagen' => $a['url'],
                             'tipo'       => $a['tipo'],
+                            'grupo'      => $a['grupo'],
                             'subido_por' => (int)$usuarioActual['id'],
                         ]);
                     }
@@ -553,6 +588,7 @@ switch ($method) {
                             'pedido_id'  => $id,
                             'url_imagen' => $a['url'],
                             'tipo'       => $a['tipo'],
+                            'grupo'      => $a['grupo'],
                             'subido_por' => (int)$usuarioActual['id'],
                         ]);
                     }

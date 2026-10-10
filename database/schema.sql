@@ -768,3 +768,24 @@ ALTER TABLE usuarios_personal
 
 ALTER TABLE invitaciones_personal
   ADD COLUMN area ENUM('taller','instalacion') NULL DEFAULT NULL AFTER rol;
+
+-- ================================================================
+-- Notas de pedido: VARCHAR(255) se quedaba corto para el contexto real
+-- que ventas necesita dejarle al diseñador (ver api/pedidos.php
+-- action=agregar_adjunto) — nunca se expone al cliente (seguimiento.php
+-- no la lee), así que ampliarla no filtra nada hacia afuera.
+-- ================================================================
+ALTER TABLE pedidos MODIFY COLUMN notas TEXT NULL;
+
+-- ================================================================
+-- Entregables reales del diseñador: no solo un render en imagen — también
+-- el proyecto .skp (SketchUp) y los cortes .dxf, que llegan agrupados por
+-- variante/acabado (ej. una carpeta "Ámbar" con 19 piezas, otra "Lino1"
+-- con 2) — sin 'grupo' no había forma de saber qué juego de cortes
+-- corresponde a cuál acabado una vez subidos todos juntos.
+-- ================================================================
+ALTER TABLE pedido_imagenes_diseno
+  MODIFY COLUMN tipo ENUM('sketchup','vcarve','skp','otro') NOT NULL DEFAULT 'otro';
+
+ALTER TABLE pedido_imagenes_diseno
+  ADD COLUMN grupo VARCHAR(80) NULL DEFAULT NULL AFTER tipo;
