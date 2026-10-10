@@ -153,6 +153,10 @@ switch ($method) {
         }
         if (isset($body['activo'])) $update['activo'] = (int)(bool)$body['activo'];
         if ($update) dbUpdate('usuarios_personal', $update, 'id = ?', [$id]);
+        // Mantener el claim de Firebase al día: desactivado = sin permiso de
+        // subir archivos; cambio de rol = claim con el rol nuevo.
+        $actual = dbRow("SELECT firebase_uid, rol, activo FROM usuarios_personal WHERE id = ?", [$id]);
+        if ($actual) firebaseMarcarPersonal($actual['firebase_uid'], $actual['activo'] ? $actual['rol'] : null);
         jsonSuccess(['mensaje' => 'Empleado actualizado']);
         break;
 
@@ -163,6 +167,9 @@ switch ($method) {
         $objetivo = dbRow("SELECT id, rol FROM usuarios_personal WHERE id = ?", [$id]);
         if (!$objetivo) jsonError('Empleado no encontrado', 404);
         dbUpdate('usuarios_personal', ['activo' => 0], 'id = ?', [$id]);
+        $uidBaja = dbRow("SELECT firebase_uid FROM usuarios_personal WHERE id = ?", [$id])['firebase_uid'] ?? '';
+        firebaseMarcarPersonal($uidBaja, null); // quitar permiso de Storage
+        revocarSesionesPersonal($id);
         jsonSuccess(['mensaje' => 'Empleado desactivado']);
         break;
 

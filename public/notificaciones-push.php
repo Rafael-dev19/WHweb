@@ -1,6 +1,6 @@
 <?php
 // notificaciones-push.php — Módulo de activación de notificaciones push.
-// A pedido del jefe, el personal (jefe/empleado/disenador) pasa por aquí en
+// A pedido del jefe, el personal (jefe/empleado/disenador/ventas) pasa por aquí en
 // cada inicio de sesión mientras no tenga las notificaciones activadas en
 // ese dispositivo; una vez activadas, login ya no lo trae aquí (ver
 // modal-auth.js). El administrador nunca recibe push (ver
@@ -24,12 +24,16 @@ if ($_rol === 'administrador') {
     header('Location: /admin/panel_administrador.php');
     exit;
 }
-if (!in_array($_rol, ['jefe', 'empleado', 'disenador'], true)) {
+// 'ventas' también pasa por aquí (modal-auth.js e invitacion.php mandan a
+// este módulo a todo el personal salvo administrador) — antes no estaba en
+// la lista y cualquier vendedor sin el permiso ya concedido en su
+// dispositivo terminaba en /acceso-denegado en vez de su panel.
+if (!in_array($_rol, ['jefe', 'empleado', 'disenador', 'ventas'], true)) {
     header('Location: /acceso-denegado');
     exit;
 }
 
-$_destino = $_rol === 'jefe' ? '/admin/panel_administrador.php' : '/empleado/panel_empleado.php';
+$_destino = panelPhpPathParaRol($_rol);
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -44,7 +48,7 @@ $_destino = $_rol === 'jefe' ? '/admin/panel_administrador.php' : '/empleado/pan
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap">
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+  <script src="/assets/vendor/lucide-1.55.0.min.js" defer></script>
   <link rel="stylesheet" href="./assets/<?= av('css/push-prompt.css') ?>">
 </head>
 <body>
@@ -65,9 +69,9 @@ $_destino = $_rol === 'jefe' ? '/admin/panel_administrador.php' : '/empleado/pan
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
   <script src="./assets/<?= av('js/firebase-config.js') ?>"></script>
-  <script>window.WH_FCM_VAPID_KEY = <?= json_encode(FCM_VAPID_KEY) ?>;</script>
+  <script nonce="<?= cspNonce() ?>">window.WH_FCM_VAPID_KEY = <?= json_encode(FCM_VAPID_KEY) ?>;</script>
   <script src="./assets/<?= av('js/push-notifications.js') ?>"></script>
-  <script>
+  <script nonce="<?= cspNonce() ?>">
     document.addEventListener('DOMContentLoaded', function () {
       if (window.lucide) window.lucide.createIcons();
       initPushGate('pgContent', <?= json_encode($_destino) ?>);

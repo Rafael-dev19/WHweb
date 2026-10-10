@@ -22,6 +22,8 @@ if (!defined('WH_API_REQUEST')) {
     header('X-Frame-Options: SAMEORIGIN');
     header_remove('X-Powered-By');
     header_remove('Server');
+    require_once __DIR__ . '/csp.php';
+    enviarCabeceraCSP();
     $__isHttpsPage = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
                    || (int)($_SERVER['SERVER_PORT'] ?? 80) === 443;
     if ($__isHttpsPage) {

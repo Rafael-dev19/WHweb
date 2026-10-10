@@ -25,9 +25,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   initNavHamburger();
   initCartBadge();
   await cargarCategorias();
-  await cargarProductos();
   initBusqueda();
   initOrden();
+  // Enlaces desde el inicio (/catalogo?categoria=cocinas|closets) abren
+  // directo la explicación de diseño a la medida.
+  const catUrl = new URLSearchParams(location.search).get('categoria');
+  if (catUrl === 'cocinas' || catUrl === 'closets') {
+    seleccionarCategoriaPrincipal(catUrl, document.querySelector(`.main-cat-btn[data-main-cat="${catUrl}"]`));
+  } else {
+    await cargarProductos();
+  }
 });
 
 // ---- Nav hamburger ----
@@ -72,6 +79,11 @@ async function cargarCategorias() {
 function renderCategorias() {
   const container = document.getElementById('categorias-filtro');
   if (!container) return;
+  // Catálogo 2026: una sola categoría (Muebles de baño) — los chips de
+  // filtro solo estorban; vuelven solos si algún día hay más de una.
+  // (d-none y no style.display: el contenedor trae d-flex de Bootstrap con !important)
+  container.classList.toggle('d-none', state.categorias.length <= 1);
+  if (state.categorias.length <= 1) return;
   container.innerHTML = `
     <button class="filter-btn active" data-cat-filter="">Todos</button>
     ${state.categorias.map(cat => `
@@ -81,7 +93,7 @@ function renderCategorias() {
 }
 
 // ---- Categorías principales: Baños / Cocinas / Closets ----
-// "Baños" usa el catálogo real. Cocinas y Closets son vista previa (sin backend todavía).
+// "Baños" usa el catálogo real. Cocinas y Closets no tienen modelos: se cotizan a la medida.
 function seleccionarCategoriaPrincipal(cat, btnEl) {
   document.querySelectorAll('.main-cat-btn').forEach(b => b.classList.remove('active'));
   if (btnEl) btnEl.classList.add('active');
@@ -89,7 +101,8 @@ function seleccionarCategoriaPrincipal(cat, btnEl) {
   const headerFiltros = document.querySelector('.catalog-header');
 
   if (cat === 'banos') {
-    if (headerFiltros) headerFiltros.style.display = '';
+    if (headerFiltros) headerFiltros.classList.remove('d-none');
+    document.getElementById('accesoriosSeccion')?.classList.remove('d-none');
     state.filtro.categoria = null;
     document.querySelectorAll('#categorias-filtro .filter-btn').forEach(b => b.classList.remove('active'));
     document.querySelector('#categorias-filtro .filter-btn[data-cat-filter=""]')?.classList.add('active');
@@ -97,22 +110,36 @@ function seleccionarCategoriaPrincipal(cat, btnEl) {
     return;
   }
 
-  if (headerFiltros) headerFiltros.style.display = 'none';
-  const nombre = cat === 'cocinas' ? 'Cocinas' : 'Closets';
+  if (headerFiltros) headerFiltros.classList.add('d-none'); // d-flex de Bootstrap trae !important
+  // Ovalines/monomandos/cubiertas son del catálogo de baño — no aplican aquí.
+  document.getElementById('accesoriosSeccion')?.classList.add('d-none');
+  const esCocina = cat === 'cocinas';
+  const nombre   = esCocina ? 'cocina' : 'clóset';
+  const tipo     = esCocina ? 'cocina' : 'closet';
 
+  // Cocinas y clósets no tienen modelos de catálogo: se diseñan 100% a la
+  // medida del espacio y de las ideas del cliente, así que solo se piden por
+  // cotización (que incluye visita/medidas y diseño 3D).
   const grid = document.getElementById('productos-grid');
   if (grid) {
     grid.innerHTML = `
-      <div class="no-productos" style="grid-column:1/-1; text-align:center; padding:50px 20px;">
-        <i data-lucide="hammer" style="width:32px;height:32px;stroke-width:1.5;color:var(--color-primary);margin-bottom:14px;display:block;margin-left:auto;margin-right:auto;"></i>
-        <p style="font-size:18px;font-weight:600;color: var(--color-text-muted);">¡Línea de ${escHtml(nombre)} próximamente!</p>
-        <p style="color: var(--color-text-muted);margin-top:6px;">Estamos preparando nuestro catálogo de ${escHtml(nombre.toLowerCase())} a la medida. Vuelve pronto.</p>
+      <div class="a-medida-box">
+        <div class="a-medida-icono"><i data-lucide="${esCocina ? 'cooking-pot' : 'shirt'}"></i></div>
+        <h2>Tu ${escHtml(nombre)} se diseña a la medida</h2>
+        <p>No vendemos ${esCocina ? 'cocinas' : 'clósets'} de catálogo: cada proyecto se diseña para tu espacio, tus medidas y tus ideas. Así funciona:</p>
+        <ol class="a-medida-pasos">
+          <li><strong>Pide tu cotización.</strong> Cuéntanos qué buscas y, si puedes, manda medidas aproximadas y fotos del lugar o de ideas que te gusten.</li>
+          <li><strong>Te contactamos.</strong> Afinamos medidas, colores y acabados contigo (podemos ir a medir).</li>
+          <li><strong>Diseño 3D sin costo</strong> para que veas cómo quedará antes de producir (proyectos confirmados con anticipo).</li>
+          <li><strong>Fabricamos e instalamos.</strong></li>
+        </ol>
+        <a href="/solicitudes?tipo=${tipo}" class="a-medida-cta"><i data-lucide="receipt"></i> Cotizar mi ${escHtml(nombre)}</a>
       </div>`;
     _refreshIcons();
   }
 
   const contador = document.getElementById('productos-count');
-  if (contador) contador.textContent = 'Próximamente';
+  if (contador) contador.textContent = 'Diseño a la medida · solo por cotización';
 
   const paginacion = document.getElementById('paginacion-container');
   if (paginacion) paginacion.innerHTML = '';
@@ -182,7 +209,22 @@ function renderProductos() {
       : '';
     const imgPlaceholder = `<div class="placeholder-imagen" id="ph-${p.id}" ${p.imagen_principal ? 'style="display:none"' : ''}><i data-lucide="tree-pine"></i></div>`;
     const badge = p.etiqueta ? `<div class="product-badge">${escHtml(p.etiqueta)}</div>` : '';
-    const precio = formatCurrency(p.precio);
+    const medidas = p.medidas || [];
+    const precio = (medidas.length ? 'Desde ' : '') + formatCurrency(p.precio);
+    const rango = medidas.length
+      ? (medidas.length > 1 ? `${medidas[0].ancho_cm} a ${medidas[medidas.length - 1].ancho_cm} cm de ancho` : `${medidas[0].ancho_cm} cm de ancho`)
+      : '';
+    // Con varios anchos el precio depende de cuál elija: se elige en el
+    // detalle, no se agrega a ciegas desde la tarjeta.
+    const boton = medidas.length
+      ? `<a href="/detalle/${p.id}" class="btn-add-cart" style="text-decoration:none;"><i data-lucide="ruler"></i> Elegir medida</a>`
+      : `<button class="btn-add-cart"
+              data-id="${p.id}"
+              data-nombre="${escHtml(p.nombre)}"
+              data-precio="${p.precio}"
+              data-imagen="${escHtml(p.imagen_principal || '')}">
+              <i data-lucide="shopping-cart"></i> Agregar al carrito
+            </button>`;
 
     return `
       <div class="product-card">
@@ -192,18 +234,12 @@ function renderProductos() {
         </div>
         <div class="product-info">
           <div class="product-name">${escHtml(p.nombre)}</div>
-          <div class="product-category">${escHtml(p.categoria_nombre || '')}</div>
+          <div class="product-category">${escHtml(rango || p.categoria_nombre || '')}</div>
           <div class="product-price-section">
             <span class="price">${precio}</span>
           </div>
           <div class="product-actions">
-            <button class="btn-add-cart"
-              data-id="${p.id}"
-              data-nombre="${escHtml(p.nombre)}"
-              data-precio="${p.precio}"
-              data-imagen="${escHtml(p.imagen_principal || '')}">
-              <i data-lucide="shopping-cart"></i> Agregar al carrito
-            </button>
+            ${boton}
             <a href="/detalle/${p.id}" class="btn-details">Ver detalles</a>
           </div>
         </div>

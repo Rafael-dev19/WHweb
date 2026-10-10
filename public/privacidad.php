@@ -2,6 +2,8 @@
 header('Content-Type: text/html; charset=utf-8');
 require_once dirname(__DIR__) . '/includes/assets.php';
 require_once dirname(__DIR__) . '/includes/env.php';
+require_once dirname(__DIR__) . '/includes/csp.php';
+enviarCabeceraCSP();
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -22,7 +24,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
   <link rel="stylesheet" href="./assets/<?= av('css/theme-toggle.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/modal-auth.css') ?>">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+  <script src="/assets/vendor/lucide-1.55.0.min.js" defer></script>
 </head>
 <body>
 
@@ -281,7 +283,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
 <script src="/assets/<?= av('js/modal-auth.js') ?>"></script>
 <script src="/assets/<?= av('js/event-delegation.js') ?>"></script>
 <script src="/assets/<?= av('js/animations.js') ?>"></script>
-<script>
+<script nonce="<?= cspNonce() ?>">
   document.addEventListener('DOMContentLoaded', function () {
     if (window.lucide) window.lucide.createIcons();
   });

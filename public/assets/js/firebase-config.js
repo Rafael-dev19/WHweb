@@ -34,6 +34,17 @@ function initFirebase() {
 
     window.firebaseApp  = app;
     window.firebaseAuth = fb.auth();
+    // El claim {staff:true} (ver includes/firebase_admin.php) se asigna al
+    // iniciar sesión, pero el token de Firebase lo trae hasta que se renueva:
+    // en los paneles se fuerza una renovación por sesión del navegador para
+    // que las subidas a Storage (fotos de catálogo, archivos de pedido) pasen.
+    try {
+      window.firebaseAuth.onAuthStateChanged(u => {
+        if (!u || sessionStorage.getItem('wh_claims_ok')) return;
+        if (!/^\/(admin|empleado|ventas|disenador)/.test(location.pathname)) return;
+        u.getIdToken(true).then(() => sessionStorage.setItem('wh_claims_ok', '1')).catch(() => {});
+      });
+    } catch (e) { /* sin auth disponible */ }
     if (typeof fb.firestore === 'function')
       window.firebaseFirestore = fb.firestore();
     if (typeof fb.storage  === 'function')

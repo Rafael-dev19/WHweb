@@ -1,77 +1,76 @@
 rules_version = '2';
+// Personal = cuenta de Firebase con el claim {staff: true}, que el servidor
+// asigna al iniciar sesión en el panel (includes/firebase_admin.php →
+// firebaseMarcarPersonal). ANTES bastaba con "tener sesión", y los clientes
+// también tienen sesión de Firebase: cualquier cliente registrado podía subir
+// o REEMPLAZAR fotos del catálogo. Publicar estas reglas solo después de
+// configurar FIREBASE_SERVICE_ACCOUNT_FILE (si no, el claim no se asigna y el
+// personal no podría subir archivos).
 service firebase.storage {
   match /b/{bucket}/o {
-    // Productos - solo usuarios autenticados (admin/empleado) pueden subir
-    match /productos/{allPaths=**} {
-      allow read: if true;        // Lectura pública (para mostrar en catálogo)
-      allow write: if request.auth != null
-                   && request.resource.size < 5 * 1024 * 1024
-                   && request.resource.contentType in [
-                        'image/jpeg', 'image/png', 'image/webp', 'image/gif'
-                      ];
+
+    function esPersonal() {
+      return request.auth != null && request.auth.token.staff == true;
     }
-    // Proyectos - igual
+    function esImagen() {
+      return request.resource.contentType in ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    }
+
+    // Fotos del catálogo (las sube el jefe/administrador desde el panel).
+    match /productos/{allPaths=**} {
+      allow read: if true;
+      allow write: if esPersonal() && request.resource.size < 5 * 1024 * 1024 && esImagen();
+    }
+
+    // Proyectos / renders del diseñador.
     match /proyectos/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null
-                   && request.resource.size < 5 * 1024 * 1024
-                   && request.resource.contentType in [
-                        'image/jpeg', 'image/png', 'image/webp', 'image/gif'
-                      ];
+      allow write: if esPersonal() && request.resource.size < 5 * 1024 * 1024 && esImagen();
     }
-    // Diseñador: archivos de corte para CNC (VCarve → .dxf, pueden venir
-    // decenas por pedido agrupados por acabado) y el proyecto de SketchUp
-    // (.skp) adjuntos a un pedido — ninguno es imagen, por eso no entran en
-    // la regla de arriba. Se valida por extensión del nombre (el navegador
-    // no tiene un content-type estándar para estos formatos) y tamaño; ver
-    // api/pedidos.php para la validación de render+corte antes de liberar
-    // a producción.
+    // Archivos de corte (.dxf) y proyecto SketchUp (.skp) por pedido.
     match /proyectos/pedidos/{pedidoId}/{fileName} {
       allow read: if true;
-      allow write: if request.auth != null
+      allow write: if esPersonal()
                    && (
                         (fileName.matches('.*[.]dxf') && request.resource.size < 25 * 1024 * 1024)
                         || (fileName.matches('.*[.]skp') && request.resource.size < 60 * 1024 * 1024)
                       );
     }
-    // Cotizaciones - imágenes del cliente (Fase 8) y del jefe (Fase 6)
+
+    // Fotos que sube el CLIENTE al pedir una cotización: cualquier sesión,
+    // pero solo crear (no reemplazar ni borrar archivos ya subidos).
     match /cotizaciones/{cotId}/cliente/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null
-                   && request.resource.size < 5 * 1024 * 1024
-                   && request.resource.contentType in [
-                        'image/jpeg', 'image/png', 'image/webp', 'image/gif'
-                      ];
+      allow create: if request.auth != null
+                    && request.resource.size < 5 * 1024 * 1024
+                    && esImagen();
     }
-    // También sirve la nota de voz opcional del jefe al responder (audio/*).
+    // Imágenes y nota de voz del jefe/ventas al responder la cotización.
     match /cotizaciones/{cotId}/jefe/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null
+      allow write: if esPersonal()
                    && request.resource.size < 10 * 1024 * 1024
-                   && (request.resource.contentType in [
-                        'image/jpeg', 'image/png', 'image/webp', 'image/gif'
-                      ] || request.resource.contentType.matches('audio/.*'));
+                   && (esImagen() || request.resource.contentType.matches('audio/.*'));
     }
-    // Pedidos cargados a mano por jefe/diseñador (encargos de WhatsApp) —
-    // fotos de referencia y nota de voz que describen el proyecto.
-    match /pedidos/{pedidoTmp}/adjuntos/{allPaths=**} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null
-                   && request.resource.size < 15 * 1024 * 1024
-                   && (request.resource.contentType in [
-                        'image/jpeg', 'image/png', 'image/webp', 'image/gif'
-                      ] || request.resource.contentType.matches('audio/.*'));
-    }
-
-    // PDF de la propuesta de cotización (generado en el navegador del jefe).
-    // Un wildcard de segmento completo no puede mezclarse con texto literal
-    // (ej. "propuesta_{fileName}" no es válido) — el nombre del archivo ya
-    // incluye el prefijo "propuesta_" del lado de la app, no de la regla.
+    // PDF de la propuesta (generado en el navegador del jefe/ventas).
     match /cotizaciones/{cotId}/{fileName} {
       allow read: if true;
-      allow write: if request.auth != null
+      allow write: if esPersonal()
                    && request.resource.size < 8 * 1024 * 1024
                    && request.resource.contentType == 'application/pdf';
+    }
+
+    // Pedidos cargados a mano: fotos de referencia, nota de voz y foto del
+    // modelo que trajo el cliente (fuera de catálogo). Solo personal.
+    match /pedidos/{pedidoTmp}/adjuntos/{allPaths=**} {
+      allow read: if esPersonal();
+      allow write: if esPersonal()
+                   && request.resource.size < 15 * 1024 * 1024
+                   && (esImagen() || request.resource.contentType.matches('audio/.*'));
+    }
+    match /pedidos/{pedidoTmp}/modelos/{allPaths=**} {
+      allow read: if esPersonal();
+      allow write: if esPersonal() && request.resource.size < 15 * 1024 * 1024 && esImagen();
     }
   }
 }

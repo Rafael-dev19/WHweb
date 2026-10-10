@@ -95,16 +95,23 @@ define('EMAIL_VENTAS',         env('EMAIL_VENTAS',         ''));
 // ── Google Maps ───────────────────────────────────────────────────
 define('GOOGLE_MAPS_API_KEY', env('GOOGLE_MAPS_API_KEY', ''));
 
+// ── Firebase (servidor) ───────────────────────────────────────────
+// Ruta a la llave JSON de una cuenta de servicio (FUERA de public/). Con ella
+// PHP habla con Firestore/Auth como administrador y las reglas de Firebase
+// pueden quedar cerradas — ver includes/firebase_admin.php.
+define('FIREBASE_SERVICE_ACCOUNT_FILE', env('FIREBASE_SERVICE_ACCOUNT_FILE', ''));
+
 // ── Negocio ────────────────────────────────────────────────────────
 define('COSTO_INSTALACION', (float) env('COSTO_INSTALACION', 1500));
 define('COSTO_ENVIO',       (float) env('COSTO_ENVIO',       500));
 define('DIAS_FABRICACION',    (int)   env('DIAS_FABRICACION',   15));
 define('LIMITE_DIA',          (int)   env('LIMITE_DIA',          10));
-define('MARGEN_HABILES',      (int)   env('MARGEN_HABILES',        2));
+// Catálogo 2026: producción de 8 días hábiles desde que se confirma el anticipo.
+define('MARGEN_HABILES',      (int)   env('MARGEN_HABILES',        8));
 define('SITE_NAME',         'Wooden House');
 define('SITE_PHONE',        env('SITE_PHONE',   '33 1705 4017'));
 define('SITE_EMAIL',        env('SITE_EMAIL',   'contacto@woodenhouse.com'));
-define('SITE_ADDRESS',      env('SITE_ADDRESS', 'Av. Chapultepec #1234, Col. Americana, Guadalajara'));
+define('SITE_ADDRESS',      env('SITE_ADDRESS', 'Ignacio Zaragoza 36, La Florida, 45236 San Pedro Tlaquepaque, Jal.'));
 
 function sitePhoneDigits(): string {
     return preg_replace('/\D/', '', SITE_PHONE);

@@ -7,6 +7,31 @@ $id     = isset($_GET['id'])     ? sanitizeInt($_GET['id'])    : null;
 $token  = isset($_GET['token'])  ? trim($_GET['token'])         : null;
 $numero = isset($_GET['numero']) ? trim($_GET['numero'])        : null;
 
+// Taller, instalación y diseño no ven cifras (ver puedeVerMontos en
+// includes/auth.php): se quitan del JSON en el servidor — no basta con no
+// pintarlas, porque cualquiera puede abrir las DevTools — y en su lugar va
+// estado_pago, que es lo único que necesitan para no cerrar un pedido con
+// saldo por cobrar.
+function ocultarMontosPedido(array $p): array {
+    $p['estado_pago'] = estadoPagoPedido($p);
+    foreach (['subtotal', 'costo_envio', 'costo_instalacion', 'descuento', 'total', 'monto_pagado'] as $k) unset($p[$k]);
+    if (isset($p['items']) && is_array($p['items'])) {
+        $p['items'] = array_map(function ($it) {
+            unset($it['precio_unitario'], $it['total_linea'], $it['subtotal']);
+            return $it;
+        }, $p['items']);
+    }
+    unset($p['pagos']);
+    if (isset($p['cotizacion_origen']) && is_array($p['cotizacion_origen'])) {
+        unset($p['cotizacion_origen']['pdf_url']);
+        $p['cotizacion_origen']['items'] = array_map(function ($it) {
+            unset($it['precio_unitario'], $it['subtotal']);
+            return $it;
+        }, $p['cotizacion_origen']['items'] ?? []);
+    }
+    return $p;
+}
+
 // ── Pedido cargado a mano por jefe/diseñador/ventas (encargo que hoy llega
 // por WhatsApp/teléfono y se pasaba de palabra) — sin catálogo/precio, con
 // descripción libre y/o nota de voz + fotos para el diseñador. Antes del
@@ -51,9 +76,86 @@ if ($method === 'POST' && $action === 'crear_manual') {
             $pid = sanitizeInt($it['producto_id']);
             if ($pid && dbRow("SELECT id FROM productos WHERE id = ?", [$pid])) $productoId = $pid;
         }
-        $items[] = ['producto_id' => $productoId, 'nombre' => $nombreItem, 'cantidad' => $cantidad, 'unidad' => $unidad, 'precio_unitario' => $precio];
+        // "Este modelo pero en otras medidas" — viaja pegado a la línea hasta
+        // taller/instalación, en vez de perderse en la descripción general.
+        // Sin htmlspecialchars (a diferencia de sanitize()): las medidas
+        // llevan comillas de pulgadas (24") y los paneles ya escapan al pintar.
+        $medidas = mb_substr(trim(strip_tags((string)($it['medidas_personalizadas'] ?? ''))), 0, 1000);
+        // Mueble de baño: ancho, cubierta (MDF/piedra), color e info extra;
+        // modelo fuera de catálogo: foto que trajo el cliente (Firebase Storage).
+        $ancho    = sanitizeInt($it['ancho_cm'] ?? 0);
+        $cubierta = in_array($it['cubierta'] ?? '', ['mdf', 'cuarzo', 'granito', 'marmol'], true) ? $it['cubierta'] : null;
+        $color    = mb_substr(trim(strip_tags((string)($it['color'] ?? ''))), 0, 80);
+        $info     = mb_substr(trim(strip_tags((string)($it['info_extra'] ?? ''))), 0, 2000);
+        $imgRef   = trim((string)($it['imagen_referencia'] ?? ''));
+        $ovalinIt    = is_string($it['ovalin'] ?? null) && whOvalinValido($it['ovalin']) ? $it['ovalin'] : null;
+        $monomandoIt = is_string($it['monomando'] ?? null) && whMonomandoValido($it['monomando']) ? $it['monomando'] : null;
+        [$adicIt] = whAdicionalesElegidos($it['adicionales'] ?? []);
+        if ($imgRef !== '' && strpos($imgRef, 'https://firebasestorage.googleapis.com/') !== 0) $imgRef = '';
+        $items[] = [
+            'producto_id' => $productoId, 'nombre' => $nombreItem, 'cantidad' => $cantidad, 'unidad' => $unidad,
+            'precio_unitario' => $precio, 'medidas' => $medidas,
+            'ancho_cm' => ($ancho > 0 && $ancho <= 1000) ? $ancho : null,
+            'cubierta' => $cubierta, 'color' => $color, 'info_extra' => $info, 'imagen_referencia' => $imgRef,
+            // En el pedido manual el precio lo pone ventas (ya incluye los
+            // adicionales que eligió); aquí solo se guarda qué lleva.
+            'ovalin' => $ovalinIt, 'monomando' => $monomandoIt, 'adicionales' => $adicIt ? whAdicionalesTexto($adicIt) : null,
+        ];
+    }
+    $tipoProyecto = in_array($body['tipo_proyecto'] ?? '', ['bano', 'cocina', 'closet'], true) ? $body['tipo_proyecto'] : 'bano';
+
+    // Teléfonos adicionales que da el cliente (pareja, encargado de obra...).
+    $telefonosSec = [];
+    foreach ((is_array($body['telefonos_secundarios'] ?? null) ? $body['telefonos_secundarios'] : []) as $tel) {
+        $tel = sanitize(mb_substr(trim((string)$tel), 0, 30));
+        if ($tel !== '' && !in_array($tel, $telefonosSec, true)) $telefonosSec[] = $tel;
+    }
+    if (count($telefonosSec) > 10) jsonError('Máximo 10 teléfonos secundarios', 422);
+
+    // Fecha de entrega/instalación acordada con el cliente — la misma columna
+    // (fecha_estimada) que elige el cliente en el carrito, así aparece igual
+    // en el calendario y en el detalle que ve el instalador.
+    $fechaEntrega = trim((string)($body['fecha_estimada'] ?? ''));
+    if ($fechaEntrega !== '') {
+        $dt = DateTime::createFromFormat('Y-m-d', $fechaEntrega);
+        if (!$dt || $dt->format('Y-m-d') !== $fechaEntrega) jsonError('Fecha de entrega inválida', 422);
+        if ($fechaEntrega < date('Y-m-d')) jsonError('La fecha de entrega no puede ser anterior a hoy', 422);
     }
     $totalItems = array_sum(array_map(fn($it) => round($it['cantidad'] * $it['precio_unitario'], 2), $items));
+
+    // Entrega igual que en el carrito: envío (con o sin instalación) o recoger.
+    $tipoEntrega = ($body['tipo_entrega'] ?? 'envio') === 'recoger' ? 'recoger' : 'envio';
+    $incluyeInstalacion = ($tipoEntrega === 'envio' && !empty($body['incluye_instalacion'])) ? 1 : 0;
+    $direccionEnvio = $tipoEntrega === 'recoger' ? '' : sanitize($body['direccion_envio'] ?? '');
+
+    // Montos y pago: solo los captura quien cobra (jefe/ventas). Si el pedido
+    // lo carga el diseñador, se ignoran — no ve cifras (ver puedeVerMontos).
+    $veMontos     = puedeVerMontos($usuario);
+    $costoEnvio   = $veMontos && $tipoEntrega === 'envio' ? round(max(0, (float)($body['costo_envio'] ?? 0)), 2) : 0.0;
+    $costoInst    = $veMontos && $incluyeInstalacion ? round(max(0, (float)($body['costo_instalacion'] ?? 0)), 2) : 0.0;
+    $descuento    = $veMontos ? round(max(0, (float)($body['descuento'] ?? 0)), 2) : 0.0;
+    $tipoPagoSel  = $veMontos && in_array($body['tipo_pago'] ?? '', ['completo', 'anticipo', 'sin_pago'], true) ? $body['tipo_pago'] : 'sin_pago';
+    $montoRecibido = $veMontos && $tipoPagoSel !== 'sin_pago' ? round(max(0, (float)($body['monto_pagado'] ?? 0)), 2) : 0.0;
+    $metodoPago   = in_array($body['metodo_pago'] ?? '', ['efectivo', 'transferencia', 'terminal', 'tarjeta'], true) ? $body['metodo_pago'] : 'efectivo';
+    $referenciaPago = sanitize(mb_substr(trim((string)($body['referencia_pago'] ?? '')), 0, 40));
+
+    if (!$veMontos) {
+        // Sin cifras para el diseñador: los precios de las líneas tampoco cuentan.
+        foreach ($items as &$itSinPrecio) $itSinPrecio['precio_unitario'] = 0;
+        unset($itSinPrecio);
+        $totalItems = 0;
+    }
+    $totalPedido = round(max(0, $totalItems + $costoEnvio + $costoInst - $descuento), 2);
+    if ($tipoPagoSel === 'completo') {
+        if ($totalPedido <= 0) jsonError('Para "Pagó completo" captura el precio de los muebles (el total no puede ser $0).', 422);
+        $montoRecibido = $totalPedido;
+    }
+    if ($tipoPagoSel === 'anticipo' && ($montoRecibido <= 0 || $montoRecibido >= $totalPedido)) {
+        jsonError('El anticipo debe ser mayor a $0 y menor al total del pedido.', 422);
+    }
+    // tipo_pago del pedido (mismo significado que en el carrito): 'anticipo'
+    // si queda saldo por cobrar al entregar, 'completo' si se pagó todo.
+    $tipoPagoPedido = $tipoPagoSel === 'completo' ? 'completo' : 'anticipo';
 
     if ($descripcion === '' && $audioUrl === '' && !$items) {
         jsonError('Describe el proyecto por texto, adjunta una nota de voz, o agrega al menos un producto', 422);
@@ -76,29 +178,109 @@ if ($method === 'POST' && $action === 'crear_manual') {
     $numeroPedido = generarNumeroPedido();
     $tokenSeg     = generarTokenSeguimiento();
 
+    // Mismo patrón defensivo que el checkout: si la migración de
+    // telefonos_secundarios / medidas_personalizadas (ver schema.sql) aún no
+    // corrió en este servidor, el dato no se pierde — se agrega a las notas
+    // del pedido, que el instalador también ve.
+    $tieneTelSec = false;
+    try { dbRows("SELECT telefonos_secundarios FROM pedidos LIMIT 0"); $tieneTelSec = true; } catch (Exception $e) {}
+    $tieneMedidas = false;
+    try { dbRows("SELECT medidas_personalizadas FROM detalle_pedido LIMIT 0"); $tieneMedidas = true; } catch (Exception $e) {}
+    $tieneDetalleBano = false;
+    try { dbRows("SELECT ancho_cm, cubierta, color, info_extra, imagen_referencia FROM detalle_pedido LIMIT 0"); $tieneDetalleBano = true; } catch (Exception $e) {}
+    $tieneAccesoriosM = false;
+    try { dbRows("SELECT ovalin, monomando, adicionales FROM detalle_pedido LIMIT 0"); $tieneAccesoriosM = true; } catch (Exception $e) {}
+    if (!$tieneAccesoriosM) {
+        // Migración (b) pendiente: no perder lo elegido — va al texto de extra.
+        foreach ($items as &$itAcc) {
+            $extra = implode(' · ', array_filter([
+                $itAcc['ovalin'] ? "Ovalín {$itAcc['ovalin']}" : '',
+                $itAcc['monomando'] ? "Monomando {$itAcc['monomando']}" : '',
+                $itAcc['adicionales'] ? "Adicionales: {$itAcc['adicionales']}" : '',
+            ]));
+            if ($extra !== '') $itAcc['info_extra'] = trim($extra . "\n" . $itAcc['info_extra']);
+        }
+        unset($itAcc);
+    }
+    $tieneTipoProyecto = false;
+    try { dbRows("SELECT tipo_proyecto FROM pedidos LIMIT 0"); $tieneTipoProyecto = true; } catch (Exception $e) {}
+    $etiquetasCubierta = ['mdf' => 'Tapa de MDF', 'cuarzo' => 'Cuarzo', 'granito' => 'Granito', 'marmol' => 'Mármol'];
+
+    $notas = 'Pedido cargado a mano desde el panel (encargo directo/WhatsApp).';
+    if ($telefonosSec && !$tieneTelSec) {
+        $notas .= "\nOtros teléfonos: " . implode(', ', $telefonosSec);
+    }
+    if (!$tieneMedidas) {
+        foreach ($items as $it) {
+            if ($it['medidas'] !== '') $notas .= "\nMedidas personalizadas — {$it['nombre']}: {$it['medidas']}";
+        }
+    }
+    if (!$tieneDetalleBano) {
+        foreach ($items as $it) {
+            $partes = array_filter([
+                $it['ancho_cm'] ? "{$it['ancho_cm']} cm" : '',
+                $it['cubierta'] ? 'Cubierta: ' . $etiquetasCubierta[$it['cubierta']] : '',
+                $it['color'] !== '' ? "Color: {$it['color']}" : '',
+                $it['info_extra'] !== '' ? "Extra: {$it['info_extra']}" : '',
+                $it['imagen_referencia'] !== '' ? "Foto: {$it['imagen_referencia']}" : '',
+            ]);
+            if ($partes) $notas .= "\n{$it['nombre']} — " . implode(' · ', $partes);
+        }
+    }
+
+    // Aviso (no bloqueo): ventas acuerda la fecha con el cliente por teléfono,
+    // pero conviene saber si ese día ya rebasa la capacidad del taller — el
+    // mismo límite (LIMITE_DIA) que el carrito usa para ofrecer fechas.
+    $avisoCapacidad = null;
+    if ($fechaEntrega !== '') {
+        $limite   = defined('LIMITE_DIA') ? LIMITE_DIA : 10;
+        $cargaDia = (float)(dbRow(
+            "SELECT COALESCE(SUM(dp.cantidad),0) AS total
+              FROM pedidos p
+              INNER JOIN detalle_pedido dp ON dp.pedido_id = p.id
+              WHERE p.fecha_estimada = ? AND p.estado NOT IN ('cancelado','finalizado')",
+            [$fechaEntrega]
+        )['total'] ?? 0);
+        $piezas = array_sum(array_map(fn($it) => $it['unidad'] === 'pza' ? $it['cantidad'] : 1, $items)) ?: 1;
+        if ($cargaDia + $piezas > $limite) {
+            $avisoCapacidad = "Ojo: el {$fechaEntrega} ya hay {$cargaDia} mueble(s) programados (límite diario: {$limite}).";
+        }
+    }
+
     $pedidoId = 0;
     try {
         db()->beginTransaction();
 
-        $pedidoId = dbInsert('pedidos', [
+        $datosPedido = [
             'numero_pedido'     => $numeroPedido,
             'token_seguimiento' => $tokenSeg,
             'nombre_cliente'    => $nombreCliente,
             'correo_cliente'    => '',
             'telefono_cliente'  => sanitize($body['telefono_cliente'] ?? ''),
-            'tipo_entrega'      => 'envio',
-            'direccion_envio'   => sanitize($body['direccion_envio'] ?? ''),
+            'tipo_entrega'      => $tipoEntrega,
+            'direccion_envio'   => $direccionEnvio,
+            'incluye_instalacion' => $incluyeInstalacion,
+            'fecha_estimada'    => $fechaEntrega !== '' ? $fechaEntrega : null,
             'estado'            => 'pendiente',
             'disenador_id'      => $disenadorId,
             'mensaje_disenador' => $descripcion,
-            'notas'             => 'Pedido cargado a mano desde el panel (encargo directo/WhatsApp).',
+            'notas'             => $notas,
             'subtotal'          => $totalItems,
-            'total'             => $totalItems,
-        ]);
+            'costo_envio'       => $costoEnvio,
+            'costo_instalacion' => $costoInst,
+            'descuento'         => $descuento,
+            'total'             => $totalPedido,
+            'tipo_pago'         => $tipoPagoPedido,
+        ];
+        if ($tieneTipoProyecto) $datosPedido['tipo_proyecto'] = $tipoProyecto;
+        if ($tieneTelSec) {
+            $datosPedido['telefonos_secundarios'] = $telefonosSec ? json_encode($telefonosSec, JSON_UNESCAPED_UNICODE) : null;
+        }
+        $pedidoId = dbInsert('pedidos', $datosPedido);
 
         if ($items) {
             foreach ($items as $it) {
-                dbInsert('detalle_pedido', [
+                $linea = [
                     'pedido_id'       => $pedidoId,
                     'producto_id'     => $it['producto_id'],
                     'nombre_producto' => $it['nombre'],
@@ -106,7 +288,21 @@ if ($method === 'POST' && $action === 'crear_manual') {
                     'unidad'          => $it['unidad'],
                     'precio_unitario' => $it['precio_unitario'],
                     'total_linea'     => round($it['cantidad'] * $it['precio_unitario'], 2),
-                ]);
+                ];
+                if ($tieneMedidas && $it['medidas'] !== '') $linea['medidas_personalizadas'] = $it['medidas'];
+                if ($tieneDetalleBano) {
+                    $linea['ancho_cm']          = $it['ancho_cm'];
+                    $linea['cubierta']          = $it['cubierta'];
+                    $linea['color']             = $it['color'] !== '' ? $it['color'] : null;
+                    $linea['info_extra']        = $it['info_extra'] !== '' ? $it['info_extra'] : null;
+                    $linea['imagen_referencia'] = $it['imagen_referencia'] !== '' ? $it['imagen_referencia'] : null;
+                }
+                if ($tieneAccesoriosM) {
+                    $linea['ovalin']      = $it['ovalin'];
+                    $linea['monomando']   = $it['monomando'];
+                    $linea['adicionales'] = $it['adicionales'];
+                }
+                dbInsert('detalle_pedido', $linea);
             }
         } else {
             // Sin productos capturados — el detalle real (medidas, materiales)
@@ -138,6 +334,23 @@ if ($method === 'POST' && $action === 'crear_manual') {
             ]);
         }
 
+        // Pago que ventas ya recibió (mostrador/transferencia): mismo registro
+        // que un pago del sitio — queda en el historial de pagos y el pedido
+        // pasa a anticipo_pagado/pagado, listo para que el diseñador lo tome.
+        if ($montoRecibido > 0) {
+            $pagoInicial = [
+                'pedido_id'          => $pedidoId,
+                'metodo'             => $metodoPago,
+                'referencia_externa' => 'manual-' . date('YmdHis') . ($referenciaPago !== '' ? '-' . $referenciaPago : ''),
+                'monto'              => $montoRecibido,
+                'moneda'             => 'MXN',
+                'estado'             => 'aprobado',
+            ];
+            if (pagosTieneRegistradoPor()) $pagoInicial['registrado_por'] = (int)$usuario['id'];
+            dbInsert('pagos', $pagoInicial);
+            registrarPagoAprobado($pedidoId, $montoRecibido);
+        }
+
         db()->commit();
     } catch (Exception $e) {
         db()->rollBack();
@@ -149,7 +362,7 @@ if ($method === 'POST' && $action === 'crear_manual') {
         notificarPedidoManualCreado($pedidoId, $numeroPedido, $disenadorId);
     } catch (\Throwable $e) {}
 
-    jsonSuccess(['pedido_id' => $pedidoId, 'numero_pedido' => $numeroPedido]);
+    jsonSuccess(['pedido_id' => $pedidoId, 'numero_pedido' => $numeroPedido, 'aviso_capacidad' => $avisoCapacidad]);
 }
 
 // ── Ventas/jefe/administrador agrega contexto a un pedido YA existente
@@ -190,17 +403,35 @@ switch ($method) {
             if (!preg_match('/^WH-\d{4}-\d{6}$/', $numero)) {
                 jsonError('Formato de número inválido', 422);
             }
-            // Búsqueda pública sin autenticar (folio no es secreto — es correlativo).
-            // Solo los campos que /seguimiento realmente muestra: nada de correo,
-            // teléfono, dirección ni el detalle de partidas (mismo criterio que ya
-            // aplican citas.php y cotizaciones.php en su búsqueda por número).
+            // Búsqueda pública sin autenticar. El folio es CONSECUTIVO: antes
+            // devolvía nombre y total, así que recorriendo WH-…-000001, 000002…
+            // se sacaba la lista de clientes con lo que pagó cada uno. Ahora,
+            // sin prueba de propiedad solo se ve estado/fechas y el nombre
+            // enmascarado; montos (y pagar el saldo) requieren el token del
+            // correo (?t=) o la sesión del cliente dueño del pedido.
+            checkRateLimit('pedidos_folio', 30, 600);
             $pedido = dbRow(
-                "SELECT numero_pedido, nombre_cliente, estado, total,
+                "SELECT id, cliente_id, token_seguimiento, numero_pedido, nombre_cliente, estado, total,
                         tipo_pago, monto_pagado, fecha_estimada, fecha_creacion
                  FROM pedidos WHERE numero_pedido = ?",
                 [$numero]
             );
             if (!$pedido) jsonError('Pedido no encontrado', 404);
+            $tokenFolio = trim((string)($_GET['t'] ?? ''));
+            $clienteSes = sesionClienteActiva();
+            $esDueno = ($tokenFolio !== '' && hash_equals((string)$pedido['token_seguimiento'], $tokenFolio))
+                || ($clienteSes && $pedido['cliente_id'] && (int)$clienteSes['id'] === (int)$pedido['cliente_id']);
+            unset($pedido['token_seguimiento'], $pedido['cliente_id']);
+            if (!$esDueno) {
+                $pedido = [
+                    'numero_pedido'  => $pedido['numero_pedido'],
+                    'nombre_cliente' => enmascararNombre($pedido['nombre_cliente']),
+                    'estado'         => $pedido['estado'],
+                    'fecha_estimada' => $pedido['fecha_estimada'],
+                    'fecha_creacion' => $pedido['fecha_creacion'],
+                    'parcial'        => true,
+                ];
+            }
             jsonSuccess(['pedido' => $pedido]);
         }
 
@@ -224,7 +455,7 @@ switch ($method) {
         }
 
         if ($id) {
-            requerirPersonal();
+            $usuarioGet = requerirPersonal();
             $pedido = dbRow("SELECT p.*, p.estado, p.total FROM pedidos p WHERE p.id = ?", [$id]);
             if (!$pedido) jsonError('Pedido no encontrado', 404);
             $items = dbRows(
@@ -296,10 +527,11 @@ switch ($method) {
             } catch (\Throwable $e) {
                 // Tablas de la Fase 6 aún no migradas — no bloquear el detalle del pedido.
             }
+            if (!puedeVerMontos($usuarioGet)) $pedido = ocultarMontosPedido($pedido);
             jsonSuccess(['pedido' => $pedido]);
         }
 
-        requerirPersonal();
+        $usuarioGet = requerirPersonal();
         $page   = max(1, sanitizeInt($_GET['page'] ?? 1));
         $limit  = min(50, max(1, sanitizeInt($_GET['limit'] ?? 20)));
         $offset = ($page - 1) * $limit;
@@ -338,6 +570,7 @@ switch ($method) {
             );
             $pedidos = array_map(fn($p) => array_merge(['tipo_pago' => 'completo', 'monto_pagado' => 0], $p), $pedidos);
         }
+        if (!puedeVerMontos($usuarioGet)) $pedidos = array_map('ocultarMontosPedido', $pedidos);
         jsonSuccess(['pedidos' => $pedidos, 'paginacion' => getPaginacion($total, $page, $limit)]);
         break;
 
@@ -374,9 +607,28 @@ switch ($method) {
             $prod   = dbRow("SELECT id, nombre, precio_base, stock_disponible FROM productos WHERE id = ? AND activo = 1", [$prodId]);
             if (!$prod) jsonError("Producto ID $prodId no encontrado o inactivo", 422);
             $precioUnit = (float)$prod['precio_base'];
+            // Catálogo 2026: el precio depende del ancho elegido. Siempre se
+            // toma de producto_medidas — nunca del precio que mande el navegador.
+            $ancho = sanitizeInt($item['ancho_cm'] ?? 0) ?: null;
+            $medidasProd = [];
+            try { $medidasProd = dbRows("SELECT ancho_cm, precio FROM producto_medidas WHERE producto_id = ?", [$prodId]); } catch (\Throwable $e) {}
+            if ($medidasProd) {
+                $fila = $ancho ? current(array_filter($medidasProd, fn($m) => (int)$m['ancho_cm'] === $ancho)) : false;
+                if (!$fila) jsonError("Elige un ancho válido para {$prod['nombre']}", 422);
+                $precioUnit = (float)$fila['precio'];
+            } else {
+                $ancho = null;
+            }
+            // Accesorios (includes/accesorios.php): ovalín y monomando van
+            // incluidos (solo se valida el código); los adicionales suman.
+            $ovalin    = is_string($item['ovalin'] ?? null) && whOvalinValido($item['ovalin']) ? $item['ovalin'] : null;
+            $monomando = is_string($item['monomando'] ?? null) && whMonomandoValido($item['monomando']) ? $item['monomando'] : null;
+            [$adicionales, $costoAdic] = whAdicionalesElegidos($item['adicionales'] ?? []);
+            $precioUnit += $costoAdic;
             $subProd    = $precioUnit * $cant;
             $subtotal  += $subProd;
-            $itemsData[] = ['producto' => $prod, 'cantidad' => $cant, 'precio' => $precioUnit, 'subtotal' => $subProd];
+            $itemsData[] = ['producto' => $prod, 'cantidad' => $cant, 'precio' => $precioUnit, 'subtotal' => $subProd, 'ancho_cm' => $ancho,
+                            'ovalin' => $ovalin, 'monomando' => $monomando, 'adicionales' => $adicionales];
         }
 
         $costoEnvio       = $tipoEntrega === 'envio' ? COSTO_ENVIO : 0;
@@ -386,7 +638,34 @@ switch ($method) {
         $costoInstalacion = !empty($body['incluye_instalacion'])
             ? (COSTO_INSTALACION * $totalMuebles)
             : 0;
-        $descuento        = max(0, sanitizeFloat($body['descuento'] ?? 0));
+        // El descuento NUNCA se toma tal cual del navegador (antes sí: bastaba
+        // mandar "descuento": 9000 para pagar casi nada y que el pedido quedara
+        // "pagado"). Solo se aplica si viene un código de oferta vigente, con
+        // la misma regla que api/ofertas.php?action=validar.
+        $descuento = 0.0;
+        $ofertaAplicada = null;
+        $codigoDesc = strtoupper(trim((string)($body['codigo_descuento'] ?? '')));
+        if ($codigoDesc !== '' && preg_match('/^[A-Z0-9_-]{2,40}$/', $codigoDesc)) {
+            $hoyDesc = date('Y-m-d');
+            $ofertaAplicada = dbRow(
+                "SELECT * FROM ofertas WHERE codigo = ? AND activo = 1
+                   AND (fecha_inicio IS NULL OR fecha_inicio <= ?)
+                   AND (fecha_fin IS NULL OR fecha_fin >= ?)
+                   AND (usos_maximos IS NULL OR usos_actuales < usos_maximos) LIMIT 1",
+                [$codigoDesc, $hoyDesc, $hoyDesc]
+            );
+            if ($ofertaAplicada) {
+                $baseDesc = $subtotal + $costoEnvio + $costoInstalacion;
+                if ($ofertaAplicada['tipo'] === 'porcentaje') {
+                    $descuento = round($subtotal * min(100, max(0, (float)$ofertaAplicada['valor'])) / 100, 2);
+                } elseif ($ofertaAplicada['tipo'] === 'monto_fijo') {
+                    $descuento = min((float)$ofertaAplicada['valor'], $subtotal);
+                } elseif ($ofertaAplicada['tipo'] === 'envio_gratis') {
+                    $descuento = $costoEnvio;
+                }
+                $descuento = max(0, min($descuento, $baseDesc));
+            }
+        }
         $total            = $subtotal + $costoEnvio + $costoInstalacion - $descuento;
 
         $tipoPago = ($body['tipo_pago'] ?? 'completo') === 'anticipo' ? 'anticipo' : 'completo';
@@ -487,15 +766,36 @@ switch ($method) {
                 }
             }
 
+            $tieneAncho = false;
+            try { dbRows("SELECT ancho_cm FROM detalle_pedido LIMIT 0"); $tieneAncho = true; } catch (Exception $e) {}
+            $tieneAccesorios = false;
+            try { dbRows("SELECT ovalin, monomando, adicionales FROM detalle_pedido LIMIT 0"); $tieneAccesorios = true; } catch (Exception $e) {}
             foreach ($itemsData as $item) {
-                dbInsert('detalle_pedido', [
+                $linea = [
                     'pedido_id'       => $pedidoId,
                     'producto_id'     => $item['producto']['id'],
-                    'nombre_producto' => $item['producto']['nombre'],
+                    'nombre_producto' => $item['producto']['nombre'] . ($item['ancho_cm'] ? " — {$item['ancho_cm']} cm" : ''),
                     'cantidad'        => $item['cantidad'],
                     'precio_unitario' => $item['precio'],
                     'total_linea'     => $item['subtotal'],
-                ]);
+                ];
+                if ($tieneAncho && $item['ancho_cm']) $linea['ancho_cm'] = $item['ancho_cm'];
+                if ($tieneAccesorios) {
+                    $linea['ovalin']      = $item['ovalin'];
+                    $linea['monomando']   = $item['monomando'];
+                    $linea['adicionales'] = $item['adicionales'] ? whAdicionalesTexto($item['adicionales']) : null;
+                } elseif ($item['ovalin'] || $item['monomando'] || $item['adicionales']) {
+                    $linea['nombre_producto'] .= ' (' . implode(' · ', array_filter([
+                        $item['ovalin'] ? "Ovalín {$item['ovalin']}" : '',
+                        $item['monomando'] ? "Monomando {$item['monomando']}" : '',
+                        whAdicionalesTexto($item['adicionales']),
+                    ])) . ')';
+                }
+                dbInsert('detalle_pedido', $linea);
+            }
+
+            if ($ofertaAplicada && $descuento > 0) {
+                dbQuery("UPDATE ofertas SET usos_actuales = usos_actuales + 1 WHERE id = ?", [(int)$ofertaAplicada['id']]);
             }
 
             db()->commit();
@@ -561,6 +861,13 @@ switch ($method) {
             $permitidos = $transicionesValidas[$estadoActual] ?? [];
             if (!in_array($body['estado'], $permitidos, true)) {
                 jsonError("No se puede cambiar de '$estadoActual' a '{$body['estado']}'", 422);
+            }
+            // Un pedido solo se da por terminado cuando ya está pagado completo:
+            // si fue con anticipo, quien entrega/instala primero confirma que el
+            // cliente pagó el resto (pagos.php?action=marcar_saldo_manual) — el
+            // mismo cierre para pedidos del sitio y cargados a mano.
+            if ($body['estado'] === 'finalizado' && estadoPagoPedido($pedido) !== 'liquidado') {
+                jsonError('El cliente aún tiene saldo pendiente. Confirma que pagó el resto antes de finalizar el pedido.', 422);
             }
 
             if ($body['estado'] === 'listo_para_produccion') {
@@ -643,8 +950,21 @@ switch ($method) {
 
             $update['estado'] = $body['estado'];
         }
-        if (isset($body['fecha_estimada'])) $update['fecha_estimada'] = $body['fecha_estimada'];
-        if (isset($body['notas']))           $update['notas']          = sanitize($body['notas']);
+        // Fecha de entrega y notas: las acuerda ventas/jefe con el cliente —
+        // taller, instalación y diseño solo avanzan el estado (antes cualquier
+        // personal podía cambiarlas y la fecha ni siquiera se validaba).
+        if (isset($body['fecha_estimada']) || isset($body['notas'])) {
+            if (!in_array($usuarioActual['rol'], ['jefe', 'administrador', 'ventas'], true)) {
+                jsonError('Solo ventas o el jefe pueden cambiar la fecha o las notas del pedido', 403);
+            }
+        }
+        if (isset($body['fecha_estimada'])) {
+            $fe = (string)$body['fecha_estimada'];
+            $dtFe = DateTime::createFromFormat('Y-m-d', $fe);
+            if (!$dtFe || $dtFe->format('Y-m-d') !== $fe) jsonError('Fecha de entrega inválida', 422);
+            $update['fecha_estimada'] = $fe;
+        }
+        if (isset($body['notas'])) $update['notas'] = sanitize(mb_substr((string)$body['notas'], 0, 2000));
 
         if ($update) {
             try {

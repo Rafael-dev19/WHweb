@@ -32,7 +32,7 @@ if (empty($_SESSION['cliente_email_verified'])) {
   <link rel="stylesheet" href="./assets/<?= av('css/animations.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/modal-auth.css') ?>">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+  <script src="/assets/vendor/lucide-1.55.0.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous" defer></script>
 </head>
 <body>
@@ -189,6 +189,9 @@ if (empty($_SESSION['cliente_email_verified'])) {
 
         <div class="form-section">
           <h2 class="section-title"><i data-lucide="ruler"></i> Especificaciones del Proyecto</h2>
+          <div class="help-text" style="margin:-4px 0 12px;">
+            Las <strong>cocinas y clósets</strong> se diseñan a la medida y solo se piden por aquí. ¿Buscas un <strong>mueble de baño</strong>? Si es un modelo del catálogo (60 a 120 cm) puedes <a href="/catalogo">comprarlo directo</a>; cotiza aquí si lo quieres en otra medida, con cubierta de piedra o con un diseño propio.
+          </div>
           <div class="row g-3">
             <div class="col-md-6 form-group">
               <label>Tipo de proyecto <span class="required">*</span></label>
@@ -196,7 +199,7 @@ if (empty($_SESSION['cliente_email_verified'])) {
                 <option value="">Selecciona una opción</option>
                 <option value="cocina">Cocina</option>
                 <option value="closet">Closet</option>
-                <option value="lavamanos">Lavamanos</option>
+                <option value="lavamanos">Mueble de baño (otra medida o diseño especial)</option>
                 <option value="otro">Otro</option>
               </select>
             </div>
@@ -224,7 +227,7 @@ if (empty($_SESSION['cliente_email_verified'])) {
 
             <div class="col-12 form-group">
               <label>Descripción — ¿cómo te imaginas tu proyecto? <span class="required">*</span></label>
-              <textarea name="descripcion" placeholder="Describe tu proyecto: estilo, colores, materiales, funcionalidades (cajones, puertas, iluminación), etc." required maxlength="1000"></textarea>
+              <textarea name="descripcion" placeholder="Describe tu proyecto: estilo, colores y acabados, distribución (cajones, puertas, entrepaños), electrodomésticos que van, iluminación, etc." required maxlength="1000"></textarea>
               <div class="help-text">Entre más detalles proporciones, más precisa será la cotización</div>
             </div>
 
@@ -438,7 +441,7 @@ if (empty($_SESSION['cliente_email_verified'])) {
   <?php if (defined('GOOGLE_MAPS_API_KEY') && GOOGLE_MAPS_API_KEY): ?>
   <script src="https://maps.googleapis.com/maps/api/js?key=<?= htmlspecialchars(GOOGLE_MAPS_API_KEY) ?>&libraries=places&callback=initMapsPickerReady&loading=async" async defer></script>
   <?php endif; ?>
-  <script>
+  <script nonce="<?= cspNonce() ?>">
     document.addEventListener('DOMContentLoaded', function () {
       if (window.lucide) window.lucide.createIcons();
     });

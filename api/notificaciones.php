@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/_helpers.php';
 
-requerirPersonal();
+$usuarioNotif = requerirPersonal();
 $method = requestMethod();
 $id     = trim($_GET['id'] ?? '');
 
@@ -10,20 +10,9 @@ switch ($method) {
         $destinosValidos = ['todos', 'admin', 'empleado'];
         $destino = trim($_GET['destino'] ?? 'todos');
         if (!in_array($destino, $destinosValidos, true)) $destino = 'todos';
-        $projectId = FIREBASE_PROJECT_ID;
-        $apiKey    = FIREBASE_API_KEY;
-
-        $url = "https://firestore.googleapis.com/v1/projects/{$projectId}/databases/(default)/documents/notificaciones?key={$apiKey}&pageSize=50&orderBy=fecha+desc";
-
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT        => 10,
-            CURLOPT_SSL_VERIFYPEER => true,
-        ]);
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        $r = firestoreRequest('GET', 'notificaciones', ['pageSize' => 50, 'orderBy' => 'fecha desc']);
+        $httpCode = $r['code'];
+        $response = $r['body'];
 
         $notificaciones = [];
         if ($httpCode === 200) {
@@ -41,6 +30,11 @@ switch ($method) {
                     'leida'      => ($fields['leida']['booleanValue'] ?? false) === true,
                     'fecha'      => $fields['fecha']['timestampValue'] ?? $fields['fecha']['stringValue'] ?? '',
                 ];
+                // Sin permiso de montos (taller/instalación/diseño/administrador):
+                // quitar las cifras ("… por $20,900.00") del texto del aviso.
+                if (!puedeVerMontos($usuarioNotif)) {
+                    $notif['mensaje'] = preg_replace('/\s*por\s*\$\s*[\d.,]+/u', '', $notif['mensaje']);
+                }
                 if (!$notif['leida'] && ($destino === 'todos' || $notif['destino'] === $destino || $notif['destino'] === 'todos')) {
                     $notificaciones[] = $notif;
                 }

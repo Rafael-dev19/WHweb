@@ -69,6 +69,11 @@ function checkURLParams() {
     const target = document.getElementById(`tab-${tab}`);
     if (target) target.classList.add('active');
   }
+  // ?tipo=cocina|closet (enlaces del inicio y del catálogo): dejar el tipo
+  // de proyecto ya elegido en el formulario de cotización.
+  const tipo = params.get('tipo');
+  const sel  = document.querySelector('#formCotizacion [name="tipoMueble"]');
+  if (sel && tipo && [...sel.options].some(o => o.value === tipo)) sel.value = tipo;
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────

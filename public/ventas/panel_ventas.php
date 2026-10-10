@@ -38,12 +38,12 @@ unset($_usuario);
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
   <link rel="stylesheet" href="../assets/<?= av('css/panel_ventas.css') ?>">
   <link rel="stylesheet" href="../assets/<?= av('css/animations.css') ?>">
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+  <script src="/assets/vendor/lucide-1.55.0.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous" defer></script>
 </head>
 
 <body>
-  <script>window.WH_ES_JEFE = false; window.WH_ROL = "ventas"; window.WH_VISTA_COMPLETA = false;</script>
+  <script nonce="<?= cspNonce() ?>">window.WH_ES_JEFE = false; window.WH_ROL = "ventas"; window.WH_VISTA_COMPLETA = false;</script>
   <div class="header">
     <div class="header-left">
     <button class="menu-toggle" id="menuToggle" aria-label="Abrir menú" aria-expanded="false">
@@ -396,6 +396,8 @@ unset($_usuario);
       </div>
     </div>
   </div>
+
+  <script src="../assets/<?= av('js/metodo-cobro.js') ?>"></script>
 
   <script src="../assets/<?= av('js/panel_ventas.js') ?>"></script>
   <script src="../assets/<?= av('js/voice-recorder.js') ?>"></script>

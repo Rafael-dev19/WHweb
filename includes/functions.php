@@ -142,7 +142,7 @@ function appLog(string $level, string $message, array $context = []): void {
             $body    = "Error en Wooden House\n\n"
                      . $line . "\n\n"
                      . "URL: " . ($_SERVER['REQUEST_URI'] ?? 'CLI') . "\n"
-                     . "IP:  " . ($_SERVER['REMOTE_ADDR'] ?? '-') . "\n"
+                     . "IP:  " . clienteIp() . "\n"
                      . "APP: " . APP_URL;
             @mail(
                 DESARROLLADOR_EMAIL,
@@ -287,4 +287,32 @@ function calcularFechaMinHabil(DateTime $desde, int $dias): DateTime {
         if ($dow <= 5 && !isset($bloqSet[$ymd])) $contados++;
     }
     return $fecha;
+}
+
+// Folios públicos (WH-/CIT-/COT-) son consecutivos: cualquiera puede probar
+// números seguidos. En esas búsquedas el nombre se enmascara ("Juan P.") para
+// que el folio sirva para confirmar un estado, no para sacar la lista de
+// clientes. Los datos completos solo con el token del correo o la sesión del
+// cliente dueño.
+function enmascararNombre(string $nombre): string {
+    $partes = preg_split('/\s+/u', trim(html_entity_decode($nombre, ENT_QUOTES, 'UTF-8')));
+    if (!$partes || $partes[0] === '') return '';
+    $out = $partes[0];
+    if (isset($partes[1]) && $partes[1] !== '') $out .= ' ' . mb_substr($partes[1], 0, 1) . '.';
+    return $out;
+}
+
+// IP real del visitante. El sitio corre detrás de un túnel de Cloudflare:
+// PHP ve como REMOTE_ADDR la IP local del túnel, la MISMA para todos — así
+// los límites de intentos eran compartidos por todo el mundo (5 logins de
+// cualquiera bloqueaban a todos). Solo se confía en CF-Connecting-IP cuando
+// la conexión viene del túnel local; si alguien la falsifica desde fuera,
+// REMOTE_ADDR no es local y se ignora.
+function clienteIp(): string {
+    $remota = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    $cf = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? '';
+    if (in_array($remota, ['127.0.0.1', '::1'], true) && $cf !== '' && filter_var($cf, FILTER_VALIDATE_IP)) {
+        return $cf;
+    }
+    return $remota;
 }

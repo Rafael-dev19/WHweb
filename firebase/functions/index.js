@@ -427,6 +427,97 @@ ${(pedido.metodo_pago || pedido.referencia_pago) ? `
   return emailWrapper('Pedido Confirmado', contenido);
 }
 
+// ── emailCopiaPedidoInterna ───────────────────────────────────────
+// Copia completa de un pedido nuevo para jefe y ventas (los únicos roles que
+// ven cifras). Taller/instalación/diseño reciben solo un aviso corto.
+function escHtml(v) {
+  return String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+const CUBIERTAS = { mdf: 'Tapa de MDF', cuarzo: 'Cuarzo', granito: 'Granito', marmol: 'Mármol' };
+function detalleLinea(it) {
+  const datos = [
+    it.ancho_cm ? `Ancho: ${escHtml(it.ancho_cm)} cm` : '',
+    it.cubierta ? `Cubierta: ${escHtml(CUBIERTAS[it.cubierta] || it.cubierta)}` : '',
+    it.color ? `Color: ${escHtml(it.color)}` : '',
+    it.ovalin ? `Ovalín: ${escHtml(it.ovalin)}` : '',
+    it.monomando ? `Monomando: ${escHtml(it.monomando)}` : '',
+    it.adicionales ? `Adicionales: ${escHtml(it.adicionales)}` : '',
+  ].filter(Boolean).join(' · ');
+  return `${datos ? `<div style="margin-top:4px;font-size:12px;color:#666;">${datos}</div>` : ''}`
+    + `${it.medidas ? `<div style="margin-top:4px;font-size:12px;color:#8B6914;white-space:pre-line;"><strong>Medidas:</strong> ${escHtml(it.medidas)}</div>` : ''}`
+    + `${it.info_extra ? `<div style="margin-top:4px;font-size:12px;color:#555;white-space:pre-line;"><strong>Información extra:</strong> ${escHtml(it.info_extra)}</div>` : ''}`
+    + `${it.imagen_referencia ? `<div style="margin-top:6px;"><a href="${escHtml(it.imagen_referencia)}" style="color:#8B6914;font-size:12px;">Ver foto del modelo</a></div>` : ''}`;
+}
+function emailCopiaPedidoInterna(pedido) {
+  const fmt = (n) => `$${Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+  const total  = Number(pedido.total || 0);
+  const pagado = Number(pedido.monto_pagado || 0);
+  const resta  = Math.max(0, total - pagado);
+  const estadoPago = pagado <= 0.009 ? 'Sin pago registrado'
+    : (resta <= 0.01 ? 'Pagado completo' : 'Anticipo — falta pagar una parte');
+  const entrega = pedido.tipo_entrega === 'recoger'
+    ? 'Pasa a recogerlo al taller'
+    : (pedido.incluye_instalacion ? 'Entrega e instalación' : 'Solo entrega a domicilio');
+  const tels = [pedido.telefono_cliente, ...(pedido.telefonos_secundarios || [])].filter(Boolean);
+  const fila = (k, v) => `<tr><td style="padding:8px 12px;border-bottom:1px solid #f0e8d8;color:#666;width:38%;">${k}</td><td style="padding:8px 12px;border-bottom:1px solid #f0e8d8;font-weight:600;">${v}</td></tr>`;
+  const itemsHtml = (pedido.items || []).map(it => `
+    <tr>
+      <td style="padding:8px 12px;border-bottom:1px solid #f0e8d8;">${escHtml(it.nombre)}${detalleLinea(it)}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #f0e8d8;text-align:center;">${it.cantidad} ${it.unidad && it.unidad !== 'pza' ? escHtml(it.unidad) : ''}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #f0e8d8;text-align:right;">${fmt(it.precio_unitario)}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #f0e8d8;text-align:right;font-weight:600;">${fmt(it.total_linea || it.precio_unitario * it.cantidad)}</td>
+    </tr>`).join('');
+  const appUrl = process.env.APP_URL || 'https://muebleswh.com';
+
+  const contenido = `
+<h2 style="color:#8B6914;margin-top:0;">Nuevo pedido ${escHtml(pedido.numero_pedido)}</h2>
+<p style="color:#555;margin-top:0;">${pedido.origen === 'manual' ? 'Cargado a mano desde el panel.' : 'Hecho por el cliente desde el sitio.'} Esta copia solo les llega al jefe y a ventas.</p>
+
+<h3 style="color:#5C3D11;font-size:15px;margin:22px 0 8px;">Cliente y entrega</h3>
+<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#faf6f0;border-radius:6px;">
+  ${fila('Proyecto', { bano: 'Mueble de baño', cocina: 'Cocina a la medida', closet: 'Clóset a la medida' }[pedido.tipo_proyecto] || 'Mueble de baño')}
+  ${fila('Cliente', escHtml(pedido.nombre_cliente))}
+  ${fila('Teléfono(s)', tels.length ? tels.map(escHtml).join('<br>') : '—')}
+  ${pedido.correo_cliente ? fila('Correo', escHtml(pedido.correo_cliente)) : ''}
+  ${fila('Entrega', entrega)}
+  ${pedido.tipo_entrega !== 'recoger' ? fila('Dirección', escHtml(pedido.direccion_envio) || '—') : ''}
+  ${fila(pedido.tipo_entrega === 'recoger' ? 'Fecha en que recoge' : 'Fecha de entrega / instalación', escHtml(pedido.fecha_estimada) || 'Por confirmar')}
+</table>
+
+<h3 style="color:#5C3D11;font-size:15px;margin:22px 0 8px;">Muebles</h3>
+<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+  <tr style="background:#f0e8d8;">
+    <th style="padding:10px 12px;text-align:left;color:#5C3D11;">Mueble</th>
+    <th style="padding:10px 12px;text-align:center;color:#5C3D11;">Cant.</th>
+    <th style="padding:10px 12px;text-align:right;color:#5C3D11;">Precio c/u</th>
+    <th style="padding:10px 12px;text-align:right;color:#5C3D11;">Importe</th>
+  </tr>
+  ${itemsHtml || '<tr><td colspan="4" style="padding:10px 12px;color:#888;">Sin muebles capturados — ver indicaciones para el diseñador.</td></tr>'}
+</table>
+
+<h3 style="color:#5C3D11;font-size:15px;margin:22px 0 8px;">Pago</h3>
+<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#faf6f0;border-radius:6px;">
+  ${fila('Subtotal muebles', fmt(pedido.subtotal))}
+  ${Number(pedido.costo_envio) ? fila('Envío', fmt(pedido.costo_envio)) : ''}
+  ${Number(pedido.costo_instalacion) ? fila('Instalación', fmt(pedido.costo_instalacion)) : ''}
+  ${Number(pedido.descuento) ? fila('Descuento', '-' + fmt(pedido.descuento)) : ''}
+  ${fila('<strong>Total</strong>', `<span style="color:#8B6914;font-size:17px;">${fmt(total)}</span>`)}
+  ${fila('Pagado', fmt(pagado))}
+  ${fila('Resta por pagar', `<span style="color:${resta > 0.01 ? '#b45309' : '#3d8b3d'};">${fmt(resta)}</span>`)}
+  ${fila('Estado', estadoPago)}
+</table>
+
+${pedido.mensaje_disenador ? `<h3 style="color:#5C3D11;font-size:15px;margin:22px 0 8px;">Indicaciones para el diseñador</h3>
+<p style="color:#555;white-space:pre-line;margin:0;">${escHtml(pedido.mensaje_disenador)}</p>` : ''}
+
+<div style="text-align:center;margin:28px 0 6px;">
+  <a href="${appUrl}" style="background:#8B6914;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:6px;font-size:14px;font-weight:bold;display:inline-block;font-family:Georgia,serif;">Abrir el panel</a>
+</div>`;
+
+  return emailWrapper(`Nuevo pedido ${pedido.numero_pedido || ''}`, contenido);
+}
+
 // ── emailEstadoPedido ─────────────────────────────────────────────
 function emailEstadoPedido(pedido, estadoAnterior) {
   const folio  = pedido.numero_pedido  || '';
@@ -728,9 +819,14 @@ exports.onNuevaNotificacion = onDocumentCreated(
       }
     }
 
-    if (data.correos_jefe_json) {
+    // correos_aviso_json: mismo aviso corto para diseño/taller/instalación
+    // (ver _avisoCortoPersonal en includes/notifications.php).
+    if (data.correos_jefe_json || data.correos_aviso_json) {
       try {
-        const correosJefe = JSON.parse(data.correos_jefe_json);
+        const correosJefe = [
+          ...JSON.parse(data.correos_jefe_json || '[]'),
+          ...JSON.parse(data.correos_aviso_json || '[]'),
+        ];
         const clickUrl = data.push_url ? `${process.env.APP_URL || ''}${data.push_url}` : (process.env.APP_URL || '');
         if (Array.isArray(correosJefe)) {
           await Promise.all(correosJefe.map(correoJefe =>
@@ -752,6 +848,26 @@ exports.onNuevaNotificacion = onDocumentCreated(
       } catch (e) {
         console.error('[CF] Error procesando correos_jefe_json:', e.message);
       }
+    }
+
+    // ── copia_pedido_interna → copia completa para jefe y ventas ──────
+    if (tipo === 'copia_pedido_interna') {
+      let pedido = {};
+      try { pedido = JSON.parse(data.datos_pedido || '{}'); } catch (e) {}
+      let correos = [];
+      try { correos = JSON.parse(data.correos_copia_json || '[]'); } catch (e) {}
+      await Promise.all(correos.map(correo =>
+        sendEmail({
+          from: emails.pedidos, fromName: 'WOODEN HOUSE PEDIDOS',
+          to:      correo,
+          replyTo: emails.replyTo,
+          subject: `Nuevo pedido ${pedido.numero_pedido || ''} — ${pedido.nombre_cliente || ''}`,
+          html:    emailCopiaPedidoInterna(pedido),
+          text:    `Nuevo pedido ${pedido.numero_pedido || ''} de ${pedido.nombre_cliente || ''}. Total: $${pedido.total || 0} MXN. Pagado: $${pedido.monto_pagado || 0} MXN.`,
+        }).then(() => console.log(`[CF] emailCopiaPedidoInterna → ${correo}`))
+          .catch(e => console.error('[CF] Error emailCopiaPedidoInterna:', e.message))
+      ));
+      return;
     }
 
     // ── nuevo_pedido → emailPedidoConfirmado (cliente) ──────────────

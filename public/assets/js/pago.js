@@ -51,9 +51,19 @@ function ajustarUIParaModoSaldo() {
 async function cargarResumenSaldo(numeroPedido) {
   ajustarUIParaModoSaldo();
   try {
-    const res  = await fetch(`${API_BASE}/pedidos.php?numero=${encodeURIComponent(numeroPedido)}`);
+    const t    = new URLSearchParams(window.location.search).get('t') || '';
+    const res  = await fetch(`${API_BASE}/pedidos.php?numero=${encodeURIComponent(numeroPedido)}${t ? `&t=${encodeURIComponent(t)}` : ''}`);
     const data = await res.json();
     if (!data.success || !data.pedido) throw new Error('Pedido no encontrado');
+    if (data.pedido.parcial) {
+      // Sin el enlace del correo ni sesión del dueño no se muestran montos.
+      const notice = document.getElementById('noticeBox');
+      notice.innerHTML = '<strong><i data-lucide="lock"></i> Para pagar el saldo abre el enlace de seguimiento que te llegó por correo, o inicia sesión con tu cuenta.</strong>';
+      notice.style.display = 'block';
+      document.getElementById('btnStripe')?.setAttribute('disabled', true);
+      _refreshIcons();
+      return;
+    }
 
     const p     = data.pedido;
     const saldo = Math.round((p.total - (p.monto_pagado || 0)) * 100) / 100;
@@ -377,7 +387,8 @@ async function crearPedidoEnBD() {
       municipio_envio:     orderData.deliveryData.municipio || '',
       cp_envio:            orderData.deliveryData.cp        || '',
       incluye_instalacion: !!orderData.deliveryData.instalacion,
-      items:               orderData.carrito.map(i => ({ producto_id: i.id, cantidad: i.cantidad })),
+      items:               orderData.carrito.map(i => ({ producto_id: i.id, cantidad: i.cantidad, ancho_cm: i.ancho_cm || null,
+                                                            ovalin: i.ovalin || null, monomando: i.monomando || null, adicionales: i.adicionales || [] })),
       descuento:           orderData.descuento || 0,
       tipo_pago:           orderData.tipoPago || 'completo',
       fecha_estimada:      orderData.fechaEstimada  || '',

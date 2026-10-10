@@ -3,7 +3,14 @@
 define('WH_API_REQUEST', true);
 require_once dirname(__DIR__) . '/includes/auth.php';
 
-requerirAutenticacion();
+$usuarioSse = requerirAutenticacion();
+
+// Liberar el candado de la sesión YA: PHP bloquea el archivo de sesión hasta
+// que el script termina, y este stream no termina nunca — sin esto, toda
+// otra petición del mismo usuario (buscar modelos, guardar un pedido,
+// abrir un detalle) se quedaba esperando indefinidamente ("Buscando...").
+// El stream solo lee de la BD; no vuelve a escribir en la sesión.
+session_write_close();
 
 // Headers SSE
 header('Content-Type: text/event-stream; charset=UTF-8');
@@ -66,6 +73,7 @@ while (!connection_aborted()) {
         );
         if ($p) {
             $lastPedido = (int)$p['id'];
+            if (!puedeVerMontos($usuarioSse)) unset($p['total']); // ver includes/auth.php
             sseEvent('nuevo_pedido', $p);
         }
 

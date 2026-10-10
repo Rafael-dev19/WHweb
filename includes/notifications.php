@@ -5,17 +5,14 @@ if (!defined('WH_LOADED')) {
     require_once __DIR__ . '/config.php';
     require_once __DIR__ . '/functions.php';
 }
+require_once __DIR__ . '/firebase_admin.php';
 
 // ================================================================
 // FIRESTORE REST API
 // ================================================================
 
 function crearNotificacionFirestore(string $tipo, string $titulo, string $mensaje, array $extra = []): bool {
-    $projectId = FIREBASE_PROJECT_ID;
-    $apiKey    = FIREBASE_API_KEY;
-    if (empty($projectId) || empty($apiKey)) return false;
-
-    $url = "https://firestore.googleapis.com/v1/projects/{$projectId}/databases/(default)/documents/notificaciones?key={$apiKey}";
+    if (empty(FIREBASE_PROJECT_ID) || (!firebaseUsaCuentaServicio() && empty(FIREBASE_API_KEY))) return false;
 
     $doc = ['fields' => [
         'tipo'    => ['stringValue' => $tipo],
@@ -32,45 +29,22 @@ function crearNotificacionFirestore(string $tipo, string $titulo, string $mensaj
         elseif (is_bool($v))  $doc['fields'][$k] = ['booleanValue' => $v];
     }
 
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_POST           => true,
-        CURLOPT_POSTFIELDS     => json_encode($doc),
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
-        CURLOPT_TIMEOUT        => 5,
-    ]);
-    $body = curl_exec($ch);
-    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $err  = curl_error($ch);
-    curl_close($ch);
-
-    if ($code !== 200 && $code !== 201) {
+    $r = firestoreRequest('POST', 'notificaciones', [], $doc);
+    if ($r['code'] !== 200 && $r['code'] !== 201) {
         appLog('error', '[Firestore] crearNotificacion falló', [
-            'tipo' => $tipo, 'http' => $code, 'curl_err' => $err,
-            'body' => substr((string)$body, 0, 300),
+            'tipo' => $tipo, 'http' => $r['code'], 'curl_err' => $r['error'],
+            'body' => substr($r['body'], 0, 300),
         ]);
     }
-    return $code === 200 || $code === 201;
+    return $r['code'] === 200 || $r['code'] === 201;
 }
 
 function obtenerNotificacionesFirestore(int $limit = 20): array {
-    $projectId = FIREBASE_PROJECT_ID;
-    $apiKey    = FIREBASE_API_KEY;
-    if (empty($projectId) || empty($apiKey)) return [];
+    if (empty(FIREBASE_PROJECT_ID)) return [];
+    $r = firestoreRequest('GET', 'notificaciones', ['pageSize' => $limit, 'orderBy' => 'fecha desc']);
+    if ($r['code'] !== 200 || $r['body'] === '') return [];
 
-    $url = "https://firestore.googleapis.com/v1/projects/{$projectId}/databases/(default)/documents/notificaciones"
-         . "?pageSize={$limit}&orderBy=fecha+desc&key={$apiKey}";
-
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 5]);
-    $res  = curl_exec($ch);
-    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
-    if ($code !== 200 || empty($res)) return [];
-
-    $data = json_decode($res, true);
+    $data = json_decode($r['body'], true);
     return array_map(function ($d) {
         $f = $d['fields'] ?? [];
         return [
@@ -85,26 +59,10 @@ function obtenerNotificacionesFirestore(int $limit = 20): array {
 }
 
 function marcarNotificacionLeida(string $docId): bool {
-    $projectId = FIREBASE_PROJECT_ID;
-    $apiKey    = FIREBASE_API_KEY;
-    if (empty($projectId) || empty($apiKey)) return false;
-
-    $url  = "https://firestore.googleapis.com/v1/projects/{$projectId}/databases/(default)/documents/notificaciones/{$docId}"
-          . "?updateMask.fieldPaths=leida&key={$apiKey}";
-    $body = ['fields' => ['leida' => ['booleanValue' => true]]];
-
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_CUSTOMREQUEST  => 'PATCH',
-        CURLOPT_POSTFIELDS     => json_encode($body),
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
-        CURLOPT_TIMEOUT        => 5,
-    ]);
-    curl_exec($ch);
-    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-    return $code === 200;
+    if (empty(FIREBASE_PROJECT_ID) || !preg_match('/^[a-zA-Z0-9_-]{1,128}$/', $docId)) return false;
+    $r = firestoreRequest('PATCH', 'notificaciones/' . $docId, ['updateMask.fieldPaths' => 'leida'],
+        ['fields' => ['leida' => ['booleanValue' => true]]]);
+    return $r['code'] === 200;
 }
 
 // ================================================================
@@ -139,6 +97,128 @@ function _obtenerCorreosJefe(): array {
     } catch (\Throwable $e) {
         return [];
     }
+}
+
+// Correos del personal activo con alguno de los roles dados. $area filtra
+// dentro del rol 'empleado' (taller/instalacion); null = todos.
+function _obtenerCorreosPorRol(array $roles): array {
+    if (empty($roles)) return [];
+    try {
+        $placeholders = implode(',', array_fill(0, count($roles), '?'));
+        $rows = dbRows("SELECT correo FROM usuarios_personal WHERE activo = 1 AND rol IN ($placeholders)", $roles);
+        return array_values(array_unique(array_filter(array_column($rows, 'correo'))));
+    } catch (\Throwable $e) {
+        return [];
+    }
+}
+
+// Pedido completo para la copia interna por correo (jefe/ventas): lo mismo
+// que ven en su panel — cliente, todos los teléfonos, entrega, muebles con
+// medidas personalizadas y el estado del pago con cifras.
+function _datosCopiaPedido(int $pedidoId): ?array {
+    $p = dbRow("SELECT * FROM pedidos WHERE id = ?", [$pedidoId]);
+    if (!$p) return null;
+    $items = dbRows("SELECT * FROM detalle_pedido WHERE pedido_id = ? ORDER BY id", [$pedidoId]);
+    $tels = [];
+    if (!empty($p['telefonos_secundarios'])) {
+        $tels = json_decode($p['telefonos_secundarios'], true) ?: [];
+    }
+    return [
+        'numero_pedido'       => $p['numero_pedido'],
+        'nombre_cliente'      => html_entity_decode((string)$p['nombre_cliente'], ENT_QUOTES, 'UTF-8'),
+        'correo_cliente'      => $p['correo_cliente'] ?? '',
+        'telefono_cliente'    => $p['telefono_cliente'] ?? '',
+        'telefonos_secundarios' => array_values($tels),
+        'tipo_entrega'        => $p['tipo_entrega'] ?? 'envio',
+        'incluye_instalacion' => !empty($p['incluye_instalacion']),
+        'direccion_envio'     => html_entity_decode((string)($p['direccion_envio'] ?? ''), ENT_QUOTES, 'UTF-8'),
+        'fecha_estimada'      => $p['fecha_estimada'] ?? '',
+        'subtotal'            => (float)($p['subtotal'] ?? 0),
+        'costo_envio'         => (float)($p['costo_envio'] ?? 0),
+        'costo_instalacion'   => (float)($p['costo_instalacion'] ?? 0),
+        'descuento'           => (float)($p['descuento'] ?? 0),
+        'total'               => (float)($p['total'] ?? 0),
+        'tipo_pago'           => $p['tipo_pago'] ?? 'completo',
+        'monto_pagado'        => (float)($p['monto_pagado'] ?? 0),
+        'mensaje_disenador'   => html_entity_decode((string)($p['mensaje_disenador'] ?? ''), ENT_QUOTES, 'UTF-8'),
+        'origen'              => strpos((string)($p['notas'] ?? ''), 'cargado a mano') !== false ? 'manual' : 'sitio',
+        'items'               => array_map(fn($it) => [
+            'nombre'          => html_entity_decode((string)$it['nombre_producto'], ENT_QUOTES, 'UTF-8'),
+            'cantidad'        => (float)$it['cantidad'],
+            'unidad'          => $it['unidad'] ?? 'pza',
+            'precio_unitario' => (float)$it['precio_unitario'],
+            'total_linea'     => (float)($it['total_linea'] ?? 0),
+            'medidas'         => $it['medidas_personalizadas'] ?? '',
+            'ancho_cm'        => $it['ancho_cm'] ?? null,
+            'cubierta'        => $it['cubierta'] ?? null,
+            'color'           => $it['color'] ?? '',
+            'info_extra'      => $it['info_extra'] ?? '',
+            'imagen_referencia' => $it['imagen_referencia'] ?? '',
+            'ovalin'          => $it['ovalin'] ?? '',
+            'monomando'       => $it['monomando'] ?? '',
+            'adicionales'     => $it['adicionales'] ?? '',
+        ], $items),
+        'tipo_proyecto'       => $p['tipo_proyecto'] ?? 'bano',
+    ];
+}
+
+// Aviso de pedido nuevo a todo el personal, en dos niveles:
+//   - jefe y ventas: copia COMPLETA del pedido por correo (con cifras) + push.
+//   - diseñador, taller e instalación: solo un aviso corto por correo y push
+//     (sin datos del cliente ni montos — lo ven entrando a su panel).
+// $disenadorId: si el pedido ya tiene diseñador asignado, solo a él le llega
+// el aviso de diseño; si no, a todos los diseñadores activos.
+function notificarPedidoNuevoPersonal(int $pedidoId, ?int $disenadorId = null, bool $pushJefe = true): void {
+    $datos = _datosCopiaPedido($pedidoId);
+    if (!$datos) return;
+    $folio = $datos['numero_pedido'];
+
+    $correosCopia = _obtenerCorreosPorRol(['jefe', 'ventas']);
+    // Jefe y ventas tienen paneles distintos (/admin vs /ventas): el push de
+    // ventas va en su propio documento para que el clic abra su panel.
+    $tokensGestion = $pushJefe ? _obtenerTokensPushPorRol(['jefe']) : [];
+    _avisoCortoPersonal('aviso_pedido_ventas', _obtenerTokensPushPorRol(['ventas']), [],
+        'Nuevo pedido', "Nuevo pedido $folio, ingresa al sitio para revisarlo.", '/ventas#pedidos');
+    if ($correosCopia || $tokensGestion) {
+        $extra = [
+            'datos_pedido' => json_encode($datos, JSON_UNESCAPED_UNICODE),
+            'push_titulo'  => 'Nuevo pedido',
+            'push_mensaje' => "Nuevo pedido $folio, ingresa al sitio para revisarlo.",
+            'push_url'     => '/admin#pedidos',
+        ];
+        if ($correosCopia)  $extra['correos_copia_json'] = json_encode($correosCopia);
+        if ($tokensGestion) $extra['push_tokens_json']   = json_encode($tokensGestion);
+        crearNotificacionFirestore('copia_pedido_interna', "Nuevo pedido $folio", "Copia interna del pedido $folio", $extra);
+    }
+
+    // Diseño
+    if ($disenadorId) {
+        $tokensDis  = _obtenerTokensPushPorUsuario($disenadorId);
+        $correoDis  = dbRow("SELECT correo FROM usuarios_personal WHERE id = ? AND activo = 1", [$disenadorId])['correo'] ?? '';
+        $correosDis = $correoDis ? [$correoDis] : [];
+    } else {
+        $tokensDis  = _obtenerTokensPushPorRol(['disenador']);
+        $correosDis = _obtenerCorreosPorRol(['disenador']);
+    }
+    _avisoCortoPersonal('aviso_pedido_disenador', $tokensDis, $correosDis,
+        'Nuevo pedido para diseñar',
+        "Hay un nuevo pedido ($folio) para diseñar. Ingresa a tu panel para ver los detalles.",
+        '/disenador#pedidos');
+
+    // Taller e instalación (rol empleado): lo verán en su panel cuando el
+    // diseñador lo libere a producción, pero ya saben que viene en camino.
+    _avisoCortoPersonal('aviso_pedido_empleado', _obtenerTokensPushPorRol(['empleado']), _obtenerCorreosPorRol(['empleado']),
+        'Nuevo pedido',
+        "Entró un nuevo pedido ($folio). Aparecerá en tu panel cuando pase a producción.",
+        '/empleado#pedidos');
+}
+
+function _avisoCortoPersonal(string $tipo, array $tokens, array $correos, string $titulo, string $mensaje, string $url): void {
+    if (!$tokens && !$correos) return;
+    $extra = ['push_titulo' => $titulo, 'push_mensaje' => $mensaje, 'push_url' => $url];
+    if ($tokens)  $extra['push_tokens_json']   = json_encode($tokens);
+    if ($correos) $extra['correos_aviso_json'] = json_encode($correos);
+    crearNotificacionFirestore($tipo, $titulo, $mensaje, $extra);
 }
 
 // Tokens de dispositivo activos de todo el personal con alguno de los roles dados.
@@ -242,59 +322,19 @@ function notificarNuevoPedido(array $pedido, bool $desdeConversionCotizacion = f
         ]
     );
 
-    // Push: al diseñador siempre (tiene que diseñarlo); al jefe solo si el
-    // pedido vino directo del carrito (si vino de una cotización, el jefe ya
-    // recibió el push+email de confirmación — evita avisarle dos veces).
-    // Jefe y diseñador tienen paneles distintos (/admin vs /disenador), así
-    // que cada quien necesita su propia URL de destino — dos llamadas, no una.
-    $desdeCarrito = !$desdeConversionCotizacion;
-    if ($desdeCarrito) {
-        crearNotificacionPush(
-            'push_nuevo_pedido',
-            ['jefe'],
-            'Nuevo pedido',
-            'Hay un nuevo pedido, ingresa al sitio para revisarlo.',
-            '/admin#pedidos',
-            true
-        );
+    // Personal: copia completa a jefe/ventas, aviso corto a diseño/taller/
+    // instalación. Si vino de una cotización ya confirmada, el jefe ya tuvo
+    // su push en ese momento — no se le repite (el correo con la copia sí).
+    if (!empty($pedido['id'])) {
+        notificarPedidoNuevoPersonal((int)$pedido['id'], null, !$desdeConversionCotizacion);
     }
-    crearNotificacionPush(
-        'push_nuevo_pedido',
-        ['disenador'],
-        'Nuevo pedido',
-        'Hay un nuevo pedido, ingresa al sitio para revisarlo.',
-        '/disenador#pedidos'
-    );
 }
 
-// Pedido cargado a mano por jefe/diseñador (encargo que llegó por WhatsApp).
-// Si un diseñador lo cargó para sí mismo, push solo a él; si lo cargó el
-// jefe queda sin asignar y se avisa a todo el rol (puede haber varios
-// diseñadores activos) — el que lo tome lo abre desde su panel.
+// Pedido cargado a mano por jefe/ventas/diseñador (encargo de WhatsApp,
+// teléfono o mostrador): mismos avisos que un pedido del sitio. Si lo cargó
+// un diseñador para sí mismo, el aviso de diseño solo le llega a él.
 function notificarPedidoManualCreado(int $pedidoId, string $numeroPedido, ?int $disenadorId): void {
-    if ($disenadorId) {
-        $tokens = _obtenerTokensPushPorUsuario($disenadorId);
-        if (empty($tokens)) return;
-        crearNotificacionFirestore(
-            'push_pedido_manual_creado',
-            'Nuevo pedido para diseñar',
-            "Pedido $numeroPedido cargado, ingresa al sitio para revisarlo.",
-            [
-                'push_titulo'      => 'Nuevo pedido para diseñar',
-                'push_mensaje'     => 'Cargaste un nuevo pedido, ingresa al sitio para revisarlo.',
-                'push_url'         => '/disenador#pedidos',
-                'push_tokens_json' => json_encode($tokens),
-            ]
-        );
-        return;
-    }
-    crearNotificacionPush(
-        'push_pedido_manual_creado',
-        ['disenador'],
-        'Nuevo pedido para diseñar',
-        'Hay un nuevo pedido cargado a mano, ingresa al sitio para revisarlo.',
-        '/disenador#pedidos'
-    );
+    notificarPedidoNuevoPersonal($pedidoId, $disenadorId, true);
 }
 
 function notificarCambioPedido(array $pedido, string $estadoAnterior): void {

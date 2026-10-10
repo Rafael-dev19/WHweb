@@ -1,32 +1,16 @@
 rules_version = '2';
+// Firestore solo lo usan el servidor PHP (con cuenta de servicio — ver
+// includes/firebase_admin.php) y la Cloud Function (Admin SDK). Ambos
+// ignoran estas reglas, así que para cualquier navegador todo queda cerrado.
+//
+// ANTES estaba abierto (lectura pública y creación sin sesión porque PHP
+// usaba la API key pública): cualquiera podía leer los datos de clientes que
+// viajan en las notificaciones y crear documentos que la Cloud Function
+// convierte en correos/push. Publicar estas reglas SOLO después de configurar
+// FIREBASE_SERVICE_ACCOUNT_FILE en el .env del servidor; si no, los avisos
+// por correo/push dejan de salir.
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /notificaciones/{notifId} {
-      // El backend PHP usa REST API con API key (sin auth token), por eso read/create no pueden requerir auth
-      allow read:   if true;
-      allow create: if request.resource.data.keys().hasAll(['tipo','titulo','mensaje','leida','fecha'])
-                    && request.resource.data.tipo in [
-                         'nuevo_pedido','estado_pedido',
-                         'nueva_cotizacion','cotizacion_respondida','nueva_cita',
-                         'cotizacion_en_produccion','cotizacion_lista','cotizacion_entregada',
-                         'invitacion_personal',
-                         'push_nuevo_pedido','push_pedido_manual_creado',
-                         'push_nueva_cotizacion','push_confirmacion_cotizacion',
-                         'push_pedido_listo_produccion','push_nueva_cita'
-                       ]
-                    && request.resource.data.leida == false
-                    && request.resource.data.titulo is string
-                    && request.resource.data.titulo.size() <= 200
-                    && request.resource.data.mensaje is string
-                    && request.resource.data.mensaje.size() <= 1000;
-      // El backend PHP también marca notificaciones como leídas vía REST API
-      // con API key (sin auth token) — por eso esta regla tampoco puede exigir
-      // request.auth. La protección real es que solo se puede tocar 'leida'/
-      // 'fecha_leida', nunca el resto de los campos del documento.
-      allow update: if request.resource.data.diff(resource.data).affectedKeys()
-                         .hasOnly(['leida','fecha_leida']);
-      allow delete: if request.auth != null;
-    }
     match /{document=**} {
       allow read, write: if false;
     }

@@ -1,6 +1,6 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    html { overflow-x: hidden; width: 100%; }
+    html { overflow-x: clip; width: 100%; }
 
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -8,6 +8,7 @@
       color: var(--color-text-main);
       line-height: 1.6;
       overflow-x: hidden;
+      overflow-x: clip; /* ver styles.css: no romper el header sticky en iOS */
       width: 100%;
     }
 
@@ -631,3 +632,52 @@
       .product-card:hover { transform: none !important; }
     }
 
+/* ── Catálogo 2026: intro y caja "a la medida" (cocinas/clósets) ── */
+.catalogo-intro { text-align: center; color: var(--color-text-muted); margin: -8px auto 20px; max-width: 640px; line-height: 1.6; }
+.catalogo-intro a { color: var(--color-primary); font-weight: 600; }
+.a-medida-box {
+  grid-column: 1 / -1; max-width: 640px; margin: 10px auto; padding: 28px 24px;
+  border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-bg-card);
+}
+.a-medida-icono { color: var(--color-primary); margin-bottom: 10px; }
+.a-medida-icono svg { width: 36px; height: 36px; stroke-width: 1.5; }
+.a-medida-box h2 { font-family: var(--font-display); font-size: 24px; color: var(--color-text-main); margin-bottom: 8px; }
+.a-medida-box p { color: var(--color-text-muted); line-height: 1.6; }
+.a-medida-pasos { margin: 14px 0 20px; padding-left: 20px; color: var(--color-text-main); line-height: 1.7; }
+.a-medida-pasos li { margin-bottom: 6px; }
+.a-medida-cta {
+  display: inline-flex; align-items: center; gap: 8px; padding: 12px 22px; border-radius: 10px;
+  background: var(--color-primary); color: #fff !important; font-weight: 600; text-decoration: none;
+}
+@media (max-width: 640px) { .a-medida-box { padding: 22px 16px; } .a-medida-cta { width: 100%; justify-content: center; } }
+
+/* ── Accesorios y personalización ── */
+.accesorios-seccion { margin: 48px 0 24px; }
+.accesorios-titulo { font-family: var(--font-display); font-size: 28px; color: var(--color-text-main); text-align: center; margin-bottom: 6px; }
+.accesorios-intro { text-align: center; color: var(--color-text-muted); max-width: 620px; margin: 0 auto 22px; line-height: 1.6; }
+.acc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.acc-dos { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 16px; }
+.acc-card { border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-bg-card); overflow: hidden; }
+.acc-card--texto { padding: 18px; }
+.acc-img { display: block; background: #fff; }
+.acc-img img { width: 100%; height: 170px; object-fit: contain; display: block; }
+.acc-body { padding: 14px 16px 16px; }
+.acc-card h3 { display: flex; align-items: center; gap: 8px; font-size: 17px; color: var(--color-text-main); margin-bottom: 6px; }
+.acc-card h3 svg { color: var(--color-primary); width: 18px; height: 18px; }
+.acc-card p { color: var(--color-text-muted); font-size: 14px; line-height: 1.55; }
+.acc-card details { margin-top: 8px; }
+.acc-card summary { cursor: pointer; color: var(--color-primary); font-weight: 600; font-size: 14px; }
+.acc-lista { list-style: none; padding: 0; margin: 8px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: 13px; color: var(--color-text-muted); }
+.acc-lista strong { color: var(--color-text-main); }
+.acc-precios { list-style: none; padding: 0; margin: 10px 0; }
+.acc-precios li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--color-border); font-size: 14px; color: var(--color-text-main); }
+.acc-precios li:last-child { border-bottom: none; }
+.acc-precios small { display: block; font-size: 12px; color: var(--color-text-muted); }
+.acc-precios strong { color: var(--color-primary); white-space: nowrap; }
+.acc-mini { font-size: 13px !important; }
+.acc-mini a { color: var(--color-primary); font-weight: 600; }
+@media (max-width: 640px) {
+  .accesorios-titulo { font-size: 22px; }
+  .acc-dos, .acc-grid { grid-template-columns: 1fr; }
+  .acc-lista { grid-template-columns: 1fr; }
+}

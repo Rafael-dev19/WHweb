@@ -25,7 +25,7 @@ switch ($action) {
 
         $payload = verificarTokenFirebase($firebaseToken);
         if (!$payload) {
-            error_log('Login fallido - token inválido desde IP: ' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown'));
+            error_log('Login fallido - token inválido desde IP: ' . clienteIp());
             jsonError('Token de Firebase inválido o expirado', 401);
         }
 
@@ -40,6 +40,7 @@ switch ($action) {
         }
 
         _crearSesion($usuario);
+        firebaseMarcarPersonal($uid, $usuario['rol']); // claim staff para Storage (ver firebase_admin.php)
 
         $redirect    = panelPhpPathParaRol($usuario['rol']);
 
@@ -147,6 +148,7 @@ switch ($action) {
             $usuario = obtenerUsuarioPorFirebaseUid($uid);
             if (!$usuario) jsonError('Tu cuenta de personal no está activa. Contacta al administrador.', 403);
             _crearSesion($usuario);
+            firebaseMarcarPersonal($uid, $usuario['rol']); // claim staff para Storage
             $redirect   = panelUrlParaRol($usuario['rol']);
             jsonSuccess([
                 'redirect' => $redirect,

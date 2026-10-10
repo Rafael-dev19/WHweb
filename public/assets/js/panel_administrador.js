@@ -815,7 +815,7 @@
           id:'milano',
           sku:'MLN-001',
           nombre:'Milano',
-          categoria:'A Piso',
+          categoria:'Muebles de baño',
           badge:'Nuevo',
           estado:'activo',
           precio:8500,
@@ -851,7 +851,7 @@
           id:'venecia',
           sku:'VNC-002',
           nombre:'Venecia',
-          categoria:'Flotados',
+          categoria:'Muebles de baño',
           badge:'Popular',
           estado:'activo',
           precio:12800,
@@ -962,7 +962,7 @@
               <div class="cat-title">${escapeHtml(p.nombre)} <span style="color:var(--muted);font-size:12px;">(${escapeHtml(p.categoria || '')})</span></div>
               <div class="cat-desc" style="color: var(--muted);font-size:13px;margin:6px 0;">${escapeHtml((p.descripcion || p.descLarga || '').substring(0, 80))}${(p.descripcion||'').length > 80 ? '...' : ''}</div>
               <div class="cat-footer">
-                <div class="cat-price">${money(p.precio || p.precio_base || 0)}</div>
+                <div class="cat-price">${precioCatalogoTexto(p)}</div>
                 <div class="cat-actions">
                   <button class="btn btn-secondary btn-small btn-ver-prod">Ver</button>
                   <button class="btn btn-secondary btn-small btn-edit-prod" title="Editar"><i data-lucide="pen"></i></button>
@@ -996,7 +996,7 @@
             <td>${escapeHtml(String(p.id))}</td>
             <td>${escapeHtml(p.nombre)}</td>
             <td>${escapeHtml(p.categoria || '—')}</td>
-            <td style="color:var(--accent);font-weight:900;">${money(p.precio || p.precio_base || 0)}</td>
+            <td style="color:var(--accent);font-weight:900;">${precioCatalogoTexto(p)}</td>
             <td><span class="status-badge ${p.estado === 'activo' ? 'status-completed' : 'status-disabled'}">${p.estado === 'activo' ? 'Activo' : 'Inactivo'}</span></td>
             <td>
               <button class="btn btn-secondary btn-small btn-ver-prod">Ver</button>
@@ -1021,8 +1021,7 @@
       document.getElementById('productoModalTitle').textContent = isEdit ? 'Editar Producto' : 'Nuevo Producto';
 
       ['p_nombre','p_categoria','p_badge','p_estado','p_precio','p_descLarga',
-       'p_tipo_instalacion','p_largo','p_alto','p_fondo','p_ovalin','p_monomando',
-       'p_incluye','p_espejo','p_imgs_urls'].forEach(fieldId => {
+       'p_imgs_urls'].forEach(fieldId => {
         const el = document.getElementById(fieldId);
         if (el) el.value = '';
       });
@@ -1049,6 +1048,7 @@
               ...p,
               imagenes: detalle.producto.imagenes || [],
               especificaciones: detalle.producto.especificaciones || [],
+              medidas: detalle.producto.medidas || [],
               descripcion: detalle.producto.descripcion || p.descripcion || '',
               activo: detalle.producto.activo ?? p.activo,
               precio: detalle.producto.precio ?? detalle.producto.precio_base ?? p.precio,
@@ -1067,19 +1067,8 @@
         setVal('p_precio',    p.precio || p.precio_base || 0);
         setVal('p_descLarga', p.descripcion || '');
 
-        const specs = p.especificaciones || [];
-        const getSpec = (keyword) => {
-          const s = specs.find(x => x.clave && x.clave.toLowerCase().includes(keyword.toLowerCase()));
-          return s ? s.valor : '';
-        };
-        setVal('p_tipo_instalacion', getSpec('instalacion') || 'Flotado');
-        setVal('p_largo',     getSpec('largo'));
-        setVal('p_alto',      getSpec('alto'));
-        setVal('p_fondo',     getSpec('fondo'));
-        setVal('p_ovalin',    getSpec('ovalin'));
-        setVal('p_monomando', getSpec('monomando'));
-        setVal('p_incluye',   getSpec('incluye') || 'Cespol de PBC - Contra canasta');
-        setVal('p_espejo',    getSpec('espejo') || '');
+        renderFilasMedidas(p.medidas || []);
+        renderFilasSpecs(p.especificaciones || []);
 
         const imgUrls = p.imagenes
           ? p.imagenes.map(img => img.url_imagen)
@@ -1092,13 +1081,76 @@
           catSelect.value = String(window._apiCategorias[0].id);
         }
         document.getElementById('p_estado').value = 'activo';
-        const tipoEl = document.getElementById('p_tipo_instalacion');
-        if (tipoEl) tipoEl.value = 'Flotado';
-        const incluyeEl = document.getElementById('p_incluye');
-        if (incluyeEl) incluyeEl.value = 'Cespol de PBC - Contra canasta';
+        // Plantilla del catálogo 2026: los mismos anchos y el mismo paquete
+        // base que casi todos los modelos — solo se ajustan precios.
+        renderFilasMedidas([60, 70, 80, 90, 100, 120].map(a => ({ ancho_cm: a, precio: '' })));
+        renderFilasSpecs([
+          { clave: 'Estilo', valor: '' },
+          { clave: 'Mueble', valor: 'MDF Arauco 15 mm' },
+          { clave: 'Ovalín', valor: 'Cerámica (a elegir)' },
+          { clave: 'Monomando', valor: 'A elegir' },
+          { clave: 'Incluye', valor: 'Céspol y contracanasta' },
+          { clave: 'Herrajes', valor: 'Cierre lento' },
+        ]);
       }
 
       openModal('productoModal');
+    }
+
+    // ── Filas editables del modal de producto (anchos y "qué incluye") ──
+    function renderFilasMedidas(medidas) {
+      const cont = document.getElementById('p_medidas');
+      if (!cont) return;
+      cont.innerHTML = '';
+      medidas.forEach(m => agregarFilaMedida(m.ancho_cm, m.precio));
+      actualizarPrecioUnico();
+    }
+    function agregarFilaMedida(ancho = '', precio = '') {
+      const cont = document.getElementById('p_medidas');
+      if (!cont) return;
+      const fila = document.createElement('div');
+      fila.className = 'prod-fila';
+      fila.innerHTML = `
+        <input type="number" class="form-input" data-ancho min="20" step="1" placeholder="Ancho (cm)" value="${escapeHtml(String(ancho))}" inputmode="numeric">
+        <input type="number" class="form-input" data-precio min="1" step="0.01" placeholder="Precio $" value="${escapeHtml(String(precio))}" inputmode="decimal">
+        <button type="button" class="btn btn-secondary" title="Quitar ancho" aria-label="Quitar ancho"><i data-lucide="x"></i></button>`;
+      fila.querySelector('button').addEventListener('click', () => { fila.remove(); actualizarPrecioUnico(); });
+      cont.appendChild(fila);
+      actualizarPrecioUnico();
+    }
+    function actualizarPrecioUnico() {
+      const hay = document.querySelectorAll('#p_medidas .prod-fila').length > 0;
+      const wrap = document.getElementById('p_precio_wrap');
+      if (wrap) wrap.style.display = hay ? 'none' : '';
+    }
+    function leerFilasMedidas() {
+      const out = [];
+      for (const f of document.querySelectorAll('#p_medidas .prod-fila')) {
+        const ancho = parseInt(f.querySelector('[data-ancho]').value, 10);
+        const precio = parseFloat(f.querySelector('[data-precio]').value);
+        if (!ancho && !precio) continue;
+        if (!ancho || !(precio > 0)) { showNotification('Cada ancho necesita su precio (o quita la fila vacía)', 'error'); return null; }
+        out.push({ ancho_cm: ancho, precio });
+      }
+      return out;
+    }
+    function renderFilasSpecs(specs) {
+      const cont = document.getElementById('p_specs');
+      if (!cont) return;
+      cont.innerHTML = '';
+      specs.forEach(sp => agregarFilaSpec(sp.clave, sp.valor));
+    }
+    function agregarFilaSpec(clave = '', valor = '') {
+      const cont = document.getElementById('p_specs');
+      if (!cont) return;
+      const fila = document.createElement('div');
+      fila.className = 'prod-fila prod-fila--spec';
+      fila.innerHTML = `
+        <input type="text" class="form-input" data-k placeholder="ej. Ovalín" value="${escapeHtml(clave)}">
+        <input type="text" class="form-input" data-v placeholder="ej. Cerámica (a elegir)" value="${escapeHtml(valor)}">
+        <button type="button" class="btn btn-secondary" title="Quitar" aria-label="Quitar"><i data-lucide="x"></i></button>`;
+      fila.querySelector('button').addEventListener('click', () => fila.remove());
+      cont.appendChild(fila);
     }
 
     function validateProductoPayload(payload, isEdit=false){
@@ -1122,7 +1174,9 @@
 
       if (!nombre)      { showNotification('Falta el nombre del producto', 'error'); return; }
       if (!categoriaId) { showNotification('Selecciona una categoria', 'error'); return; }
-      if (precio <= 0)  { showNotification('El precio debe ser mayor a 0', 'error'); return; }
+      const medidas = leerFilasMedidas();
+      if (medidas === null) return;
+      if (!medidas.length && precio <= 0) { showNotification('Pon el precio de cada ancho (o un precio único si no maneja anchos)', 'error'); return; }
       if (!descLarga)   { showNotification('Falta la descripcion del producto', 'error'); return; }
 
       let imagenesUrls = (document.getElementById('p_imgs_urls')?.value || '')
@@ -1147,30 +1201,15 @@
 
       const imagenes = imagenesUrls.map(url => ({ url }));
 
-      const tipoInst  = (document.getElementById('p_tipo_instalacion')?.value || '').trim();
-      const largo     = (document.getElementById('p_largo')?.value  || '').trim();
-      const alto      = (document.getElementById('p_alto')?.value   || '').trim();
-      const fondo     = (document.getElementById('p_fondo')?.value  || '').trim();
-      const ovalin    = (document.getElementById('p_ovalin')?.value || '').trim();
-      const monomando = (document.getElementById('p_monomando')?.value || '').trim();
-      const incluye   = (document.getElementById('p_incluye')?.value  || '').trim();
-      const espejo    = (document.getElementById('p_espejo')?.value   || '').trim();
-
-      const especificaciones = [
-        { clave: 'Tipo de instalacion', valor: tipoInst },
-        { clave: 'Largo',   valor: largo },
-        { clave: 'Alto',    valor: alto },
-        { clave: 'Fondo',   valor: fondo },
-        { clave: 'Ovalin',  valor: ovalin },
-        { clave: 'Monomando', valor: monomando },
-        { clave: 'Incluye', valor: incluye || 'Cespol de PBC - Contra canasta' },
-        { clave: 'Espejo opcional', valor: espejo || 'No incluye' },
-      ].filter(s => s.valor);
+      const especificaciones = [...document.querySelectorAll('#p_specs .prod-fila')]
+        .map(f => ({ clave: f.querySelector('[data-k]').value.trim(), valor: f.querySelector('[data-v]').value.trim() }))
+        .filter(x => x.clave && x.valor);
 
       const apiPayload = {
         nombre,
         descripcion:  descLarga,
-        precio_base:  precio,
+        precio_base:  medidas.length ? Math.min(...medidas.map(m => m.precio)) : precio,
+        medidas,
         etiqueta:     badge || null,
         categoria_id: categoriaId,
         activo:       estado === 'activo' ? 1 : 0,
@@ -1361,9 +1400,22 @@
     }
 
     let _detailCurrentId = '';
-    function openProductoDetalle(id){
-      const p = getProductos().find(x => String(x.id) === String(id));
+    // "Desde $5,800 · 60–120 cm" cuando el modelo maneja precio por ancho.
+    function precioCatalogoTexto(p) {
+      const med = p.medidas || [];
+      if (!med.length) return money(p.precio || p.precio_base || 0);
+      const rango = med.length > 1 ? `${med[0].ancho_cm}–${med[med.length - 1].ancho_cm} cm` : `${med[0].ancho_cm} cm`;
+      return `Desde ${money(Math.min(...med.map(m => m.precio)))} <span style="color:var(--muted);font-size:11px;font-weight:600;">· ${rango}</span>`;
+    }
+
+    async function openProductoDetalle(id){
+      let p = getProductos().find(x => String(x.id) === String(id));
       if(!p){ showNotification('No se encontró el producto', 'error'); return; }
+      // La lista no trae las especificaciones: pedir el detalle completo.
+      try {
+        const d = await apiFetch(`${API_BASE}/productos.php?id=${id}`);
+        if (d.success && d.producto) p = { ...p, especificaciones: d.producto.especificaciones || [], medidas: d.producto.medidas || p.medidas || [] };
+      } catch (e) { /* se muestra con lo que haya */ }
       _detailCurrentId = id;
 
       $('#detalleModalTitle').textContent = `Detalle: ${p.nombre}`;
@@ -1388,7 +1440,7 @@
                 ${escapeHtml(p.categoria || '')}
                 ${p.etiqueta || p.badge ? ` • <span style="background:#8b7355;color:#fff;padding:2px 8px;border-radius:4px;font-size:12px;">${escapeHtml(p.etiqueta || p.badge)}</span>` : ''}
               </div>
-              <div class="detail-price">${money(p.precio || p.precio_base || 0)}</div>
+              <div class="detail-price">${precioCatalogoTexto(p)}</div>
               <div class="detail-desc" style="margin-top:10px;color:var(--muted2);font-size:14px;line-height:1.6;">${escapeHtml(p.descripcion || p.descLarga || 'Sin descripción')}</div>
             </div>
           </div>
@@ -1397,9 +1449,11 @@
             <div class="kv"><span>ID en BD</span><b>${escapeHtml(String(p.id))}</b></div>
             <div class="kv"><span>Categoría</span><b>${escapeHtml(p.categoria || '—')}</b></div>
             <div class="kv"><span>Estado</span><b><span class="status-badge ${p.estado === 'activo' ? 'status-completed' : 'status-disabled'}">${p.estado || 'inactivo'}</span></b></div>
-            <div class="kv"><span>Precio</span><b style="color:var(--accent);">${money(p.precio || p.precio_base || 0)}</b></div>
+            ${(p.medidas || []).length
+              ? `<h4 style="margin-top:14px;">Precio por ancho (sin instalación)</h4>${p.medidas.map(m => `<div class="kv"><span>${m.ancho_cm} cm</span><b style="color:var(--accent);">${money(m.precio)}</b></div>`).join('')}`
+              : `<div class="kv"><span>Precio</span><b style="color:var(--accent);">${money(p.precio || p.precio_base || 0)}</b></div>`}
             <div style="margin-top:14px;"></div>
-            <h4>Especificaciones</h4>
+            <h4>Qué incluye el paquete</h4>
             ${specsHTML}
           </div>
         </div>
@@ -2228,6 +2282,7 @@ async function cargarProductosAPI() {
         imagen_principal: p.imagen_principal || '',
         imgs:             p.imagen_principal ? [p.imagen_principal] : [],
         especificaciones: [],  // se cargan en detalle si se necesitan
+        medidas:          p.medidas || [],
         descLarga:        p.descripcion || '',
       }));
       window._apiProductos = apiProductos;
@@ -2316,7 +2371,7 @@ async function cargarPedidosAPI() {
         <td>${escapeHtml(p.correo_cliente)}</td>
         <td>${p.fecha_estimada || '—'}</td>
         <td><span class="status-badge ${ESTADO_PEDIDO_CLASS[p.estado] || ''}">${ESTADO_PEDIDO_LABELS[p.estado] || p.estado}</span></td>
-        <td style="color:var(--accent);font-weight:800;">${money(p.total)}</td>
+        <td style="color:var(--accent);font-weight:800;">${window.WH_VE_MONTOS ? money(p.total) : estadoPagoBadge(p.estado_pago)}</td>
         <td style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
           <button data-call="verDetallePedidoAdmin" data-args="[${p.id}]" style="background:var(--accent);color:#fff;border:none;padding:5px 12px;border-radius:4px;cursor:pointer;font-size:12px;white-space:nowrap;flex-shrink:0;">
             <i data-lucide="eye"></i> Ver
@@ -2347,13 +2402,18 @@ async function actualizarEstadoPedido(id, estado) {
       // Al finalizar un pedido con anticipo y saldo pendiente, resolver el cobro
       // del saldo en el mismo paso — evita tener que presionar "finalizado" y
       // luego acordarse de marcar el saldo por separado.
-      if (estado === 'finalizado' && p && p.tipo_pago === 'anticipo') {
+      // Sin montos (administrador) la API solo manda estado_pago.
+      if (estado === 'finalizado' && p && (p.estado_pago ? p.estado_pago !== 'liquidado' : p.tipo_pago === 'anticipo')) {
         const saldo = Math.max(0, (p.total || 0) - (p.monto_pagado || 0));
-        if (saldo > 0.009) {
-          const cobrado = confirm(`Este pedido tiene un saldo pendiente de ${money(saldo)} (anticipo). ¿Se cobró el saldo en efectivo/en persona al momento de la instalación/entrega?`);
+        if (p.estado_pago ? true : saldo > 0.009) {
+          const cobrado = confirm(window.WH_VE_MONTOS
+            ? `Este pedido tiene un saldo pendiente de ${money(saldo)}. ¿El cliente ya pagó el resto (efectivo, transferencia o terminal)?`
+            : 'Este pedido todavía tiene saldo por pagar. ¿El cliente ya pagó el resto?');
           if (cobrado) {
+            const metodo = await elegirMetodoCobro();
+            if (!metodo) { cargarPedidosAPI(); return; }
             const r = await apiFetch(`${API_BASE}/pagos.php?action=marcar_saldo_manual`, {
-              method: 'POST', body: JSON.stringify({ pedido_id: id }),
+              method: 'POST', body: JSON.stringify({ pedido_id: id, metodo }),
             });
             if (!r.success) {
               showNotification('<i data-lucide="x"></i> ' + (r.error || 'Error al registrar el saldo'), 'error');
@@ -2528,7 +2588,7 @@ async function verDetallePedidoAdmin(id) {
 
     let entrega;
     if (p.tipo_entrega === 'recoger') {
-      entrega = '🏪 Recoge en tienda';
+      entrega = '🏪 Pasa a recogerlo al taller';
     } else {
       // Pedidos cargados a mano (ver pedido-manual.js) suelen traer un link de
       // ubicación pegado directo en direccion_envio en vez de texto — usarlo
@@ -2572,18 +2632,19 @@ async function verDetallePedidoAdmin(id) {
           <thead><tr style="background:var(--bg);">
             <th style="padding:8px 6px;text-align:left;color:var(--accent);border-bottom:1px solid var(--border);">Producto</th>
             <th style="padding:8px 6px;text-align:center;color:var(--accent);border-bottom:1px solid var(--border);">Cant.</th>
-            <th style="padding:8px 6px;text-align:right;color:var(--accent);border-bottom:1px solid var(--border);">P. Unit.</th>
-            <th style="padding:8px 6px;text-align:right;color:var(--accent);border-bottom:1px solid var(--border);">Total</th>
+            ${window.WH_VE_MONTOS ? `<th style="padding:8px 6px;text-align:right;color:var(--accent);border-bottom:1px solid var(--border);">P. Unit.</th>
+            <th style="padding:8px 6px;text-align:right;color:var(--accent);border-bottom:1px solid var(--border);">Total</th>` : ''}
           </tr></thead>
           <tbody>${items.map(i=>`
             <tr style="border-bottom:1px solid var(--border);">
               <td style="padding:8px 6px;color:var(--muted2);">
                 <div>${escapeHtml(i.nombre_producto||i.producto_nombre||'Producto')}</div>
                 ${renderSpecs(i.especificaciones)}
+                ${detalleLineaHtml(i)}
               </td>
-              <td style="padding:8px 6px;text-align:center;color:var(--muted2);">${i.cantidad}${i.unidad&&i.unidad!=="pza"?" "+escapeHtml(i.unidad):""}</td>
-              <td style="padding:8px 6px;text-align:right;color:var(--muted2);">${money(i.precio_unitario)}</td>
-              <td style="padding:8px 6px;text-align:right;font-weight:700;color:var(--accent);">${money(i.total||i.precio_unitario*i.cantidad)}</td>
+              <td style="padding:8px 6px;text-align:center;color:var(--muted2);">${Number(i.cantidad)}${i.unidad&&i.unidad!=="pza"?" "+escapeHtml(i.unidad):""}</td>
+              ${window.WH_VE_MONTOS ? `<td style="padding:8px 6px;text-align:right;color:var(--muted2);">${money(i.precio_unitario)}</td>
+              <td style="padding:8px 6px;text-align:right;font-weight:700;color:var(--accent);">${money(i.total_linea||i.precio_unitario*i.cantidad)}</td>` : ''}
             </tr>`).join('')}
           </tbody>
         </table>`
@@ -2591,7 +2652,12 @@ async function verDetallePedidoAdmin(id) {
 
     const esAnticipo     = p.tipo_pago === 'anticipo';
     const saldoPendiente = Math.max(0, (p.total||0) - (p.monto_pagado||0));
-    const saldoHtml = saldoPendiente > 0.009
+    const saldoHtml = !window.WH_VE_MONTOS
+      ? `<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:14px;">
+          <div style="font-weight:700;color:var(--accent);margin-bottom:6px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Pago del cliente</div>
+          ${estadoPagoBadge(p.estado_pago)}
+        </div>`
+      : saldoPendiente > 0.009
       ? `<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
           <div>
             <div style="font-weight:700;color:var(--accent);margin-bottom:4px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">${esAnticipo ? 'Anticipo (50%)' : 'Pago pendiente'}</div>
@@ -2606,30 +2672,30 @@ async function verDetallePedidoAdmin(id) {
     const pagos = p.pagos || [];
     const pagosHtml = pagos.length
       ? pagos.map(pg=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:1px solid var(--border);color:var(--muted2);">
-          <span>${pg.metodo_pago||'Pago'} — ${(pg.fecha_creacion||'').substring(0,10)}</span>
+          <span>${escapeHtml(pg.metodo||pg.metodo_pago||'Pago')} — ${(pg.fecha_creacion||'').substring(0,10)}</span>
           <span style="font-weight:700;color:var(--ok);">${money(pg.monto||0)}</span>
         </div>`).join('')
       : '<p style="color:var(--muted);font-style:italic;font-size:12px;padding:6px 0;">Sin pagos registrados</p>';
 
     body.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:18px;">
-        <span class="status-badge ${cls}">${label}</span>
-        <div style="text-align:right;">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;"><span class="status-badge ${cls}">${label}</span>${tipoProyectoBadge(p.tipo_proyecto)}</div>
+        ${window.WH_VE_MONTOS ? `<div style="text-align:right;">
           <div style="font-size:22px;font-weight:900;color:var(--accent);">${money(p.total)}</div>
-          <div style="font-size:11px;color:var(--muted);">Sub ${money(p.subtotal)} + Envío ${money(p.costo_envio)} + Inst. ${money(p.costo_instalacion)}</div>
-        </div>
+          <div style="font-size:11px;color:var(--muted);">Sub ${money(p.subtotal)} + Envío ${money(p.costo_envio)} + Inst. ${money(p.costo_instalacion)}${Number(p.descuento) ? ` − Desc. ${money(p.descuento)}` : ''}</div>
+        </div>` : ''}
       </div>
 
       <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:14px;">
         <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Cliente</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;color:var(--muted2);">
           <div><span style="color:var(--muted);display:block;font-size:10px;">Nombre</span><strong>${escapeHtml(p.nombre_cliente)}</strong></div>
-          <div><span style="color:var(--muted);display:block;font-size:10px;">Teléfono</span><strong>${escapeHtml(p.telefono_cliente||'—')}</strong></div>
+          <div><span style="color:var(--muted);display:block;font-size:10px;">Teléfono</span><strong>${escapeHtml(p.telefono_cliente||'—')}${telefonosSecundariosHtml(p.telefonos_secundarios)}</strong></div>
           <div><span style="color:var(--muted);display:block;font-size:10px;">Correo</span><strong>${escapeHtml(p.correo_cliente)}</strong></div>
-          <div><span style="color:var(--muted);display:block;font-size:10px;">Fecha estimada</span><strong>${p.fecha_estimada||'—'}</strong></div>
+          <div><span style="color:var(--muted);display:block;font-size:10px;">Fecha de entrega / instalación</span><strong>${p.fecha_estimada||'—'}</strong></div>
           <div style="grid-column:1/-1;"><span style="color:var(--muted);display:block;font-size:10px;">Entrega</span><strong>${entrega}</strong></div>
           <div style="grid-column:1/-1;"><span style="color:var(--muted);display:block;font-size:10px;">Instalación</span><strong>${instalacion}</strong></div>
-          ${p.notas?`<div style="grid-column:1/-1;"><span style="color:var(--muted);display:block;font-size:10px;">Notas</span><strong>${escapeHtml(p.notas)}</strong></div>`:''}
+          ${p.notas?`<div style="grid-column:1/-1;"><span style="color:var(--muted);display:block;font-size:10px;">Notas</span><strong style="white-space:pre-line;">${escapeHtml(p.notas)}</strong></div>`:''}
           ${p.cliente_id?`<div style="grid-column:1/-1;margin-top:4px;"><span style="background:#2d6a3f20;color:#2d6a3f;border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700;"><i data-lucide="user-check"></i> Cliente registrado #${p.cliente_id}</span></div>`:''}
         </div>
       </div>
@@ -2713,7 +2779,7 @@ async function verDetallePedidoAdmin(id) {
         ${itemsHtml}
       </div>
 
-      <div style="margin-bottom:14px;">
+      <div style="margin-bottom:14px;${window.WH_VE_MONTOS ? '' : 'display:none;'}">
         <div style="font-weight:700;color:var(--accent);margin-bottom:6px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Historial de Pagos</div>
         ${pagosHtml}
         ${p.total > p.monto_pagado ? `
@@ -2790,11 +2856,12 @@ async function _subirAdjuntoPedido(id, file) {
 }
 
 async function marcarSaldoManualAdmin(id) {
-  if (!confirm('¿Confirmas que el saldo restante se cobró en efectivo, transferencia o terminal? Esto marcará el pedido como pagado.')) return;
+  const metodo = await elegirMetodoCobro();
+  if (!metodo) return;
   try {
     const data = await apiFetch(`${API_BASE}/pagos.php?action=marcar_saldo_manual`, {
       method: 'POST',
-      body: JSON.stringify({ pedido_id: id }),
+      body: JSON.stringify({ pedido_id: id, metodo }),
     });
     if (data.success) {
       showNotification('✅ Saldo registrado como pagado', 'success');
@@ -2932,7 +2999,7 @@ async function cambiarEstadoCitaAdmin(id, estado) {
 }
 
 // ── Ver detalle de COTIZACIÓN ──────────────────────────────────
-const COTIZADOR_TIPO_LABELS = { cocina:'Cocina', closet:'Closet', lavamanos:'Lavamanos', otro:'Otro' };
+const COTIZADOR_TIPO_LABELS = { cocina:'Cocina', closet:'Closet', lavamanos:'Mueble de baño', otro:'Otro' };
 
 async function cargarCatalogoCotizador(forzar) {
   if (window._cotizadorCatalogo && !forzar) return window._cotizadorCatalogo;
@@ -3019,8 +3086,8 @@ function renderCatalogoCotizadorBody() {
       <span style="flex:1 1 140px;font-size:13px;color:var(--muted2);">${escapeHtml(it.nombre)} <span style="color:var(--muted);font-size:11px;">(${escapeHtml(it.unidad)})</span></span>
       <input type="number" min="0" step="0.01" value="${it.precio_unitario_default}" id="catPrecio_${it.id}"
         style="width:110px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:6px;color:var(--text);font-size:13px;">
-      <button class="btn btn-secondary btn-small" onclick="guardarPrecioCatalogo(${it.id})"><i data-lucide="save"></i></button>
-      <button class="btn btn-danger btn-small" onclick="desactivarPartidaCatalogo(${it.id})"><i data-lucide="trash-2"></i></button>
+      <button class="btn btn-secondary btn-small" data-call="guardarPrecioCatalogo" data-args="[${it.id}]"><i data-lucide="save"></i></button>
+      <button class="btn btn-danger btn-small" data-call="desactivarPartidaCatalogo" data-args="[${it.id}]"><i data-lucide="trash-2"></i></button>
     </div>
   `).join('') : '<p style="color:var(--muted);font-size:12px;">Sin partidas en el catálogo todavía.</p>';
 }
@@ -3106,9 +3173,9 @@ async function verDetalleCotAdmin(id) {
       aceptada: [], en_produccion: [], lista: [], entregada: [], cancelada: [], convertida_a_pedido: [],
     };
     const botonesHtml = (acciones[est] || []).map(([estado, label, cls]) =>
-      `<button class="btn ${cls} btn-small" onclick="cambiarEstadoCotAdmin(${cot.id},'${estado}')">${label}</button>`
+      `<button class="btn ${cls} btn-small" data-call="cambiarEstadoCotAdmin" data-args='[${cot.id},"${estado}"]'>${label}</button>`
     ).join(' ') + (est === 'aceptada'
-      ? ` <button class="btn btn-primary btn-small" onclick="convertirCotizacionAPedido(${cot.id})"><i data-lucide="factory"></i> Enviar a producción</button>`
+      ? ` <button class="btn btn-primary btn-small" data-call="convertirCotizacionAPedido" data-args="[${cot.id}]"><i data-lucide="factory"></i> Enviar a producción</button>`
       : '') + (est === 'convertida_a_pedido' && cot.numero_pedido
       ? ` <span class="status-badge status-completed"><i data-lucide="check"></i> Pedido ${escapeHtml(cot.numero_pedido)}</span>`
       : '');
@@ -3185,7 +3252,7 @@ async function verDetalleCotAdmin(id) {
             </div>
 
             <div id="cotizadorPartidasWrap"></div>
-            <button class="btn btn-secondary btn-small" onclick="agregarPartidaCotizador()" style="margin:8px 0 14px;">
+            <button class="btn btn-secondary btn-small" data-call="agregarPartidaCotizador" style="margin:8px 0 14px;">
               <i data-lucide="plus"></i> Agregar partida
             </button>
 
@@ -3256,10 +3323,10 @@ async function verDetalleCotAdmin(id) {
 
             ${cot.pdf_url ? `<p style="font-size:12px;margin-bottom:10px;"><a href="${cot.pdf_url}" target="_blank" rel="noopener" style="color:var(--accent);"><i data-lucide="file-text"></i> Ver el PDF ya enviado</a></p>` : ''}
 
-            <button class="btn btn-secondary btn-small" onclick="guardarCamposCotizacion(${cot.id})">
+            <button class="btn btn-secondary btn-small" data-call="guardarCamposCotizacion" data-args="[${cot.id}]">
               <i data-lucide="save"></i> Guardar borrador
             </button>
-            <button class="btn btn-primary" id="btnResponderCliente" onclick="generarPDFCotizacion(${cot.id})">
+            <button class="btn btn-primary" id="btnResponderCliente" data-call="generarPDFCotizacion" data-args="[${cot.id}]">
               <i data-lucide="send"></i> Responder al cliente (genera PDF)
             </button>
           </div>
@@ -3288,20 +3355,20 @@ function renderCotizadorPartidas() {
 
   wrap.innerHTML = items.map((it, idx) => `
     <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap;">
-      <select onchange="seleccionarPartidaCatalogo(${idx}, this.value)" style="flex:1 1 130px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:6px;color:var(--text);font-size:12px;">
+      <select data-onchange="seleccionarPartidaCatalogo" data-args="[${idx}]" style="flex:1 1 130px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:6px;color:var(--text);font-size:12px;">
         <option value="">Personalizada…</option>
         ${catalogo.map(c => `<option value="${c.clave}" ${c.clave === it.clave ? 'selected' : ''}>${escapeHtml(c.nombre)}</option>`).join('')}
       </select>
-      <input type="text" value="${escapeHtml(it.nombre)}" placeholder="Nombre" oninput="actualizarPartidaCotizador(${idx},'nombre',this.value)"
+      <input type="text" value="${escapeHtml(it.nombre)}" placeholder="Nombre" data-oninput="actualizarPartidaCotizador" data-args='[${idx},"nombre"]'
         style="flex:1 1 110px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:6px;color:var(--text);font-size:12px;">
-      <input type="number" min="0" step="0.01" value="${it.cantidad}" placeholder="Cant." oninput="actualizarPartidaCotizador(${idx},'cantidad',this.value)"
+      <input type="number" min="0" step="0.01" value="${it.cantidad}" placeholder="Cant." data-oninput="actualizarPartidaCotizador" data-args='[${idx},"cantidad"]'
         style="width:64px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:6px;color:var(--text);font-size:12px;">
-      <input type="text" value="${escapeHtml(it.unidad)}" placeholder="Unidad" oninput="actualizarPartidaCotizador(${idx},'unidad',this.value)"
+      <input type="text" value="${escapeHtml(it.unidad)}" placeholder="Unidad" data-oninput="actualizarPartidaCotizador" data-args='[${idx},"unidad"]'
         style="width:56px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:6px;color:var(--text);font-size:12px;">
-      <input type="number" min="0" step="0.01" value="${it.precio_unitario}" placeholder="P. unit." oninput="actualizarPartidaCotizador(${idx},'precio_unitario',this.value)"
+      <input type="number" min="0" step="0.01" value="${it.precio_unitario}" placeholder="P. unit." data-oninput="actualizarPartidaCotizador" data-args='[${idx},"precio_unitario"]'
         style="width:82px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:6px;color:var(--text);font-size:12px;">
       <span style="width:82px;text-align:right;font-size:12px;color:var(--muted2);font-weight:700;">${money((it.cantidad||0) * (it.precio_unitario||0))}</span>
-      <button type="button" onclick="quitarPartidaCotizador(${idx})" style="background:none;border:none;color:var(--danger);cursor:pointer;padding:4px;"><i data-lucide="trash-2"></i></button>
+      <button type="button" data-call="quitarPartidaCotizador" data-args="[${idx}]" style="background:none;border:none;color:var(--danger);cursor:pointer;padding:4px;"><i data-lucide="trash-2"></i></button>
     </div>
   `).join('') || '<p style="color:var(--muted);font-size:12px;">Sin partidas — agrega al menos una.</p>';
 
@@ -4190,7 +4257,7 @@ async function cargarClientesAdmin() {
         <td style="font-size:13px;">${escapeHtml(c.telefono || '—')}</td>
         <td style="font-size:13px;">${escapeHtml(c.ciudad || '—')}</td>
         <td style="text-align:center;font-weight:700;color:${c.total_pedidos > 0 ? 'var(--accent)' : 'var(--muted)'};">${c.total_pedidos}</td>
-        <td style="font-weight:700;color:var(--accent);">${money(c.total_gastado)}</td>
+        <td style="font-weight:700;color:var(--accent);">${window.WH_VE_MONTOS ? money(c.total_gastado) : "—"}</td>
         <td style="font-size:12px;color:var(--muted);">${(c.fecha_registro || '').substring(0, 10)}</td>
         <td>
           <button class="btn btn-secondary btn-small" data-call="verDetalleCliente" data-args="[${c.id}]" title="Ver historial">
@@ -4286,7 +4353,7 @@ async function verDetalleCliente(id) {
             ${pedidos.map(p => `<tr style="border-bottom:1px solid var(--border);">
               <td style="padding:8px;font-weight:600;">${escapeHtml(p.numero_pedido)}</td>
               <td style="padding:8px;"><span style="color:${estColors[p.estado]||'var(--muted)'};font-weight:600;font-size:12px;">${estLabels[p.estado]||p.estado}</span></td>
-              <td style="padding:8px;text-align:right;font-weight:700;color:var(--accent);">${money(p.total)}</td>
+              <td style="padding:8px;text-align:right;font-weight:700;color:var(--accent);">${window.WH_VE_MONTOS ? money(p.total) : '—'}</td>
               <td style="padding:8px;color:var(--muted);">${(p.fecha_creacion||'').substring(0,10)}</td>
             </tr>`).join('')}
           </tbody>
@@ -4730,4 +4797,56 @@ async function generarRutaDiaAdmin(fecha) {
   } catch(e) {
     if (body) body.innerHTML = `<div style="color:var(--danger);padding:24px;text-align:center;"><i data-lucide="circle-alert"></i> Error: ${escapeHtml(e.message)}</div>`;
   }
+}
+
+
+/* ── Datos extra de pedidos cargados a mano (ver pedido-manual.js) ──────
+   Teléfonos adicionales del cliente y "medidas personalizadas" por mueble:
+   tienen que llegarle tal cual a quien instala, no quedarse en ventas. */
+function telefonosSecundariosHtml(raw) {
+  let tels = [];
+  try { tels = Array.isArray(raw) ? raw : JSON.parse(raw || '[]'); } catch (e) { tels = []; }
+  if (!Array.isArray(tels) || !tels.length) return '';
+  return tels.map(t => `<div style="margin-top:2px;"><a href="tel:${encodeURIComponent(String(t).replace(/[^\d+]/g, ''))}" style="color:inherit;">${escapeHtml(t)}</a></div>`).join('');
+}
+function medidasPersonalizadasHtml(txt) {
+  if (!txt || !String(txt).trim()) return '';
+  return `<div style="margin-top:4px;padding:6px 8px;border:1px dashed var(--accent);border-radius:6px;font-size:11px;line-height:1.5;color:var(--text);white-space:pre-line;"><strong style="color:var(--accent);">Medidas personalizadas:</strong> ${escapeHtml(txt)}</div>`;
+}
+// Todo lo que se eligió para ese mueble: ancho, cubierta, color, ovalín,
+// monomando, adicionales,
+// información extra, medidas y la foto del modelo si no es de catálogo.
+const _CUBIERTA_LABELS = { mdf: 'Tapa de MDF', cuarzo: 'Cuarzo', granito: 'Granito', marmol: 'Mármol' };
+function detalleLineaHtml(i) {
+  const chips = [
+    i.ancho_cm ? `Ancho: <strong>${escapeHtml(String(i.ancho_cm))} cm</strong>` : '',
+    i.cubierta ? `Cubierta: <strong>${escapeHtml(_CUBIERTA_LABELS[i.cubierta] || i.cubierta)}</strong>` : '',
+    i.color ? `Color: <strong>${escapeHtml(i.color)}</strong>` : '',
+    i.ovalin ? `Ovalín: <strong>${escapeHtml(i.ovalin)}</strong>` : '',
+    i.monomando ? `Monomando: <strong>${escapeHtml(i.monomando)}</strong>` : '',
+    i.adicionales ? `Adicionales: <strong>${escapeHtml(i.adicionales)}</strong>` : '',
+  ].filter(Boolean);
+  return `
+    ${chips.length ? `<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11px;color:var(--muted2);">${chips.map(c => `<span>${c}</span>`).join('')}</div>` : ''}
+    ${medidasPersonalizadasHtml(i.medidas_personalizadas)}
+    ${i.info_extra ? `<div style="margin-top:4px;font-size:11px;line-height:1.5;color:var(--text);white-space:pre-line;"><strong style="color:var(--accent);">Información extra:</strong> ${escapeHtml(i.info_extra)}</div>` : ''}
+    ${i.imagen_referencia ? `<a href="${escapeHtml(i.imagen_referencia)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:6px;"><img src="${escapeHtml(i.imagen_referencia)}" alt="Foto del modelo" style="width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>` : ''}`;
+}
+const _TIPO_PROYECTO_LABELS = { bano: 'Mueble de baño', cocina: 'Cocina a la medida', closet: 'Clóset a la medida' };
+function tipoProyectoBadge(tipo) {
+  if (!tipo) return '';
+  const ico = { bano: 'bath', cocina: 'cooking-pot', closet: 'shirt' }[tipo] || 'box';
+  return `<span class="status-badge status-info"><i data-lucide="${ico}"></i> ${escapeHtml(_TIPO_PROYECTO_LABELS[tipo] || tipo)}</span>`;
+}
+
+// Estado del pago sin cifras, para quien no ve montos (administrador) —
+// mismo criterio que estadoPagoPedido() en includes/auth.php.
+function estadoPagoBadge(estado) {
+  const map = {
+    liquidado:       ['status-completed', 'circle-check', 'Pagado completo'],
+    saldo_pendiente: ['status-pending',   'hand-coins',   'Falta pagar una parte'],
+    sin_pago:        ['status-cancelled', 'circle-alert', 'Sin pago registrado'],
+  };
+  const [cls, ico, txt] = map[estado] || map.sin_pago;
+  return `<span class="status-badge ${cls}"><i data-lucide="${ico}"></i> ${txt}</span>`;
 }

@@ -18,6 +18,7 @@ require_once dirname(__DIR__) . '/includes/db.php';
 require_once dirname(__DIR__) . '/includes/functions.php';
 require_once dirname(__DIR__) . '/includes/auth.php';
 require_once dirname(__DIR__) . '/includes/notifications.php';
+require_once dirname(__DIR__) . '/includes/accesorios.php';
 require_once dirname(__DIR__) . '/includes/security.php';
 
 // ── CORS ──────────────────────────────────────────────────────────
@@ -104,7 +105,7 @@ header('Pragma: no-cache');
 
 // ── Rate limiting simple por IP ───────────────────────────────────
 function checkRateLimit(string $key, int $maxRequests = 60, int $windowSec = 60): void {
-    $ip      = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    $ip      = clienteIp();
     $file    = sys_get_temp_dir() . '/wh_rl_' . md5($key . $ip) . '.json';
     $now     = time();
     $data    = file_exists($file) ? json_decode(file_get_contents($file), true) : [];
@@ -137,4 +138,51 @@ function checkHoneypot(array $body): void {
     if (!empty($body['_hp']) || !empty($body['website']) || !empty($body['url'])) {
         jsonError('Error de validación', 422);
     }
+}
+
+// Aplica un pago ya aprobado (Stripe/PayPal/manual) al pedido: suma a
+// monto_pagado y mueve el estado a anticipo_pagado/pagado. Compartida por
+// api/pagos.php y api/pedidos.php (pedido manual con pago recibido).
+function registrarPagoAprobado(int $pedidoId, float $montoPago): void {
+    $pedido = dbRow("SELECT total, monto_pagado, estado, tipo_pago FROM pedidos WHERE id = ?", [$pedidoId]);
+    if (!$pedido) return;
+
+    $estadoPrevio      = $pedido['estado'];
+    $montoPagadoPrevio = (float)$pedido['monto_pagado'];
+    $total             = (float)$pedido['total'];
+    $nuevoMontoPagado  = round($montoPagadoPrevio + $montoPago, 2);
+    $liquidado         = $nuevoMontoPagado >= ($total - 0.01);
+    // Es liquidación de saldo (no el primer pago) si ya había algo pagado antes.
+    $esLiquidacionSaldo = $liquidado && $montoPagadoPrevio > 0.009;
+
+    $datosUpdate = ['monto_pagado' => $nuevoMontoPagado];
+    $estadosFasePago = ['pendiente', 'anticipo_pagado', 'pagado'];
+    if (in_array($estadoPrevio, $estadosFasePago, true)) {
+        $datosUpdate['estado'] = $liquidado ? 'pagado' : 'anticipo_pagado';
+    }
+    dbUpdate('pedidos', $datosUpdate, 'id = ?', [$pedidoId]);
+
+    if ($esLiquidacionSaldo) {
+        try {
+            $pedidoActualizado = dbRow("SELECT * FROM pedidos WHERE id = ?", [$pedidoId]);
+            if ($pedidoActualizado) {
+                // Para el correo: indica que el saldo quedó liquidado, sin alterar
+                // el estado real de fulfillment ya guardado en la base de datos.
+                $pedidoActualizado['estado'] = 'pagado';
+                notificarCambioPedido($pedidoActualizado, 'anticipo_pagado');
+            }
+        } catch (Exception $e) {
+            appLog('warning', 'Notif saldo liquidado error', ['error' => $e->getMessage()]);
+        }
+    }
+}
+
+// pagos.registrado_por (migración 2026-10): quién del personal registró un
+// pago manual. Se consulta una vez por petición por si la columna aún no existe.
+function pagosTieneRegistradoPor(): bool {
+    static $tiene = null;
+    if ($tiene === null) {
+        try { dbRows("SELECT registrado_por FROM pagos LIMIT 0"); $tiene = true; } catch (\Throwable $e) { $tiene = false; }
+    }
+    return $tiene;
 }

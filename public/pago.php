@@ -58,7 +58,7 @@ if (!$paypalId)  error_log('[pago.php] PAYPAL_CLIENT_ID vacío o no definido');
   <link rel="stylesheet" href="./assets/<?= av('css/theme-toggle.css') ?>">
   <link rel="stylesheet" href="/assets/<?= av('css/animations.css') ?>">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+  <script src="/assets/vendor/lucide-1.55.0.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous" defer></script>
 </head>
 <body>
@@ -200,7 +200,7 @@ if (!$paypalId)  error_log('[pago.php] PAYPAL_CLIENT_ID vacío o no definido');
   <script src="./assets/<?= av('js/pago.js') ?>"></script>
   <script src="./assets/<?= av('js/event-delegation.js') ?>"></script>
   <script src="./assets/<?= av('js/animations.js') ?>"></script>
-  <script>
+  <script nonce="<?= cspNonce() ?>">
     document.addEventListener('DOMContentLoaded', function () {
       if (window.lucide) window.lucide.createIcons();
     });

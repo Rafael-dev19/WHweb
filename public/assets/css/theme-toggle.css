@@ -62,3 +62,15 @@
     bottom: calc(72px + env(safe-area-inset-bottom, 0px));
   }
 }
+
+/* ── Regla global de móvil (este archivo se carga en todas las páginas
+   públicas): iOS hace zoom automático al enfocar un campo con letra menor
+   a 16px y la página queda ampliada — el header y la barra inferior fijos
+   se descuadran. Solo en pantallas táctiles; en escritorio no cambia nada. ── */
+@media (hover: none) and (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}

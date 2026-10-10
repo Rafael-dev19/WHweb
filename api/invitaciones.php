@@ -159,6 +159,7 @@ switch ($action) {
         // Crear sesión para que el empleado entre directamente
         $usuario = dbRow("SELECT * FROM usuarios_personal WHERE id = ? LIMIT 1", [$empId]);
         if ($usuario) _crearSesion($usuario);
+        firebaseMarcarPersonal($uid, $inv['rol']); // claim staff para Storage
 
         $redirect = panelUrlParaRol($inv['rol']);
         jsonSuccess([

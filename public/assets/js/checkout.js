@@ -405,6 +405,7 @@ function renderizarItems() {
             <div class="cart-item-details">
                 <div class="cart-item-name">${esc(item.nombre)}</div>
                 <div class="cart-item-specs" style="color: var(--color-text-muted);font-size:13px;margin:6px 0;">
+                    ${item.detalle ? `${esc(item.detalle)}<br>` : ''}
                     ${item.categoria ? `<strong>Categoría:</strong> ${esc(item.categoria)}<br>` : ''}
                     ${item.material  ? `<strong>Material:</strong> ${esc(item.material)}<br>`  : ''}
                 </div>

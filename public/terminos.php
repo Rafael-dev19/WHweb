@@ -2,6 +2,8 @@
 header('Content-Type: text/html; charset=utf-8');
 require_once dirname(__DIR__) . '/includes/assets.php';
 require_once dirname(__DIR__) . '/includes/env.php';
+require_once dirname(__DIR__) . '/includes/csp.php';
+enviarCabeceraCSP();
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -22,7 +24,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
   <link rel="stylesheet" href="./assets/<?= av('css/theme-toggle.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/modal-auth.css') ?>">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+  <script src="/assets/vendor/lucide-1.55.0.min.js" defer></script>
 </head>
 <body>
 
@@ -56,7 +58,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
     <h2><i data-lucide="building-2"></i> 1. Datos de la empresa</h2>
     <p>
       <strong>Wooden House</strong> es una empresa mexicana dedicada a la fabricación y comercialización
-      de muebles de madera a medida — cocinas integrales, clósets y muebles de baño —, con domicilio en Guadalajara, Jalisco.
+      de muebles de madera — muebles de baño de catálogo personalizables y cocinas y clósets diseñados a la medida bajo cotización —, con taller en <?= htmlspecialchars(SITE_ADDRESS) ?>.
     </p>
     <p>Contacto: <a href="mailto:<?= SITE_EMAIL ?>"><?= SITE_EMAIL ?></a> &nbsp;|&nbsp; <a href="tel:<?= sitePhoneDigits() ?>"><?= SITE_PHONE ?></a></p>
   </div>
@@ -175,9 +177,8 @@ require_once dirname(__DIR__) . '/includes/env.php';
     <h2><i data-lucide="truck"></i> 7. Envíos y entregas</h2>
     <ul>
       <li><strong>Recoger en sucursal:</strong> sin costo adicional en nuestras instalaciones en Guadalajara, Jalisco. El cliente será notificado cuando su pedido esté listo.</li>
-      <li><strong>Envío a domicilio:</strong> disponible en Guadalajara y Zona Metropolitana. Costo de envío: <strong>$<?= number_format(COSTO_ENVIO, 0) ?> MXN</strong>. El tiempo estimado de entrega es de <strong>2 a 5 días hábiles</strong> a partir del pago confirmado.</li>
-      <li><strong>Envío gratuito</strong> en pedidos superiores a <strong>$5,000 MXN</strong>.</li>
-      <li><strong>Instalación profesional:</strong> servicio adicional de <strong>$<?= number_format(COSTO_INSTALACION, 0) ?> MXN</strong> por mueble, incluye conexión de lavabo y ajustes finales.</li>
+      <li><strong>Envío a domicilio:</strong> disponible en Guadalajara y Zona Metropolitana. Costo de envío: <strong>$<?= number_format(COSTO_ENVIO, 0) ?> MXN</strong>. Los muebles de baño se producen en <strong><?= (int) MARGEN_HABILES ?> días hábiles</strong> a partir de la confirmación del anticipo; la fecha de entrega se elige al comprar. Zonas foráneas de Jalisco (Tapalpa, Mazamitla y otras) con flete cotizado según la distancia.</li>
+      <li><strong>Instalación profesional:</strong> servicio adicional de <strong>$<?= number_format(COSTO_INSTALACION, 0) ?> MXN</strong> por mueble (2 personas, herramienta y garantía), incluye conexión de lavabo y ajustes finales.</li>
     </ul>
     <p>
       Los tiempos de entrega son estimados y pueden variar por factores externos ajenos al control de Wooden House
@@ -331,7 +332,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
 <script src="/assets/<?= av('js/modal-auth.js') ?>"></script>
 <script src="/assets/<?= av('js/event-delegation.js') ?>"></script>
 <script src="/assets/<?= av('js/animations.js') ?>"></script>
-<script>
+<script nonce="<?= cspNonce() ?>">
   document.addEventListener('DOMContentLoaded', function () {
     if (window.lucide) window.lucide.createIcons();
   });

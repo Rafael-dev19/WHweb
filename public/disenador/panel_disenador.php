@@ -37,12 +37,12 @@ unset($_usuario);
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
   <link rel="stylesheet" href="../assets/<?= av('css/panel_disenador.css') ?>">
   <link rel="stylesheet" href="../assets/<?= av('css/animations.css') ?>">
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+  <script src="/assets/vendor/lucide-1.55.0.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous" defer></script>
 </head>
 
 <body>
-  <script>window.WH_ROL = "disenador"; window.WH_AREA = null;</script>
+  <script nonce="<?= cspNonce() ?>">window.WH_ROL = "disenador"; window.WH_AREA = null;</script>
   <div class="header">
     <div class="header-left">
     <button class="menu-toggle" id="menuToggle" aria-label="Abrir menú" aria-expanded="false">
@@ -196,7 +196,7 @@ unset($_usuario);
                     <th>Correo</th>
                     <th>Fecha de Entrega</th>
                     <th>Estado</th>
-                    <th>Total</th>
+                    <th>Pago</th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
@@ -517,12 +517,13 @@ unset($_usuario);
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
   <script src="../assets/<?= av('js/theme-toggle.js') ?>"></script>
   <script src="../assets/<?= av('js/firebase-config.js') ?>"></script>
+  <script src="../assets/<?= av('js/metodo-cobro.js') ?>"></script>
   <script src="../assets/<?= av('js/panel_disenador.js') ?>"></script>
   <script src="../assets/<?= av('js/voice-recorder.js') ?>"></script>
   <script src="../assets/<?= av('js/pedido-manual.js') ?>"></script>
   <script src="../assets/<?= av('js/event-delegation.js') ?>"></script>
   <script src="../assets/<?= av('js/animations.js') ?>"></script>
   <script src="../assets/<?= av('js/push-notifications.js') ?>"></script>
-  <script>initPushForegroundListener();</script>
+  <script nonce="<?= cspNonce() ?>">initPushForegroundListener();</script>
 </body>
 </html>

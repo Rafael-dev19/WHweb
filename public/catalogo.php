@@ -2,6 +2,8 @@
 header('Content-Type: text/html; charset=utf-8');
 require_once dirname(__DIR__) . '/includes/assets.php';
 require_once dirname(__DIR__) . '/includes/env.php';
+require_once dirname(__DIR__) . '/includes/csp.php';
+enviarCabeceraCSP();
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -10,7 +12,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Catálogo - Wooden House</title>
-  <meta name="description" content="Explora el catálogo completo de Wooden House. Muebles de madera artesanales: cocinas, clósets, muebles de baño y más. Encuentra el mueble perfecto para tu hogar.">
+  <meta name="description" content="Catálogo 2026 de muebles de baño Wooden House: 7 modelos personalizables de 60 a 120 cm, con ovalín, monomando y herrajes de cierre lento. Cocinas y clósets a la medida bajo cotización.">
   <link rel="canonical" href="<?= APP_URL ?>/catalogo">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,7 +26,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
   <link rel="stylesheet" href="./assets/<?= av('css/animations.css') ?>">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous" defer></script>
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+  <script src="/assets/vendor/lucide-1.55.0.min.js" defer></script>
 </head>
 <body>
 
@@ -49,7 +51,8 @@ require_once dirname(__DIR__) . '/includes/env.php';
 
   <main id="contenido-principal">
   <div class="container">
-    <h1 class="page-title">Catálogo de Muebles de Madera</h1>
+    <h1 class="page-title">Catálogo de Muebles de Baño</h1>
+    <p class="catalogo-intro">7 diseños, cada uno personalizable a la medida (60 a 120 cm). Cocinas y clósets los diseñamos a tu medida <a href="/solicitudes">bajo cotización</a>.</p>
 
     <div class="catalog-main-categories" id="categoriasMain">
       <button class="main-cat-btn active" data-main-cat="banos">
@@ -58,11 +61,11 @@ require_once dirname(__DIR__) . '/includes/env.php';
       </button>
       <button class="main-cat-btn" data-main-cat="cocinas">
         <i data-lucide="cooking-pot"></i>
-        <span>Cocinas</span>
+        <span>Cocinas · a la medida</span>
       </button>
       <button class="main-cat-btn" data-main-cat="closets">
         <i data-lucide="shirt"></i>
-        <span>Closets</span>
+        <span>Clósets · a la medida</span>
       </button>
     </div>
 
@@ -101,6 +104,79 @@ require_once dirname(__DIR__) . '/includes/env.php';
     </div>
 
     <div id="paginacion-container" class="paginacion"></div>
+
+    <?php require_once dirname(__DIR__) . '/includes/accesorios.php'; ?>
+    <!-- ══ Accesorios y personalización (catálogo 2026, págs. 10-14) ══ -->
+    <section class="accesorios-seccion" id="accesoriosSeccion" aria-labelledby="accTitulo">
+      <h2 class="accesorios-titulo" id="accTitulo">Accesorios y personalización</h2>
+      <p class="accesorios-intro">El ovalín y el monomando ya vienen incluidos en el precio de tu mueble: tú eliges cuál al agregarlo al carrito.</p>
+
+      <div class="acc-grid">
+        <article class="acc-card">
+          <a href="/assets/img/catalogo/ovalines.jpg" data-lightbox class="acc-img"><img src="/assets/img/catalogo/ovalines.jpg" alt="Ovalines disponibles" loading="lazy"></a>
+          <div class="acc-body">
+            <h3><i data-lucide="droplets"></i> Ovalines</h3>
+            <p>12 modelos de cerámica incluidos en el paquete. Los importados o premium pueden tener un ajuste.</p>
+            <details><summary>Ver medidas</summary>
+              <ul class="acc-lista"><?php foreach (WH_OVALINES as $o): if ($o['linea'] !== 'incluido') continue; ?>
+                <li><strong><?= htmlspecialchars($o['codigo']) ?></strong> <?= htmlspecialchars($o['medidas']) ?></li>
+              <?php endforeach; ?></ul>
+            </details>
+          </div>
+        </article>
+
+        <article class="acc-card">
+          <a href="/assets/img/catalogo/ovalines-economicos.jpg" data-lightbox class="acc-img"><img src="/assets/img/catalogo/ovalines-economicos.jpg" alt="Ovalines línea económica" loading="lazy"></a>
+          <div class="acc-body">
+            <h3><i data-lucide="piggy-bank"></i> Línea económica</h3>
+            <p>Misma calidad estructural con acabados más sencillos. Ideal para baños secundarios o presupuesto ajustado.</p>
+            <details><summary>Ver medidas</summary>
+              <ul class="acc-lista"><?php foreach (WH_OVALINES as $o): if ($o['linea'] !== 'economica') continue; ?>
+                <li><strong><?= htmlspecialchars($o['codigo']) ?></strong> <?= htmlspecialchars($o['medidas']) ?></li>
+              <?php endforeach; ?></ul>
+            </details>
+          </div>
+        </article>
+
+        <article class="acc-card">
+          <a href="/assets/img/catalogo/monomandos.jpg" data-lightbox class="acc-img"><img src="/assets/img/catalogo/monomandos.jpg" alt="Monomandos disponibles" loading="lazy"></a>
+          <div class="acc-body">
+            <h3><i data-lucide="droplet"></i> Monomandos</h3>
+            <p>Plateado, negro mate o dorado — tú eliges. Incluidos en el paquete; los dorados premium pueden tener un ajuste.</p>
+            <details><summary>Ver modelos</summary>
+              <ul class="acc-lista"><?php foreach (WH_MONOMANDOS as $m): ?>
+                <li><strong><?= htmlspecialchars($m['codigo']) ?></strong> <?= htmlspecialchars($m['acabado']) ?></li>
+              <?php endforeach; ?></ul>
+            </details>
+          </div>
+        </article>
+      </div>
+
+      <div class="acc-dos">
+        <div class="acc-card acc-card--texto">
+          <h3><i data-lucide="gem"></i> Cubiertas de piedra</h3>
+          <p>Lleva cualquier modelo al siguiente nivel. Se entregan cortadas, pulidas e instaladas (incluye hueco para ovalín).</p>
+          <ul class="acc-precios">
+            <li><span>Granito</span><strong>$<?= number_format(WH_CUBIERTAS_ML['granito']) ?> / metro lineal</strong></li>
+            <li><span>Mármol</span><strong>$<?= number_format(WH_CUBIERTAS_ML['marmol']) ?> / metro lineal</strong></li>
+            <li><span>Cuarzo</span><strong>$<?= number_format(WH_CUBIERTAS_ML['cuarzo']) ?> / metro lineal</strong></li>
+          </ul>
+          <p class="acc-mini">Para un mueble de 1 metro considera aprox. 1.2 m de cubierta (frente y laterales). <a href="/solicitudes">Cotízala aquí</a>.</p>
+        </div>
+        <div class="acc-card acc-card--texto">
+          <h3><i data-lucide="sliders-horizontal"></i> Adicionales</h3>
+          <p>Hazlo totalmente tuyo. Los eliges en la ficha de cada modelo:</p>
+          <ul class="acc-precios">
+            <?php foreach (WH_ADICIONALES as $a): ?>
+              <li><span><?= htmlspecialchars($a['nombre']) ?> <small><?= htmlspecialchars($a['detalle']) ?></small></span><strong>+$<?= number_format($a['precio']) ?></strong></li>
+            <?php endforeach; ?>
+            <li><span>Espejo con LED <small>Varios tamaños</small></span><strong>Desde $1,500</strong></li>
+            <li><span>Color o acabado especial</span><strong>Consultar</strong></li>
+          </ul>
+          <p class="acc-mini">¿Una idea 100% a medida? Te la diseñamos en 3D sin costo para proyectos confirmados con anticipo. <a href="/solicitudes">Pide tu cotización</a>.</p>
+        </div>
+      </div>
+    </section>
   </div>
 
   <div class="footer">
@@ -145,8 +221,8 @@ require_once dirname(__DIR__) . '/includes/env.php';
           <div class="wh-step-num">1</div>
           <div class="wh-step-icon"><i data-lucide="search"></i></div>
           <div class="wh-step-info">
-            <strong>Busca el mueble que quieres</strong>
-            <span>Usa la barra de búsqueda o los filtros de categoría de arriba</span>
+            <strong>Elige tu modelo y su ancho</strong>
+            <span>Abre el modelo, elige el ancho que quepa en tu baño (60 a 120 cm) y el precio se ajusta solo</span>
           </div>
         </div>
         <div class="wh-guide-step">
@@ -179,7 +255,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
           <i data-lucide="receipt"></i> ¿Prefiero cotizar primero
         </a>
       </div>
-      <p class="wh-guide-note"><i data-lucide="info"></i> Si no sabes el precio exacto o quieres medidas especiales, pide una cotización gratis</p>
+      <p class="wh-guide-note"><i data-lucide="info"></i> ¿Otra medida, cubierta de piedra, una cocina o un clóset? Pide una cotización gratis</p>
     </div>
   </div>
 
@@ -190,7 +266,7 @@ require_once dirname(__DIR__) . '/includes/env.php';
   <script src="./assets/<?= av('js/event-delegation.js') ?>"></script>
   <script src="./assets/<?= av('js/page-init.js') ?>"></script>
   <script src="./assets/<?= av('js/animations.js') ?>"></script>
-  <script>
+  <script nonce="<?= cspNonce() ?>">
     document.addEventListener('DOMContentLoaded', function () {
       if (window.lucide) window.lucide.createIcons();
     });

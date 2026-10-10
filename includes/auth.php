@@ -302,6 +302,23 @@ function requerirPersonal(): array {
     return $usuario;
 }
 
+// Montos del pedido (total, anticipo, saldo, pagos, precios): solo los ven
+// el jefe y ventas (quienes cobran). Administrador (soporte técnico), taller,
+// instalación y diseño reciben únicamente el estado del pago
+// ("liquidado"/"saldo pendiente") — ver ocultarMontosPedido() en api/pedidos.php.
+function puedeVerMontos(array $usuario): bool {
+    return in_array($usuario['rol'] ?? '', ['jefe', 'ventas'], true);
+}
+
+// Estado del pago en palabras, sin cifras — lo que sí necesita saber quien
+// entrega/instala para no cerrar un pedido con saldo por cobrar.
+function estadoPagoPedido(array $pedido): string {
+    $total  = (float)($pedido['total'] ?? 0);
+    $pagado = (float)($pedido['monto_pagado'] ?? 0);
+    if ($pagado <= 0.009) return 'sin_pago';
+    return $pagado >= $total - 0.01 ? 'liquidado' : 'saldo_pendiente';
+}
+
 function sesionActiva(): ?array {
     if (!empty($_SESSION['usuario_id'])) {
         return dbRow(

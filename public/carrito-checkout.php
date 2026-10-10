@@ -33,7 +33,7 @@ header('Content-Type: text/html; charset=utf-8');
     <link rel="stylesheet" href="./assets/<?= av('css/animations.css') ?>">
     <link rel="stylesheet" href="./assets/<?= av('css/modal-auth.css') ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+    <script src="/assets/vendor/lucide-1.55.0.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous" defer></script>
 </head>
 <body>
@@ -207,7 +207,7 @@ header('Content-Type: text/html; charset=utf-8');
                 </h2>
 
                 <div class="date-info">
-                    <strong><i data-lucide="clock"></i> Fabricación bajo pedido — entrega estimada en 2 días hábiles</strong>
+                    <strong><i data-lucide="clock"></i> Fabricación bajo pedido — <?= (int) MARGEN_HABILES ?> días hábiles de producción</strong>
                     <p>
                         Selecciona el día que prefieres recibir tu mueble.
                         La disponibilidad se actualiza en tiempo real según la carga del taller.
@@ -432,7 +432,7 @@ header('Content-Type: text/html; charset=utf-8');
 <?php if (defined('GOOGLE_MAPS_API_KEY') && GOOGLE_MAPS_API_KEY): ?>
 <script src="https://maps.googleapis.com/maps/api/js?key=<?= htmlspecialchars(GOOGLE_MAPS_API_KEY) ?>&libraries=places&callback=initMapsPickerReady&loading=async" async defer></script>
 <?php endif; ?>
-<script>
+<script nonce="<?= cspNonce() ?>">
     document.addEventListener('DOMContentLoaded', function () {
       if (window.lucide) window.lucide.createIcons();
     });

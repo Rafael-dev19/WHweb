@@ -6,6 +6,7 @@
       color: var(--color-text-main);
       line-height: 1.6;
       overflow-x: hidden;
+      overflow-x: clip; /* ver styles.css: no romper el header sticky en iOS */
     }
 
     /* =========================
@@ -668,3 +669,48 @@
     @media (max-width: 900px) {
       .footer, body > .container:last-of-type { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
     }
+
+/* ── Catálogo 2026: selector de ancho y caja de personalización ── */
+.price-nota { font-size: 13px; color: var(--color-text-muted); margin: -4px 0 14px; }
+.ancho-selector { margin: 0 0 18px; }
+.ancho-label { font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; color: var(--color-text-main); }
+.ancho-chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
+.ancho-chip {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 10px 6px; border-radius: 10px; cursor: pointer;
+  border: 2px solid var(--color-border); background: var(--color-bg-card); color: var(--color-text-main);
+  min-height: 56px; font: inherit;
+}
+.ancho-chip strong { font-size: 15px; }
+.ancho-chip span { font-size: 12px; color: var(--color-text-muted); }
+.ancho-chip.active { border-color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 14%, var(--color-bg-card)); }
+.ancho-chip.active span { color: var(--color-primary); font-weight: 600; }
+.personaliza-box {
+  margin-top: 16px; padding: 14px 16px; border-radius: 12px;
+  border: 1px solid var(--color-border); background: var(--color-bg-card);
+}
+.personaliza-box strong { display: flex; align-items: center; gap: 8px; color: var(--color-text-main); }
+.personaliza-box p { font-size: 13px; color: var(--color-text-muted); margin: 6px 0 8px; line-height: 1.5; }
+.personaliza-link { color: var(--color-primary); font-weight: 600; font-size: 14px; }
+
+/* ── Accesorios y adicionales en la ficha ── */
+.accesorios-box { margin: 0 0 18px; }
+.ancho-label small { font-weight: 400; color: var(--color-text-muted); }
+.acc-campo { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--color-text-muted); margin: 6px 0 2px; }
+.acc-select {
+  width: 100%; min-height: 44px; padding: 8px 10px; border-radius: 10px;
+  border: 1px solid var(--color-border); background: var(--color-bg-card); color: var(--color-text-main); font: inherit;
+}
+.acc-ver { font-size: 13px; color: var(--color-primary); font-weight: 600; }
+.acc-nota { font-size: 12px; color: var(--color-text-muted); margin: 8px 0 0; line-height: 1.5; }
+.acc-nota a { color: var(--color-primary); font-weight: 600; }
+.adic-lista { display: flex; flex-direction: column; gap: 6px; }
+.adic-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; cursor: pointer;
+  border: 1px solid var(--color-border); background: var(--color-bg-card);
+}
+.adic-item input { width: 18px; height: 18px; accent-color: var(--color-primary); flex-shrink: 0; }
+.adic-item span { display: flex; flex-direction: column; flex: 1; font-size: 14px; color: var(--color-text-main); }
+.adic-item small { font-size: 12px; color: var(--color-text-muted); }
+.adic-item em { font-style: normal; font-weight: 700; color: var(--color-primary); white-space: nowrap; }
+.adic-item:has(input:checked) { border-color: var(--color-primary); }

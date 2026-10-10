@@ -25,12 +25,21 @@ function initCartBadge() {
   } catch { badge.style.display = 'none'; }
 }
 
+let _tokenPedido = null;
+function _tokenPara(numero) {
+  return _tokenPedido && String(numero).toUpperCase() === _tokenPedido.numero
+    ? `&t=${encodeURIComponent(_tokenPedido.token)}` : '';
+}
+
 function checkURLParams() {
   const params      = new URLSearchParams(window.location.search);
   const token       = params.get('token');
   const pedido      = params.get('pedido');
   const cotizacion  = params.get('cotizacion');
   if (token && pedido) {
+    // El token del correo prueba que es el dueño: con él la API devuelve
+    // montos y permite pagar el saldo (el folio solo, no).
+    _tokenPedido = { numero: pedido.toUpperCase(), token };
     const trackInput = document.getElementById('trackingNumber');
     if (trackInput) { trackInput.value = pedido; trackOrder(); }
     return;
@@ -92,7 +101,7 @@ async function trackOrder() {
 
   try {
     let endpoint = '';
-    if (esPedido)    endpoint = `${API_URL}/pedidos.php?numero=${encodeURIComponent(trackingNumber)}`;
+    if (esPedido)    endpoint = `${API_URL}/pedidos.php?numero=${encodeURIComponent(trackingNumber)}${_tokenPara(trackingNumber)}`;
     else if (esCita) endpoint = `${API_URL}/citas.php?numero_cita=${encodeURIComponent(trackingNumber)}`;
     else             endpoint = `${API_URL}/cotizaciones.php?numero=${encodeURIComponent(trackingNumber)}`;
 
@@ -223,7 +232,7 @@ async function trackOrder() {
 
     const saldoPendienteBtn = (data.pedido && item.tipo_pago === 'anticipo' && Math.max(0, (item.total || 0) - (item.monto_pagado || 0)) > 0.009)
       ? `<div style="text-align:center;margin-top:16px;">
-           <a href="/pago?modo=saldo&numero=${encodeURIComponent(item.numero_pedido)}" class="btn-track" style="display:inline-flex;text-decoration:none;">
+           <a href="/pago?modo=saldo&numero=${encodeURIComponent(item.numero_pedido)}${_tokenPara(item.numero_pedido)}" class="btn-track" style="display:inline-flex;text-decoration:none;">
              <i data-lucide="credit-card"></i> Pagar saldo pendiente
            </a>
          </div>`
@@ -317,7 +326,7 @@ function renderCotizacionToken(cot, token) {
   if (est === 'respondida') {
     accionHtml = `
       <div style="text-align:center;margin-top:18px;">
-        <button class="btn-track" onclick="confirmarCotizacion('${token}')"><i data-lucide="check"></i> Confirmar y continuar con mi proyecto</button>
+        <button class="btn-track" data-call="confirmarCotizacion" data-args='["${token}"]'><i data-lucide="check"></i> Confirmar y continuar con mi proyecto</button>
       </div>`;
   } else if (est === 'aceptada') {
     accionHtml = `<p style="text-align:center;color:#4a8b5a;font-weight:600;margin-top:14px;display:flex;align-items:center;justify-content:center;gap:6px;"><i data-lucide="circle-check" style="width:16px;height:16px;stroke-width:1.75;"></i> Confirmado — en espera de que agendemos tu producción.</p>`;

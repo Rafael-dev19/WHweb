@@ -800,3 +800,10 @@ ALTER TABLE pedido_imagenes_diseno
 -- ================================================================
 ALTER TABLE detalle_pedido MODIFY COLUMN cantidad DECIMAL(10,3) NOT NULL DEFAULT 1;
 ALTER TABLE detalle_pedido ADD COLUMN unidad VARCHAR(30) NOT NULL DEFAULT 'pza' AFTER cantidad;
+
+-- ================================================================
+-- Catálogo de baño 2026, precio por ancho (producto_medidas), pedido
+-- manual por tipo (baño/cocina/closet) y métodos de pago manuales:
+-- ver database/migracion_2026_10_catalogo_banos.sql y
+-- database/migracion_2026_10b_accesorios.sql (ovalín/monomando/adicionales).
+-- ================================================================

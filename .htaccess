@@ -32,3 +32,9 @@ Options -Indexes
     Header always unset Server
     Header always set X-Content-Type-Options "nosniff"
 </IfModule>
+
+# Llaves de Firebase (cuenta de servicio) y archivos temporales del editor
+# (.swp de vim puede contener el .env completo) — nunca se sirven.
+<FilesMatch "(firebase-adminsdk.*|service-account.*)\.json$|\.sw[op]$|~$">
+    Require all denied
+</FilesMatch>

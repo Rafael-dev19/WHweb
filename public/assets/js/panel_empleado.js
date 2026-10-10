@@ -1158,7 +1158,7 @@ async function cargarPedidosEmpleadoAPI() {
         <td>${p.correo_cliente}</td>
         <td>${p.fecha_estimada || '—'}</td>
         <td><span class="status-badge ${ESTADO_PEDIDO_CLASS[p.estado] || ''}">${ESTADO_PEDIDO_LABELS[p.estado] || p.estado}</span></td>
-        <td style="color:var(--accent);font-weight:800;">$${parseFloat(p.total||0).toLocaleString('es-MX')}</td>
+        <td>${estadoPagoBadge(p.estado_pago)}</td>
         <td style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
           <button data-call="verDetallePedidoEmp" data-args="[${p.id}]" style="background:var(--accent);color:#fff;border:none;padding:5px 12px;border-radius:4px;cursor:pointer;font-size:12px;white-space:nowrap;flex-shrink:0;">
             <i data-lucide="eye"></i> Ver
@@ -1186,24 +1186,22 @@ async function actualizarEstadoPedidoEmp(id, estado) {
     if (estado === 'finalizado') {
       const detalle = await apiFetch(`${API_BASE}/pedidos.php?id=${id}`);
       const p = detalle?.pedido;
-      if (p && p.tipo_pago === 'anticipo') {
-        const saldo = Math.max(0, (p.total || 0) - (p.monto_pagado || 0));
-        if (saldo > 0.009) {
-          const cobrado = confirm(`Este pedido tiene un saldo pendiente de $${saldo.toLocaleString('es-MX')} (anticipo). ¿Se cobró el saldo en efectivo/en persona al momento de la instalación/entrega?`);
-          if (cobrado) {
-            const r = await apiFetch(`${API_BASE}/pagos.php?action=marcar_saldo_manual`, {
-              method: 'POST', body: JSON.stringify({ pedido_id: id }),
-            });
-            if (!r.success) {
-              showNotification('<i data-lucide="circle-x"></i> ' + (r.error || 'Error al registrar el saldo'), 'error');
-              cargarPedidosEmpleadoAPI();
-              return;
-            }
-          } else {
-            showNotification('<i data-lucide="triangle-alert"></i> El pedido no puede marcarse como finalizado con saldo pendiente. Registra el pago primero.', 'warning');
-            cargarPedidosEmpleadoAPI();
-            return;
-          }
+      if (p && p.estado_pago !== 'liquidado') {
+        const cobrado = confirm('Este pedido todavía tiene saldo por pagar.\n\n¿El cliente ya pagó el resto (efectivo, transferencia o terminal)?\n\nAcepta solo si ya lo pagó: el pedido quedará como liquidado y terminado.');
+        if (!cobrado) {
+          showNotification('<i data-lucide="triangle-alert"></i> El pedido se puede terminar hasta que el cliente pague el resto. Si no pudo pagar, avisa a ventas o al jefe.', 'warning');
+          cargarPedidosEmpleadoAPI();
+          return;
+        }
+        const metodo = await elegirMetodoCobro();
+        if (!metodo) { cargarPedidosEmpleadoAPI(); return; }
+        const r = await apiFetch(`${API_BASE}/pagos.php?action=marcar_saldo_manual`, {
+          method: 'POST', body: JSON.stringify({ pedido_id: id, metodo }),
+        });
+        if (!r.success) {
+          showNotification('<i data-lucide="circle-x"></i> ' + (r.error || 'Error al registrar el pago'), 'error');
+          cargarPedidosEmpleadoAPI();
+          return;
         }
       }
     }
@@ -1346,7 +1344,7 @@ async function verDetallePedidoEmp(id) {
 
     let entrega;
     if (p.tipo_entrega === 'recoger') {
-      entrega = '🏪 Recoge en tienda';
+      entrega = '🏪 Pasa a recogerlo al taller';
     } else {
       // Pedidos cargados a mano (ver pedido-manual.js) suelen traer un link de
       // ubicación pegado directo en direccion_envio en vez de texto — usarlo
@@ -1388,64 +1386,47 @@ async function verDetallePedidoEmp(id) {
           <thead><tr style="background:var(--bg);">
             <th style="padding:8px 6px;text-align:left;color:var(--accent);border-bottom:1px solid var(--border);">Producto</th>
             <th style="padding:8px 6px;text-align:center;color:var(--accent);border-bottom:1px solid var(--border);">Cant.</th>
-            <th style="padding:8px 6px;text-align:right;color:var(--accent);border-bottom:1px solid var(--border);">P. Unit.</th>
-            <th style="padding:8px 6px;text-align:right;color:var(--accent);border-bottom:1px solid var(--border);">Total</th>
           </tr></thead>
           <tbody>${items.map(i=>`
             <tr style="border-bottom:1px solid var(--border);">
               <td style="padding:8px 6px;color:var(--muted2);">
                 <div>${escapeHtml(i.nombre_producto||i.producto_nombre||'Producto')}</div>
                 ${renderSpecsEmp(i.especificaciones)}
+                ${detalleLineaHtml(i)}
               </td>
-              <td style="padding:8px 6px;text-align:center;color:var(--muted2);">${i.cantidad}${i.unidad&&i.unidad!=="pza"?" "+escapeHtml(i.unidad):""}</td>
-              <td style="padding:8px 6px;text-align:right;color:var(--muted2);">${money(i.precio_unitario)}</td>
-              <td style="padding:8px 6px;text-align:right;font-weight:700;color:var(--accent);">${money(i.total_linea||i.precio_unitario*i.cantidad)}</td>
+              <td style="padding:8px 6px;text-align:center;color:var(--muted2);">${Number(i.cantidad)}${i.unidad&&i.unidad!=="pza"?" "+escapeHtml(i.unidad):""}</td>
             </tr>`).join('')}
           </tbody>
         </table>`
       : '<p style="color:var(--muted);font-style:italic;font-size:12px;padding:8px 0;">Sin productos registrados</p>';
 
-    const pagos = p.pagos || [];
-    const pagosHtml = pagos.length
-      ? pagos.map(pg=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:1px solid var(--border);color:var(--muted2);">
-          <span>${pg.metodo_pago||'Pago'} — ${(pg.fecha_creacion||'').substring(0,10)}</span>
-          <span style="font-weight:700;color:var(--ok);">${money(pg.monto||0)}</span>
-        </div>`).join('')
-      : '<p style="color:var(--muted);font-style:italic;font-size:12px;padding:6px 0;">Sin pagos registrados</p>';
-
-    const esAnticipo     = p.tipo_pago === 'anticipo';
-    const saldoPendiente = Math.max(0, (p.total||0) - (p.monto_pagado||0));
-    const saldoHtml = saldoPendiente > 0.009
-      ? `<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-          <div>
-            <div style="font-weight:700;color:var(--accent);margin-bottom:4px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">${esAnticipo ? 'Anticipo (50%)' : 'Pago pendiente'}</div>
-            <div style="font-size:12px;color:var(--muted2);">Pagado: <strong>${money(p.monto_pagado||0)}</strong> · Saldo pendiente: <strong style="color:var(--accent);">${money(saldoPendiente)}</strong></div>
-          </div>
-          <button class="btn btn-secondary btn-small" data-call="marcarSaldoManualEmp" data-args="[${id}]"><i data-lucide="hand-coins"></i> ${p.monto_pagado>0?'Marcar saldo pagado':'Marcar como pagado'}</button>
-        </div>`
-      : (esAnticipo ? `<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:14px;">
-          <div style="font-weight:700;color:var(--ok);font-size:12px;"><i data-lucide="circle-check"></i> Anticipo y saldo liquidados</div>
-        </div>` : '');
+    // Sin cifras (la API ya no las manda a taller/instalación/diseño): solo
+    // si el cliente ya pagó todo, para saber si hay que cobrar al entregar.
+    const saldoHtml = `<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:14px;">
+        <div style="font-weight:700;color:var(--accent);margin-bottom:6px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Pago del cliente</div>
+        ${estadoPagoBadge(p.estado_pago)}
+        <div style="font-size:12px;color:var(--muted2);margin-top:6px;line-height:1.5;">${
+          p.estado_pago === 'liquidado'
+            ? 'El cliente ya pagó todo. Al terminar, solo marca el pedido como <strong>Finalizado</strong>.'
+            : 'El cliente <strong>todavía debe una parte</strong>. Al terminar la entrega/instalación, confirma que pagó el resto y marca el pedido como <strong>Finalizado</strong> — el sistema te lo pregunta en ese paso.'
+        }</div>
+      </div>`;
 
     body.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:18px;">
-        <span class="status-badge ${cls}">${label}</span>
-        <div style="text-align:right;">
-          <div style="font-size:22px;font-weight:900;color:var(--accent);">${money(p.total)}</div>
-          <div style="font-size:11px;color:var(--muted);">Sub ${money(p.subtotal)} + Envío ${money(p.costo_envio)} + Inst. ${money(p.costo_instalacion)}</div>
-        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;"><span class="status-badge ${cls}">${label}</span>${tipoProyectoBadge(p.tipo_proyecto)}</div>
       </div>
 
       <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:14px;">
         <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Cliente</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;color:var(--muted2);">
           <div><span style="color:var(--muted);display:block;font-size:10px;">Nombre</span><strong>${escapeHtml(p.nombre_cliente)}</strong></div>
-          <div><span style="color:var(--muted);display:block;font-size:10px;">Teléfono</span><strong>${escapeHtml(p.telefono_cliente||'—')}</strong></div>
+          <div><span style="color:var(--muted);display:block;font-size:10px;">Teléfono</span><strong>${escapeHtml(p.telefono_cliente||'—')}${telefonosSecundariosHtml(p.telefonos_secundarios)}</strong></div>
           <div><span style="color:var(--muted);display:block;font-size:10px;">Correo</span><strong>${escapeHtml(p.correo_cliente)}</strong></div>
-          <div><span style="color:var(--muted);display:block;font-size:10px;">Fecha estimada</span><strong>${p.fecha_estimada||'—'}</strong></div>
+          <div><span style="color:var(--muted);display:block;font-size:10px;">Fecha de entrega / instalación</span><strong>${p.fecha_estimada||'—'}</strong></div>
           <div style="grid-column:1/-1;"><span style="color:var(--muted);display:block;font-size:10px;">Entrega</span><strong>${entrega}</strong></div>
           <div style="grid-column:1/-1;"><span style="color:var(--muted);display:block;font-size:10px;">Instalación</span><strong>${instalacion}</strong></div>
-          ${p.notas?`<div style="grid-column:1/-1;"><span style="color:var(--muted);display:block;font-size:10px;">Notas</span><strong>${escapeHtml(p.notas)}</strong></div>`:''}
+          ${p.notas?`<div style="grid-column:1/-1;"><span style="color:var(--muted);display:block;font-size:10px;">Notas</span><strong style="white-space:pre-line;">${escapeHtml(p.notas)}</strong></div>`:''}
           ${p.cliente_id?`<div style="grid-column:1/-1;margin-top:4px;"><span style="background:#2d6a3f20;color:#2d6a3f;border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700;"><i data-lucide="user-check"></i> Cliente registrado #${p.cliente_id}</span></div>`:''}
         </div>
       </div>
@@ -1509,7 +1490,7 @@ async function verDetallePedidoEmp(id) {
         <summary><i data-lucide="receipt"></i> Partidas cotizadas (${escapeHtml(p.cotizacion_origen.numero_cotizacion)}) <span class="wh-collapse-count">— ver historial completo</span></summary>
         <div class="wh-collapse-body">
           ${p.cotizacion_origen.items?.length ? `<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">
-            <tbody>${p.cotizacion_origen.items.map(it => `<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 4px;color:var(--muted2);">${escapeHtml(it.nombre_item)}</td><td style="padding:5px 4px;text-align:center;color:var(--muted2);">${it.cantidad} ${escapeHtml(it.unidad)}</td><td style="padding:5px 4px;text-align:right;color:var(--accent);font-weight:700;">${money(it.subtotal)}</td></tr>`).join('')}</tbody>
+            <tbody>${p.cotizacion_origen.items.map(it => `<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 4px;color:var(--muted2);">${escapeHtml(it.nombre_item)}</td><td style="padding:5px 4px;text-align:center;color:var(--muted2);">${it.cantidad} ${escapeHtml(it.unidad)}</td></tr>`).join('')}</tbody>
           </table>` : ''}
           ${p.cotizacion_origen.descripcion_respuesta ? `<div style="font-size:12px;color:var(--muted2);margin-bottom:8px;">${escapeHtml(p.cotizacion_origen.descripcion_respuesta)}</div>` : ''}
           ${p.cotizacion_origen.audio_respuesta_url ? `<audio controls src="${p.cotizacion_origen.audio_respuesta_url}" style="width:100%;height:36px;margin-bottom:8px;"></audio>` : ''}
@@ -1524,10 +1505,6 @@ async function verDetallePedidoEmp(id) {
         ${itemsHtml}
       </div>
 
-      <div style="margin-bottom:14px;">
-        <div style="font-weight:700;color:var(--accent);margin-bottom:6px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Historial de Pagos</div>
-        ${pagosHtml}
-      </div>
 
       ${window.WH_ROL === 'disenador' && ['anticipo_pagado','pagado'].includes(est) ? `
       <div style="padding-top:14px;border-top:1px solid var(--border);margin-bottom:14px;">
@@ -1672,11 +1649,12 @@ async function marcarListoParaProduccion(id) {
 }
 
 async function marcarSaldoManualEmp(id) {
-  if (!confirm('¿Confirmas que el saldo restante se cobró en efectivo, transferencia o terminal? Esto marcará el pedido como pagado.')) return;
+  const metodo = await elegirMetodoCobro();
+  if (!metodo) return;
   try {
     const data = await apiFetch(`${API_BASE}/pagos.php?action=marcar_saldo_manual`, {
       method: 'POST',
-      body: JSON.stringify({ pedido_id: id }),
+      body: JSON.stringify({ pedido_id: id, metodo }),
     });
     if (data.success) {
       showNotification('<i data-lucide="circle-check"></i> Saldo registrado como pagado', 'success');
@@ -2242,4 +2220,55 @@ async function generarRutaDia(fecha) {
   } catch(e) {
     if (body) body.innerHTML = `<div style="color:var(--danger);padding:24px;text-align:center;"><i data-lucide="circle-alert"></i> Error: ${escapeHtml(e.message)}</div>`;
   }
+}
+
+
+/* ── Datos extra de pedidos cargados a mano (ver pedido-manual.js) ──────
+   Teléfonos adicionales del cliente y "medidas personalizadas" por mueble:
+   tienen que llegarle tal cual a quien instala, no quedarse en ventas. */
+function telefonosSecundariosHtml(raw) {
+  let tels = [];
+  try { tels = Array.isArray(raw) ? raw : JSON.parse(raw || '[]'); } catch (e) { tels = []; }
+  if (!Array.isArray(tels) || !tels.length) return '';
+  return tels.map(t => `<div style="margin-top:2px;"><a href="tel:${encodeURIComponent(String(t).replace(/[^\d+]/g, ''))}" style="color:inherit;">${escapeHtml(t)}</a></div>`).join('');
+}
+function medidasPersonalizadasHtml(txt) {
+  if (!txt || !String(txt).trim()) return '';
+  return `<div style="margin-top:4px;padding:6px 8px;border:1px dashed var(--accent);border-radius:6px;font-size:11px;line-height:1.5;color:var(--text);white-space:pre-line;"><strong style="color:var(--accent);">Medidas personalizadas:</strong> ${escapeHtml(txt)}</div>`;
+}
+// Todo lo que se eligió para ese mueble: ancho, cubierta, color, ovalín,
+// monomando, adicionales,
+// información extra, medidas y la foto del modelo si no es de catálogo.
+const _CUBIERTA_LABELS = { mdf: 'Tapa de MDF', cuarzo: 'Cuarzo', granito: 'Granito', marmol: 'Mármol' };
+function detalleLineaHtml(i) {
+  const chips = [
+    i.ancho_cm ? `Ancho: <strong>${escapeHtml(String(i.ancho_cm))} cm</strong>` : '',
+    i.cubierta ? `Cubierta: <strong>${escapeHtml(_CUBIERTA_LABELS[i.cubierta] || i.cubierta)}</strong>` : '',
+    i.color ? `Color: <strong>${escapeHtml(i.color)}</strong>` : '',
+    i.ovalin ? `Ovalín: <strong>${escapeHtml(i.ovalin)}</strong>` : '',
+    i.monomando ? `Monomando: <strong>${escapeHtml(i.monomando)}</strong>` : '',
+    i.adicionales ? `Adicionales: <strong>${escapeHtml(i.adicionales)}</strong>` : '',
+  ].filter(Boolean);
+  return `
+    ${chips.length ? `<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11px;color:var(--muted2);">${chips.map(c => `<span>${c}</span>`).join('')}</div>` : ''}
+    ${medidasPersonalizadasHtml(i.medidas_personalizadas)}
+    ${i.info_extra ? `<div style="margin-top:4px;font-size:11px;line-height:1.5;color:var(--text);white-space:pre-line;"><strong style="color:var(--accent);">Información extra:</strong> ${escapeHtml(i.info_extra)}</div>` : ''}
+    ${i.imagen_referencia ? `<a href="${escapeHtml(i.imagen_referencia)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:6px;"><img src="${escapeHtml(i.imagen_referencia)}" alt="Foto del modelo" style="width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>` : ''}`;
+}
+const _TIPO_PROYECTO_LABELS = { bano: 'Mueble de baño', cocina: 'Cocina a la medida', closet: 'Clóset a la medida' };
+function tipoProyectoBadge(tipo) {
+  if (!tipo) return '';
+  const ico = { bano: 'bath', cocina: 'cooking-pot', closet: 'shirt' }[tipo] || 'box';
+  return `<span class="status-badge status-info"><i data-lucide="${ico}"></i> ${escapeHtml(_TIPO_PROYECTO_LABELS[tipo] || tipo)}</span>`;
+}
+
+// Estado del pago sin cifras (ver estadoPagoPedido en includes/auth.php).
+function estadoPagoBadge(estado) {
+  const map = {
+    liquidado:       ['status-completed', 'circle-check', 'Pagado completo'],
+    saldo_pendiente: ['status-pending',   'hand-coins',   'Falta pagar una parte'],
+    sin_pago:        ['status-cancelled', 'circle-alert', 'Sin pago registrado'],
+  };
+  const [cls, ico, txt] = map[estado] || map.sin_pago;
+  return `<span class="status-badge ${cls}"><i data-lucide="${ico}"></i> ${txt}</span>`;
 }

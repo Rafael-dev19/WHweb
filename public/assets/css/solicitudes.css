@@ -5,7 +5,7 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-html { overflow-x: hidden; width: 100%; }
+html { overflow-x: clip; width: 100%; }
 
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -13,6 +13,7 @@ body {
   color: var(--color-text-main);
   line-height: 1.6;
   overflow-x: hidden;
+  overflow-x: clip; /* ver styles.css: no romper el header sticky en iOS */
   width: 100%;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

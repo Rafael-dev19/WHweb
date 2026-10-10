@@ -32,7 +32,7 @@ if ($method === 'GET' && $action === 'mis-pedidos') {
 
 // ── GET lista de clientes (admin) ─────────────────────────────────
 if ($method === 'GET' && !$id && !$action) {
-    requerirGestion();
+    $usuarioCli = requerirGestion();
     $busqueda = sanitize($_GET['q'] ?? '');
     $limit    = min((int)($_GET['limit'] ?? 50), 200);
     $offset   = max((int)($_GET['offset'] ?? 0), 0);
@@ -81,12 +81,16 @@ if ($method === 'GET' && !$id && !$action) {
         $busqueda ? ['%'.$busqueda.'%','%'.$busqueda.'%','%'.$busqueda.'%','%'.$busqueda.'%'] : []
     );
 
+    // Lo gastado por cliente es dato financiero: solo jefe/ventas (ver puedeVerMontos).
+    if (!puedeVerMontos($usuarioCli)) {
+        $clientes = array_map(function ($c) { unset($c['total_gastado']); return $c; }, $clientes);
+    }
     jsonSuccess(['clientes' => $clientes, 'total' => $totalRow['n'] ?? 0]);
 }
 
 // ── GET cliente individual con historial (admin) ──────────────────
 if ($method === 'GET' && $id) {
-    requerirGestion();
+    $usuarioCli = requerirGestion();
     $cliente = dbRow(
         "SELECT id, nombre, correo, telefono, direccion, colonia, municipio, ciudad, cp, lat, lng, activo, fecha_registro
          FROM clientes WHERE id = ? LIMIT 1",
@@ -105,6 +109,9 @@ if ($method === 'GET' && $id) {
         [$id]
     );
 
+    if (!puedeVerMontos($usuarioCli)) {
+        $pedidos = array_map(function ($p) { unset($p['total']); return $p; }, $pedidos);
+    }
     jsonSuccess(['cliente' => $cliente, 'pedidos' => $pedidos, 'cotizaciones' => $cotizaciones]);
 }
 

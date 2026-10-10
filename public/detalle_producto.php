@@ -2,6 +2,8 @@
 header('Content-Type: text/html; charset=utf-8');
 require_once dirname(__DIR__) . '/includes/assets.php';
 require_once dirname(__DIR__) . '/includes/env.php';
+require_once dirname(__DIR__) . '/includes/csp.php';
+enviarCabeceraCSP();
 require_once dirname(__DIR__) . '/includes/db.php';
 
 // Devolver 404 real cuando el producto no existe/no está activo — sin esto
@@ -39,7 +41,7 @@ if ($_prodId > 0) {
   <link rel="stylesheet" href="/assets/<?= av('css/animations.css') ?>">
   <link rel="stylesheet" href="/assets/<?= av('css/modal-auth.css') ?>">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+  <script src="/assets/vendor/lucide-1.55.0.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous" defer></script>
 </head>
 <body>
@@ -94,11 +96,13 @@ if ($_prodId > 0) {
         </div>
 
         <div class="price-large" id="pPrecio">$0</div>
+        <div class="price-nota" id="pPrecioNota"></div>
+
 
         <div class="stock-indicator" id="pStockIndicador">
           <span id="pStockIcon"><i data-lucide="circle-check"></i></span>
           <span id="pStockText"><strong>Disponible</strong> - Fabricación bajo pedido</span>
-          <span class="wh-help" data-tip="Nuestros muebles se fabrican a pedido, por lo que siempre están disponibles. El tiempo de fabricación varía entre 2 y 15 días hábiles según el modelo.">?</span>
+          <span class="wh-help" data-tip="Nuestros muebles se fabrican a pedido, por lo que siempre están disponibles. Se producen en 8 días hábiles desde que se confirma tu anticipo.">?</span>
         </div>
 
         <div class="description" id="pDesc"></div>
@@ -109,19 +113,50 @@ if ($_prodId > 0) {
         </div>
 
         <div class="cart-section">
+          <div class="ancho-selector" id="anchoSelector" style="display:none;">
+            <div class="ancho-label">
+              1. Elige el ancho de tu mueble
+              <span class="wh-help" data-tip="Es lo que mide el mueble de izquierda a derecha. Mide el espacio donde irá y elige el ancho que quepa. ¿Necesitas otra medida? Pide una cotización.">?</span>
+            </div>
+            <div class="ancho-chips" id="anchoChips" role="group" aria-label="Ancho del mueble"></div>
+          </div>
           <div class="quantity-selector">
-            <span>Cantidad:
+            <span>2. Cantidad:
               <span class="wh-help" data-tip="Selecciona cuántas unidades necesitas. Cada mueble se fabrica individualmente bajo pedido.">?</span>
             </span>
             <button class="quantity-btn" id="btnMinus" type="button" data-call="cambiarCantidad" data-args="[-1]">−</button>
             <input type="number" class="quantity-input" id="cantidad" value="1" min="1" max="99">
             <button class="quantity-btn" id="btnPlus" type="button" data-call="cambiarCantidad" data-args="[1]">+</button>
           </div>
+          <div class="accesorios-box" id="accesoriosBox" style="display:none;">
+            <div class="ancho-label"><span>3. Elige tus accesorios <small>(incluidos en el precio)</small></span></div>
+            <label class="acc-campo">Ovalín
+              <select id="selOvalin" class="acc-select"></select>
+            </label>
+            <a href="/assets/img/catalogo/ovalines.jpg" class="acc-ver" data-lightbox>Ver fotos de ovalines</a> ·
+            <a href="/assets/img/catalogo/ovalines-economicos.jpg" class="acc-ver" data-lightbox>Línea económica</a>
+            <label class="acc-campo">Monomando
+              <select id="selMonomando" class="acc-select"></select>
+            </label>
+            <a href="/assets/img/catalogo/monomandos.jpg" class="acc-ver" data-lightbox>Ver fotos de monomandos</a>
+            <p class="acc-nota">¿No sabes cuál? Déjalo en "Lo elijo con un asesor" y lo vemos contigo antes de fabricar. Los dorados premium pueden tener un ajuste de precio.</p>
+          </div>
+
+          <div class="accesorios-box" id="adicionalesBox" style="display:none;">
+            <div class="ancho-label"><span><span id="adicionalesPaso">4</span>. Adicionales <small>(opcional)</small></span></div>
+            <div id="adicionalesLista" class="adic-lista"></div>
+          </div>
+
           <button class="btn-add-cart" id="btnAddCart" type="button"><i data-lucide="shopping-cart"></i> Agregar al Carrito</button>
           <a href="/carrito" class="btn-ver-carrito" style="display:none;" id="btnVerCarrito">Ver Carrito →</a>
           <div class="shipping-note">
-            <i data-lucide="truck"></i> Envíos en ZMG · Instalación profesional disponible
-            <span class="wh-help wh-help--left" data-tip="Realizamos entregas dentro de la Zona Metropolitana de Guadalajara. La instalación profesional tiene un costo adicional que se muestra en el carrito.">?</span>
+            <i data-lucide="truck"></i> Envíos en ZMG · Instalación profesional por <?= '$' . number_format(COSTO_INSTALACION, 0) ?> adicionales
+            <span class="wh-help wh-help--left" data-tip="Entregamos en toda la Zona Metropolitana de Guadalajara. La instalación (2 personas, herramienta y garantía) la eliges en el carrito.">?</span>
+          </div>
+          <div class="personaliza-box">
+            <strong><i data-lucide="gem"></i> ¿Lo quieres con cubierta de piedra u otra medida?</strong>
+            <p>Granito o mármol desde $3,800 y cuarzo desde $4,800 por metro lineal (cortada, pulida e instalada). También hacemos cualquier modelo a la medida, con más cajones, otro color o espejo LED.</p>
+            <a href="/solicitudes" class="personaliza-link">Pedir cotización sin costo →</a>
           </div>
         </div>
       </div>
@@ -141,11 +176,12 @@ if ($_prodId > 0) {
       <div id="tab-delivery" class="tab-pane">
         <h3>Información de Entrega</h3>
         <ul>
-          <li><strong>Tiempo de fabricación:</strong> A partir de 2 días hábiles (varía según demanda de producción)</li>
-          <li><strong>Entrega a domicilio:</strong> Zona Metropolitana de Guadalajara (costo adicional)</li>
-          <li><strong>Recogida en sucursal:</strong> Sin costo adicional</li>
-          <li><strong>Instalación profesional:</strong> Disponible con costo adicional</li>
-          <li><strong>Garantía:</strong> 1 año en defectos de fabricación</li>
+          <li><strong>Tiempo de fabricación:</strong> 8 días hábiles desde que se confirma tu anticipo</li>
+          <li><strong>Forma de pago:</strong> 50% de anticipo para apartar tu producción y 50% contra entrega</li>
+          <li><strong>Entrega a domicilio:</strong> Zona Metropolitana de Guadalajara<?= COSTO_ENVIO > 0 ? ' ($' . number_format(COSTO_ENVIO, 0) . ')' : ' sin costo de flete' ?>. Zonas foráneas de Jalisco (Tapalpa, Mazamitla…) con flete cotizado según la distancia</li>
+          <li><strong>Recoger en el taller:</strong> Sin costo — <?= htmlspecialchars(SITE_ADDRESS) ?></li>
+          <li><strong>Instalación profesional:</strong> <?= '$' . number_format(COSTO_INSTALACION, 0) ?> por mueble (2 personas, herramienta y garantía)</li>
+          <li><strong>Garantía:</strong> 1 año en la estructura del mueble y herrajes</li>
         </ul>
         <p>¿Tienes dudas? <a href="/solicitudes">Solicita una cotización personalizada</a></p>
       </div>
@@ -172,10 +208,12 @@ if ($_prodId > 0) {
   <script src="/assets/<?= av('js/theme-toggle.js') ?>"></script>
 <script src="/assets/<?= av('js/firebase-config.js') ?>"></script>
   <script src="/assets/<?= av('js/modal-auth.js') ?>"></script>
+  <?php require_once dirname(__DIR__) . '/includes/accesorios.php'; ?>
+  <script nonce="<?= cspNonce() ?>">window.WH_ACCESORIOS = <?= json_encode(whAccesoriosParaJs(), JSON_UNESCAPED_UNICODE) ?>;</script>
   <script src="/assets/<?= av('js/detalle_producto.js') ?>"></script>
   <script src="/assets/<?= av('js/event-delegation.js') ?>"></script>
   <script src="/assets/<?= av('js/animations.js') ?>"></script>
-  <script>
+  <script nonce="<?= cspNonce() ?>">
     document.addEventListener('DOMContentLoaded', function () {
       if (window.lucide) window.lucide.createIcons();
     });

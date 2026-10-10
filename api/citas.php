@@ -49,12 +49,15 @@ switch ($method) {
         if (!empty($_GET['numero_cita']) && !$id) {
             $num = trim($_GET['numero_cita']);
             if (!preg_match('/^CIT-\d{4}-\d{6}$/i', $num)) jsonError('Formato inválido', 422);
+            checkRateLimit('citas_folio', 30, 600);
             $cita = dbRow(
                 "SELECT numero_cita, nombre_cliente, fecha_cita, rango_horario, tipo, estado, fecha_creacion
                  FROM citas WHERE numero_cita = ?",
                 [$num]
             );
             if (!$cita) jsonError('Cita no encontrada', 404);
+            // Folio consecutivo: nombre enmascarado (ver enmascararNombre).
+            $cita['nombre_cliente'] = enmascararNombre($cita['nombre_cliente']);
             jsonSuccess(['cita' => $cita]);
         }
 

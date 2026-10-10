@@ -45,12 +45,12 @@ unset($_usuario);
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
   <link rel="stylesheet" href="../assets/<?= av('css/panel_administrador.css') ?>">
   <link rel="stylesheet" href="../assets/<?= av('css/animations.css') ?>">
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+  <script src="/assets/vendor/lucide-1.55.0.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous" defer></script>
 </head>
 
 <body>
-  <script>window.WH_ES_JEFE = <?= json_encode($_esJefe) ?>; window.WH_ROL = <?= json_encode($_rolPanel) ?>; window.WH_VISTA_COMPLETA = <?= json_encode($_vistaCompleta) ?>;</script>
+  <script nonce="<?= cspNonce() ?>">window.WH_VE_MONTOS = <?= json_encode($_esJefe) ?>; window.WH_ES_JEFE = <?= json_encode($_esJefe) ?>; window.WH_ROL = <?= json_encode($_rolPanel) ?>; window.WH_VISTA_COMPLETA = <?= json_encode($_vistaCompleta) ?>;</script>
   <div class="header">
     <div class="header-left">
     <button class="menu-toggle" id="menuToggle" aria-label="Abrir menú" aria-expanded="false">
@@ -261,7 +261,7 @@ unset($_usuario);
                     <th>Correo</th>
                     <th>Fecha de Entrega</th>
                     <th>Estado</th>
-                    <th>Total</th>
+                    <th><?= $_esJefe ? 'Total' : 'Pago' ?></th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
@@ -619,7 +619,7 @@ unset($_usuario);
           <div class="row g-3 form-grid">
             <div class="col-md-6 form-group">
               <label class="form-label">Nombre del modelo *</label>
-              <input type="text" class="form-input" id="p_nombre" placeholder="ej: Modelo Sevilla"/>
+              <input type="text" class="form-input" id="p_nombre" placeholder="ej: Valencia"/>
             </div>
             <div class="col-md-6 form-group">
               <label class="form-label">Categoría *</label>
@@ -635,6 +635,8 @@ unset($_usuario);
                 <option value="Popular">Popular</option>
                 <option value="Oferta">Oferta</option>
                 <option value="Mas vendido">Más vendido</option>
+                <option value="Más accesible">Más accesible</option>
+                <option value="Alta gama">Alta gama</option>
               </select>
             </div>
             <div class="col-md-6 form-group">
@@ -644,9 +646,10 @@ unset($_usuario);
                 <option value="inactivo">Inactivo</option>
               </select>
             </div>
-            <div class="col-md-6 form-group">
-              <label class="form-label">Precio del mueble (MXN) *</label>
-              <input type="number" class="form-input" id="p_precio" step="0.01" min="1" placeholder="4900"/>
+            <div class="col-md-6 form-group" id="p_precio_wrap">
+              <label class="form-label">Precio único (MXN)</label>
+              <input type="number" class="form-input" id="p_precio" step="0.01" min="1" placeholder="5800"/>
+              <div class="help">Solo si el modelo NO maneja anchos. Con anchos, el precio "desde" se calcula solo.</div>
             </div>
           </div>
 
@@ -658,48 +661,24 @@ unset($_usuario);
 
           <div class="section" style="margin-top:16px;">
             <div class="section-header">
-              <h2 class="section-title"><i data-lucide="ruler"></i> Dimensiones y características</h2>
+              <h2 class="section-title"><i data-lucide="ruler"></i> Precio por ancho</h2>
             </div>
+            <div class="help" style="margin:6px 0 10px;">Cada ancho que se vende con su precio (sin instalación). El cliente elige el ancho en el sitio y el precio cambia solo.</div>
+            <div id="p_medidas" class="prod-filas"></div>
+            <button type="button" class="btn btn-secondary btn-small" data-call="agregarFilaMedida" style="margin-top:8px;">
+              <i data-lucide="plus"></i> Agregar ancho
+            </button>
+          </div>
 
-            <div class="row g-3 form-grid" style="margin-top:10px;">
-              <div class="col-md-6 form-group">
-                <label class="form-label">Tipo de instalación *</label>
-                <select class="form-select" id="p_tipo_instalacion">
-                  <option value="A piso">A piso</option>
-                  <option value="Flotado">Flotado</option>
-                </select>
-              </div>
-              <div class="col-md-6 form-group">
-                <label class="form-label">Largo (cm) *</label>
-                <input type="text" class="form-input" id="p_largo" placeholder="ej: 80 cm"/>
-              </div>
-              <div class="col-md-6 form-group">
-                <label class="form-label">Alto (cm) *</label>
-                <input type="text" class="form-input" id="p_alto" placeholder="ej: 55 cm"/>
-              </div>
-              <div class="col-md-6 form-group">
-                <label class="form-label">Fondo (cm) *</label>
-                <input type="text" class="form-input" id="p_fondo" placeholder="ej: 50 cm"/>
-              </div>
-              <div class="col-md-6 form-group">
-                <label class="form-label">Ovalín *</label>
-                <input type="text" class="form-input" id="p_ovalin" placeholder="ej: Rectangular 60x40 cm"/>
-              </div>
-              <div class="col-md-6 form-group">
-                <label class="form-label">Monomando *</label>
-                <input type="text" class="form-input" id="p_monomando" placeholder="ej: 30 cm cromado"/>
-              </div>
-              <div class="col-12 form-group">
-                <label class="form-label">Incluye</label>
-                <input type="text" class="form-input" id="p_incluye" value="Céspol de PBC - Contra canasta" placeholder="ej: Céspol de PBC - Contra canasta"/>
-              </div>
-              <div class="col-12 form-group">
-                <label class="form-label">Espejo opcional</label>
-                <input type="text" class="form-input" id="p_espejo"
-                  placeholder="ej: Rectangular 50x70 cm - LED/Touch 4mm - 3 intensidades - $1,300  (dejar vacío si no aplica)"/>
-                <div class="help">Si no incluye espejo opcional, dejar en blanco o escribir 'No incluye'.</div>
-              </div>
+          <div class="section" style="margin-top:16px;">
+            <div class="section-header">
+              <h2 class="section-title"><i data-lucide="package-check"></i> Qué incluye el paquete</h2>
             </div>
+            <div class="help" style="margin:6px 0 10px;">Se muestra tal cual en la ficha del modelo (ej. Mueble: MDF Arauco 15 mm · Ovalín: Cerámica a elegir).</div>
+            <div id="p_specs" class="prod-filas"></div>
+            <button type="button" class="btn btn-secondary btn-small" data-call="agregarFilaSpec" style="margin-top:8px;">
+              <i data-lucide="plus"></i> Agregar característica
+            </button>
           </div>
 
           <div class="section" style="margin-top:16px;">
@@ -1248,6 +1227,8 @@ unset($_usuario);
     </div>
   </div>
 
+  <script src="../assets/<?= av('js/metodo-cobro.js') ?>"></script>
+
   <script src="../assets/<?= av('js/panel_administrador.js') ?>"></script>
   <script src="../assets/<?= av('js/voice-recorder.js') ?>"></script>
 <?php if ($_puedeCrearPedidoManual): ?>
@@ -1258,7 +1239,7 @@ unset($_usuario);
   <script src="../assets/<?= av('js/sse-notificaciones.js') ?>"></script>
 <?php if ($_esJefe): ?>
   <script src="../assets/<?= av('js/push-notifications.js') ?>"></script>
-  <script>initPushForegroundListener();</script>
+  <script nonce="<?= cspNonce() ?>">initPushForegroundListener();</script>
 <?php endif; ?>
 </body>
 </html>

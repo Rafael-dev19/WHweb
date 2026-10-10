@@ -21,39 +21,8 @@ function montoPendienteAPagar(array $pedido): float {
 // Si producción ya avanzó (listo_para_produccion/en_produccion/alistando_pedido/
 // en_camino_instalacion/finalizado), NO se debe regresar el estado — solo se
 // actualiza monto_pagado, conservando el progreso real.
-function registrarPagoAprobado(int $pedidoId, float $montoPago): void {
-    $pedido = dbRow("SELECT total, monto_pagado, estado, tipo_pago FROM pedidos WHERE id = ?", [$pedidoId]);
-    if (!$pedido) return;
-
-    $estadoPrevio      = $pedido['estado'];
-    $montoPagadoPrevio = (float)$pedido['monto_pagado'];
-    $total             = (float)$pedido['total'];
-    $nuevoMontoPagado  = round($montoPagadoPrevio + $montoPago, 2);
-    $liquidado         = $nuevoMontoPagado >= ($total - 0.01);
-    // Es liquidación de saldo (no el primer pago) si ya había algo pagado antes.
-    $esLiquidacionSaldo = $liquidado && $montoPagadoPrevio > 0.009;
-
-    $datosUpdate = ['monto_pagado' => $nuevoMontoPagado];
-    $estadosFasePago = ['pendiente', 'anticipo_pagado', 'pagado'];
-    if (in_array($estadoPrevio, $estadosFasePago, true)) {
-        $datosUpdate['estado'] = $liquidado ? 'pagado' : 'anticipo_pagado';
-    }
-    dbUpdate('pedidos', $datosUpdate, 'id = ?', [$pedidoId]);
-
-    if ($esLiquidacionSaldo) {
-        try {
-            $pedidoActualizado = dbRow("SELECT * FROM pedidos WHERE id = ?", [$pedidoId]);
-            if ($pedidoActualizado) {
-                // Para el correo: indica que el saldo quedó liquidado, sin alterar
-                // el estado real de fulfillment ya guardado en la base de datos.
-                $pedidoActualizado['estado'] = 'pagado';
-                notificarCambioPedido($pedidoActualizado, 'anticipo_pagado');
-            }
-        } catch (Exception $e) {
-            appLog('warning', 'Notif saldo liquidado error', ['error' => $e->getMessage()]);
-        }
-    }
-}
+// registrarPagoAprobado() vive en _helpers.php — también la usa
+// pedidos.php?action=crear_manual al registrar el pago que recibió ventas.
 
 $method    = requestMethod();
 $_rawBody  = file_get_contents('php://input');
@@ -342,7 +311,7 @@ if ($action === 'paypal_capturar') {
 // momento de instalar. No tocar sin confirmar con el dueño del negocio.
 if ($action === 'marcar_saldo_manual') {
     if ($method !== 'POST') jsonError('Método no permitido', 405);
-    requerirPersonal();
+    $usuarioSaldo = requerirPersonal();
     requerirCsrf();
     $body     = $_jsonBody;
     requireFields($body, ['pedido_id']);
@@ -353,17 +322,30 @@ if ($action === 'marcar_saldo_manual') {
     $saldo = round((float)$pedido['total'] - (float)$pedido['monto_pagado'], 2);
     if ($saldo <= 0) jsonError('Este pedido ya está liquidado', 400);
 
-    dbInsert('pagos', [
+    // Método real del cobro y quién lo marcó: antes siempre quedaba
+    // "tarjeta" y sin autor, así que no había forma de auditar un saldo
+    // marcado como pagado por error (o sin haberse cobrado).
+    $metodoSaldo = in_array($body['metodo'] ?? '', ['efectivo', 'transferencia', 'terminal'], true) ? $body['metodo'] : 'efectivo';
+    $pagoSaldo = [
         'pedido_id'          => $pedidoId,
-        'metodo'             => 'tarjeta',
-        'referencia_externa' => 'manual-' . date('YmdHis'),
+        'metodo'             => $metodoSaldo,
+        'referencia_externa' => 'manual-' . date('YmdHis') . '-u' . (int)$usuarioSaldo['id'],
         'monto'              => $saldo,
         'moneda'             => 'MXN',
         'estado'             => 'aprobado',
-    ]);
+    ];
+    if (pagosTieneRegistradoPor()) $pagoSaldo['registrado_por'] = (int)$usuarioSaldo['id'];
+    dbInsert('pagos', $pagoSaldo);
     registrarPagoAprobado($pedidoId, $saldo);
+    appLog('info', 'Saldo marcado como pagado', [
+        'pedido_id' => $pedidoId, 'monto' => $saldo, 'metodo' => $metodoSaldo,
+        'usuario_id' => (int)$usuarioSaldo['id'], 'rol' => $usuarioSaldo['rol'],
+    ]);
 
-    jsonSuccess(['mensaje' => 'Saldo registrado como pagado', 'monto' => $saldo]);
+    // Instalación/taller confirman el cobro sin ver cifras (ver puedeVerMontos).
+    jsonSuccess(puedeVerMontos($usuarioSaldo)
+        ? ['mensaje' => 'Saldo registrado como pagado', 'monto' => $saldo]
+        : ['mensaje' => 'Saldo registrado como pagado']);
 }
 
 // ── Registrar un pago manual por un MONTO específico (anticipo parcial,
@@ -373,7 +355,7 @@ if ($action === 'marcar_saldo_manual') {
 // anticipo del 60% recibido por transferencia antes de cargar el pedido).
 if ($action === 'registrar_pago_manual') {
     if ($method !== 'POST') jsonError('Método no permitido', 405);
-    requerirVentasOGestion();
+    $usuarioPago = requerirVentasOGestion();
     requerirCsrf();
     $body     = $_jsonBody;
     requireFields($body, ['pedido_id', 'monto']);
@@ -394,14 +376,16 @@ if ($action === 'registrar_pago_manual') {
         jsonError("El monto (\$" . number_format($monto, 2) . ") no puede ser mayor al saldo pendiente (\$" . number_format($saldoPendiente, 2) . ")", 422);
     }
 
-    dbInsert('pagos', [
+    $pagoManual = [
         'pedido_id'          => $pedidoId,
         'metodo'             => $metodo,
         'referencia_externa' => 'manual-' . date('YmdHis') . ($referencia !== '' ? '-' . sanitize(mb_substr($referencia, 0, 40)) : ''),
         'monto'              => $monto,
         'moneda'             => 'MXN',
         'estado'             => 'aprobado',
-    ]);
+    ];
+    if (pagosTieneRegistradoPor()) $pagoManual['registrado_por'] = (int)$usuarioPago['id'];
+    dbInsert('pagos', $pagoManual);
     registrarPagoAprobado($pedidoId, $monto);
 
     jsonSuccess(['mensaje' => 'Pago registrado', 'monto' => $monto]);

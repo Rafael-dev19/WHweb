@@ -15,7 +15,7 @@ $token = htmlspecialchars(trim($_GET['token'] ?? ''), ENT_QUOTES, 'UTF-8');
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap">
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+  <script src="/assets/vendor/lucide-1.55.0.min.js" defer></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -91,7 +91,7 @@ $token = htmlspecialchars(trim($_GET['token'] ?? ''), ENT_QUOTES, 'UTF-8');
 <body>
 <div class="card">
   <div class="logo">
-    <img src="/assets/img/logo-login.png" alt="Wooden House" onerror="this.style.display='none'">
+    <img src="/assets/img/logo-login.png" alt="Wooden House" id="invLogo">
   </div>
 
   <!-- Estado: cargando -->
@@ -133,7 +133,7 @@ $token = htmlspecialchars(trim($_GET['token'] ?? ''), ENT_QUOTES, 'UTF-8');
       <input type="password" id="invPasswordConfirm" placeholder="Repite tu contraseña">
     </div>
 
-    <button class="btn" id="btnActivar" onclick="activarCuenta()">
+    <button class="btn" id="btnActivar" type="button">
       <i data-lucide="key"></i> Crear cuenta y entrar
     </button>
     <p style="color:#5a5040;font-size:11px;text-align:center;margin-top:14px;">
@@ -145,7 +145,7 @@ $token = htmlspecialchars(trim($_GET['token'] ?? ''), ENT_QUOTES, 'UTF-8');
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="/assets/<?= av('js/firebase-config.js') ?>"></script>
-<script>
+<script nonce="<?= cspNonce() ?>">
 const INV_TOKEN = <?= json_encode($token) ?>;
 
 function _showAlert(msg, type = 'error') {
@@ -253,6 +253,14 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('invPasswordConfirm')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') activarCuenta();
   });
+  // Antes onclick/onerror inline — bloqueados por la CSP sin 'unsafe-inline'.
+  document.getElementById('btnActivar')?.addEventListener('click', activarCuenta);
+  const logo = document.getElementById('invLogo');
+  if (logo) {
+    const ocultar = () => { logo.style.display = 'none'; };
+    if (logo.complete && !logo.naturalWidth) ocultar();
+    logo.addEventListener('error', ocultar);
+  }
 });
 </script>
 </body>

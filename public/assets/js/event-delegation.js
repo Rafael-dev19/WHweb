@@ -276,10 +276,16 @@
       return;
     }
 
-    // [data-lightbox] en IMG → abrir lightbox de zoom
+    // [data-lightbox] en IMG (o en un enlace a una imagen, ej. las hojas de
+    // ovalines/monomandos de la ficha) → abrir lightbox de zoom
     t = e.target.closest('[data-lightbox]');
     if (t && t.tagName === 'IMG' && t.src) {
       _whOpenLightbox(t.src, t.alt || '');
+      return;
+    }
+    if (t && t.tagName === 'A' && t.href && typeof _whOpenLightbox === 'function') {
+      e.preventDefault();
+      _whOpenLightbox(t.href, t.textContent.trim());
       return;
     }
 
@@ -368,8 +374,14 @@
     if (!t) return;
     var fn = window[t.dataset.onchange];
     if (typeof fn === 'function') {
+      // data-args='[...]' presente: fn(...args, value) — reemplaza los
+      // onchange="fn(1, this.value)" inline (bloqueados por la CSP sin
+      // 'unsafe-inline').
+      if (t.dataset.args !== undefined) {
+        var a; try { a = JSON.parse(t.dataset.args); } catch (err) { a = []; }
+        fn.apply(t, a.concat([t.value]));
       // data-id presente: pasar (id, value) para funciones de dos argumentos
-      if (t.dataset.id !== undefined) {
+      } else if (t.dataset.id !== undefined) {
         fn.call(t, t.dataset.id, t.value);
       } else {
         fn.call(t, t.value);
@@ -382,7 +394,13 @@
     var t = e.target.closest('[data-oninput]');
     if (!t) return;
     var fn = window[t.dataset.oninput];
-    if (typeof fn === 'function') fn.call(t);
+    if (typeof fn !== 'function') return;
+    if (t.dataset.args !== undefined) {
+      var a; try { a = JSON.parse(t.dataset.args); } catch (err) { a = []; }
+      fn.apply(t, a.concat([t.value]));
+    } else {
+      fn.call(t);
+    }
   });
 
   // ── Image error delegation ────────────────────────────────────────
@@ -396,6 +414,8 @@
       if (fallback) fallback.style.display = 'flex';
     } else if (t.dataset.imgBgFallback) {
       t.style.background = t.dataset.imgBgFallback;
+    } else if (t.dataset.imgHide !== undefined) {
+      t.style.display = 'none';
     }
   }, true);
 

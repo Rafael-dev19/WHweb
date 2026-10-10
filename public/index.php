@@ -14,7 +14,7 @@ if (!empty($_SESSION['_flash'])) {
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Wooden House - Muebles de Madera a Medida en Guadalajara</title>
-  <meta name="description" content="Wooden House — muebles de madera a medida en Guadalajara, Jalisco. Cocinas integrales, clósets, muebles de baño y más. Calidad artesanal con entrega en toda la ZMG.">
+  <meta name="description" content="Wooden House — muebles de baño de catálogo personalizables (60 a 120 cm) y cocinas y clósets diseñados a la medida en Guadalajara, Jalisco. Calidad artesanal con entrega en toda la ZMG.">
   <link rel="canonical" href="<?= APP_URL ?>/">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,7 +27,7 @@ if (!empty($_SESSION['_flash'])) {
   <link rel="stylesheet" href="./assets/<?= av('css/animations.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/theme-toggle.css') ?>">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous" defer></script>
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+  <script src="/assets/vendor/lucide-1.55.0.min.js" defer></script>
 </head>
 
 <body>
@@ -106,8 +106,8 @@ if (!empty($_SESSION['_flash'])) {
     <div class="wh-info-box" style="margin: 0 auto 16px; max-width:780px;">
       <i data-lucide="lightbulb"></i>
       <span>
-        <strong>¿Primera vez aquí?</strong> — Explora el <strong>Catálogo</strong> para ver modelos y precios.
-        Si ya sabes lo que quieres, pide una <strong>Cotización</strong>.
+        <strong>¿Primera vez aquí?</strong> — ¿Buscas un <strong>mueble de baño</strong>? Elige modelo y ancho en el <strong>Catálogo</strong> y cómpralo en línea.
+        ¿Una <strong>cocina o un clóset</strong>? Esos se diseñan a tu medida: pide una <strong>Cotización</strong>.
         Si prefieres asesoría en persona, <strong>Agenda una Cita</strong> y vamos a tu domicilio.
       </span>
     </div>
@@ -117,7 +117,7 @@ if (!empty($_SESSION['_flash'])) {
           <div class="qa-icon"><i data-lucide="store"></i></div>
           <div class="qa-info">
             <div class="qa-title">Ver Catálogo</div>
-            <div class="qa-sub">Explora nuestros muebles y precios</div>
+            <div class="qa-sub">Muebles de baño con precio por medida</div>
           </div>
           <i data-lucide="chevron-right" class="qa-arrow"></i>
         </a>
@@ -127,7 +127,7 @@ if (!empty($_SESSION['_flash'])) {
           <div class="qa-icon qa-icon--cot"><i data-lucide="receipt"></i></div>
           <div class="qa-info">
             <div class="qa-title">Pedir Cotización</div>
-            <div class="qa-sub">Cuéntanos qué necesitas y te respondemos</div>
+            <div class="qa-sub">Cocinas, clósets o un baño especial</div>
           </div>
           <i data-lucide="chevron-right" class="qa-arrow"></i>
         </a>
@@ -166,8 +166,8 @@ if (!empty($_SESSION['_flash'])) {
         a tus necesidades y estilo.
       </p>
       <p>
-        Desde cocinas integrales hasta clósets personalizados, cada proyecto es único y refleja nuestra pasión
-        por la carpintería de excelencia.
+        Tenemos un catálogo de muebles de baño personalizables a la medida, y diseñamos cocinas integrales y
+        clósets desde cero para tu espacio. Cada proyecto es único y refleja nuestra pasión por la carpintería de excelencia.
       </p>
     </div>
 
@@ -203,27 +203,27 @@ if (!empty($_SESSION['_flash'])) {
       <h2 class="section-title"><i data-lucide="wrench"></i> Nuestros Servicios</h2>
       <div class="row row-cols-1 row-cols-md-3 g-4 mb-5">
         <div class="col">
-          <a href="/catalogo?categoria=cocinas" class="service-card h-100 d-block">
-            <div class="service-icon"><i data-lucide="cooking-pot"></i></div>
-            <h3>Cocinas Integrales</h3>
-            <p>Diseño y fabricación de cocinas funcionales y elegantes, adaptadas a tu espacio y necesidades. Incluye gabinetes, barras y acabados personalizados.</p>
-            <span class="service-card-link">Ver en catálogo →</span>
-          </a>
-        </div>
-        <div class="col">
-          <a href="/catalogo?categoria=closets" class="service-card h-100 d-block">
-            <div class="service-icon"><i data-lucide="shirt"></i></div>
-            <h3>Clósets a Medida</h3>
-            <p>Maximiza tu espacio con clósets diseñados específicamente para ti. Múltiples compartimentos, cajones y opciones de organización.</p>
-            <span class="service-card-link">Ver en catálogo →</span>
-          </a>
-        </div>
-        <div class="col">
-          <a href="/catalogo?categoria=bano" class="service-card h-100 d-block">
+          <a href="/catalogo" class="service-card h-100 d-block">
             <div class="service-icon"><i data-lucide="bath"></i></div>
             <h3>Muebles de Baño</h3>
-            <p>Muebles resistentes a la humedad con diseños modernos y clásicos. Incluye lavabo, espejo y almacenamiento optimizado.</p>
-            <span class="service-card-link">Ver en catálogo →</span>
+            <p>7 modelos de catálogo, cada uno de 60 a 120 cm de ancho. Incluyen ovalín, monomando, céspol y herrajes de cierre lento. Cómpralos en línea.</p>
+            <span class="service-card-link">Ver catálogo →</span>
+          </a>
+        </div>
+        <div class="col">
+          <a href="/solicitudes?tipo=cocina" class="service-card h-100 d-block">
+            <div class="service-icon"><i data-lucide="cooking-pot"></i></div>
+            <h3>Cocinas Integrales</h3>
+            <p>Diseñadas a la medida de tu espacio y tus ideas: gabinetes, barras y acabados personalizados. Sin modelos fijos — se cotizan con diseño 3D.</p>
+            <span class="service-card-link">Cotizar mi cocina →</span>
+          </a>
+        </div>
+        <div class="col">
+          <a href="/solicitudes?tipo=closet" class="service-card h-100 d-block">
+            <div class="service-icon"><i data-lucide="shirt"></i></div>
+            <h3>Clósets a Medida</h3>
+            <p>Compartimentos, cajones y organización pensados para lo que vas a guardar. Sin modelos fijos — se cotizan con diseño 3D.</p>
+            <span class="service-card-link">Cotizar mi clóset →</span>
           </a>
         </div>
       </div>
@@ -338,17 +338,17 @@ if (!empty($_SESSION['_flash'])) {
 
       <div class="faq-item">
         <div class="faq-question">¿Hacen entregas a domicilio?<span class="faq-icon"><i data-lucide="chevron-down"></i></span></div>
-        <div class="faq-answer">Sí, realizamos entregas en toda la Zona Metropolitana de Guadalajara. El costo de envío varía según la ubicación y tamaño del mueble. El tiempo de entrega es de 5-7 días hábiles después de la confirmación del pedido.</div>
+        <div class="faq-answer">Sí, realizamos entregas en toda la Zona Metropolitana de Guadalajara. <?= COSTO_ENVIO > 0 ? 'El envío dentro de la ZMG cuesta $' . number_format(COSTO_ENVIO, 0) . '.' : 'Dentro de la ZMG no cobramos flete.' ?> También llegamos a zonas foráneas de Jalisco (Tapalpa, Mazamitla y otras) con un flete que se cotiza según la distancia. Si prefieres, puedes recoger tu mueble en el taller sin costo.</div>
       </div>
 
       <div class="faq-item">
         <div class="faq-question">¿Incluyen instalación profesional?<span class="faq-icon"><i data-lucide="chevron-down"></i></span></div>
-        <div class="faq-answer">Sí, todos nuestros proyectos incluyen instalación profesional. Nuestro equipo técnico especializado se encargará de instalar tu mueble de manera segura, profesional y dejando todo limpio.</div>
+        <div class="faq-answer">La instalación es opcional y se paga aparte: <?= '$' . number_format(COSTO_INSTALACION, 0) ?> por mueble de baño (2 personas, herramienta y garantía). La eliges al pagar en el carrito. En cocinas y clósets la instalación va incluida en la cotización.</div>
       </div>
 
       <div class="faq-item">
         <div class="faq-question">¿Qué garantía tienen los muebles?<span class="faq-icon"><i data-lucide="chevron-down"></i></span></div>
-        <div class="faq-answer">Todos nuestros muebles cuentan con garantía de 1 año contra defectos de fabricación. Además, ofrecemos 30 días de garantía de satisfacción: si no estás conforme con tu compra, trabajaremos contigo para resolver cualquier inconformidad.</div>
+        <div class="faq-answer">Todos nuestros muebles cuentan con garantía de 1 año en la estructura del mueble y herrajes. Además, ofrecemos 30 días de garantía de satisfacción: si no estás conforme con tu compra, trabajaremos contigo para resolver cualquier inconformidad.</div>
       </div>
 
       <div class="faq-item">
@@ -358,17 +358,17 @@ if (!empty($_SESSION['_flash'])) {
 
       <div class="faq-item">
         <div class="faq-question">¿Cuánto tiempo tarda la fabricación?<span class="faq-icon"><i data-lucide="chevron-down"></i></span></div>
-        <div class="faq-answer">Los tiempos varían según la complejidad del proyecto. Generalmente, los muebles personalizados tienen un tiempo de fabricación de 2-4 semanas. Te proporcionaremos un cronograma específico en tu cotización.</div>
+        <div class="faq-answer">Los muebles de baño del catálogo se fabrican en 8 días hábiles desde que se confirma tu anticipo. Las cocinas y clósets dependen del tamaño del proyecto: te damos el tiempo exacto en tu cotización.</div>
       </div>
 
       <div class="faq-item">
         <div class="faq-question">¿Aceptan pagos en parcialidades?<span class="faq-icon"><i data-lucide="chevron-down"></i></span></div>
-        <div class="faq-answer">Sí, aceptamos pagos a meses sin intereses con tarjetas de crédito participantes: 3, 6, 9 y 12 meses sin intereses en compras mayores a $5,000. También manejamos esquemas de pago: 50% anticipo y 50% al recibir.</div>
+        <div class="faq-answer">Sí: apartas tu producción con el 50% de anticipo y el otro 50% se liquida contra entrega. Aceptamos efectivo, transferencia y tarjeta (con tarjeta en persona se suma la comisión de la terminal).</div>
       </div>
 
       <div class="faq-item">
         <div class="faq-question">¿Qué tipo de maderas utilizan?<span class="faq-icon"><i data-lucide="chevron-down"></i></span></div>
-        <div class="faq-answer">Trabajamos con diversas maderas de calidad: pino, encino, cedro, MDF, triplay y melamina. Durante la consulta inicial te asesoraremos sobre el mejor material para tu proyecto según uso, presupuesto y estilo.</div>
+        <div class="faq-answer">Los muebles de baño del catálogo son de MDF Arauco de 15 mm, con opción de cubierta de granito, mármol o cuarzo. En cocinas y clósets te asesoramos sobre el mejor material para tu proyecto según uso, presupuesto y estilo.</div>
       </div>
 
       <div class="faq-item">
@@ -385,7 +385,7 @@ if (!empty($_SESSION['_flash'])) {
           <div class="contact-icon"><i data-lucide="smartphone"></i></div>
           <h4>WhatsApp</h4>
           <p><a href="<?= siteWhatsappUrl() ?>" target="_blank"><?= SITE_PHONE ?></a></p>
-          <small>Lun - Sáb: 9:00 AM - 7:00 PM</small>
+          <small>Lun - Vie: 9:00 - 18:00 · Sáb: 10:00 - 14:00</small>
         </div>
         <div class="contact-strip-item">
           <div class="contact-icon"><i data-lucide="mail"></i></div>
@@ -395,15 +395,15 @@ if (!empty($_SESSION['_flash'])) {
         </div>
         <div class="contact-strip-item">
           <div class="contact-icon"><i data-lucide="map-pin"></i></div>
-          <h4>Ubicación</h4>
-          <p>Guadalajara, Jalisco</p>
-          <small>Servicio en toda la ZMG</small>
+          <h4>Taller</h4>
+          <p><?= htmlspecialchars(SITE_ADDRESS) ?></p>
+          <small>Servicio en toda la ZMG y foráneo en Jalisco</small>
         </div>
         <div class="contact-strip-item">
           <div class="contact-icon"><i data-lucide="clock"></i></div>
           <h4>Horario</h4>
-          <p>Lunes a Sábado</p>
-          <small>9:00 AM - 7:00 PM</small>
+          <p>Lunes a Viernes · 9:00 - 18:00</p>
+          <small>Sábados · 10:00 - 14:00</small>
         </div>
       </div>
     </div>
@@ -492,7 +492,7 @@ if (!empty($_SESSION['_flash'])) {
           <div class="wh-step-icon"><i data-lucide="store"></i></div>
           <div class="wh-step-info">
             <strong>Explora el catálogo</strong>
-            <span>Ve fotos, medidas y precios de todos nuestros muebles</span>
+            <span>Elige tu mueble de baño y su ancho; el precio se ajusta solo. Cocinas y clósets van por cotización</span>
           </div>
         </div>
         <div class="wh-guide-step">
@@ -539,7 +539,7 @@ if (!empty($_SESSION['_flash'])) {
   <script src="./assets/<?= av('js/page-init.js') ?>"></script>
   <script src="./assets/<?= av('js/animations.js') ?>"></script>
   <script src="./assets/<?= av('js/theme-toggle.js') ?>"></script>
-  <script>
+  <script nonce="<?= cspNonce() ?>">
     document.addEventListener('DOMContentLoaded', function () {
       if (window.lucide) window.lucide.createIcons();
     });

@@ -128,112 +128,64 @@ function mostrarProducto() {
   if (descEl) descEl.textContent = p.descripcion || '';
 
   const specs = p.especificaciones || [];
-  const getSpec = (keyword) => {
-    const s = specs.find(x => x.clave && x.clave.toLowerCase().includes(keyword.toLowerCase()));
-    return s ? s.valor : null;
-  };
+
+  // Catálogo 2026: las especificaciones son "qué incluye tu paquete"
+  // (Mueble, Ovalín, Monomando, Herrajes, Cubierta...). Se muestran todas tal
+  // cual, más la tabla de precios por ancho.
+  const sinAcentos = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const destacados = [
+    ['estilo', 'sparkles'], ['mueble', 'layers'], ['cubierta', 'square'], ['ovalin', 'droplets'],
+  ].map(([k, icon]) => {
+    const s = specs.find(x => sinAcentos(x.clave).includes(k));
+    return s ? { icon, label: s.clave, val: s.valor } : null;
+  }).filter(Boolean);
 
   const featuresBox = document.getElementById('featuresBox');
   const pFeatures   = document.getElementById('pFeatures');
-  if (featuresBox && pFeatures) {
-    const tipo  = getSpec('instalacion');
-    const largo = getSpec('largo');
-    const alto  = getSpec('alto');
-    const fondo = getSpec('fondo');
-    const ovalin = getSpec('ovalin');
-    const espejo = getSpec('espejo');
-
-    const feats = [
-      tipo  ? { icon: 'house',       label: 'Instalación',  val: tipo  } : null,
-      largo ? { icon: 'ruler', label: 'Dimensiones', val: `${largo} × ${alto || '?'} × ${fondo || '?'}` } : null,
-      ovalin ? { icon: 'droplets',        label: 'Ovalín',       val: ovalin } : null,
-      espejo && espejo !== 'No incluye' ? { icon: 'sun', label: 'Espejo opcional', val: 'Disponible' } : null,
-    ].filter(Boolean);
-
-    if (feats.length) {
-      featuresBox.style.display = 'block';
-      pFeatures.innerHTML = feats.map(f => `
-        <div class="feature-item">
-          <span class="feature-key"><i data-lucide="${f.icon}"></i> ${escHtml(f.label)}</span>
-          <span class="feature-val">${escHtml(f.val)}</span>
-        </div>
-      `).join('');
-      _refreshIcons();
-    }
+  if (featuresBox && pFeatures && destacados.length) {
+    featuresBox.style.display = 'block';
+    pFeatures.innerHTML = destacados.map(f => `
+      <div class="feature-item">
+        <span class="feature-key"><i data-lucide="${f.icon}"></i> ${escHtml(f.label)}</span>
+        <span class="feature-val">${escHtml(f.val)}</span>
+      </div>
+    `).join('');
   }
 
   const specTable = document.getElementById('specTable');
   if (specTable) {
-    if (specs.length === 0) {
-      specTable.innerHTML = '<p style="color: var(--color-text-muted);">Sin especificaciones registradas.</p>';
-    } else {
-      const tipo      = getSpec('instalacion');
-      const largo     = getSpec('largo');
-      const alto      = getSpec('alto');
-      const fondo     = getSpec('fondo');
-      const ovalin    = getSpec('ovalin');
-      const monomando = getSpec('monomando');
-      const incluye   = getSpec('incluye');
-      const espejo    = getSpec('espejo');
+    const medidas = p.medidas || [];
+    specTable.innerHTML = `
+      ${specs.length ? `
+      <div class="spec-section-title"><i data-lucide="package-check"></i> Qué incluye tu paquete</div>
+      ${specs.map(s => `
+        <div class="spec-row">
+          <span class="spec-key">${escHtml(s.clave)}</span>
+          <span class="spec-val">${escHtml(s.valor)}</span>
+        </div>`).join('')}` : ''}
 
-      specTable.innerHTML = `
-        <!-- Sección 1: Dimensiones -->
-        <div class="spec-section-title"><i data-lucide="ruler"></i> Dimensiones del mueble</div>
+      ${medidas.length ? `
+      <div class="spec-section-title" style="margin-top:18px;"><i data-lucide="ruler"></i> Precio por ancho (sin instalación)</div>
+      ${medidas.map(m => `
         <div class="spec-row">
-          <span class="spec-key">Tipo de instalación</span>
-          <span class="spec-val">${escHtml(tipo || '—')}</span>
-        </div>
-        <div class="spec-row">
-          <span class="spec-key">Largo</span>
-          <span class="spec-val">${escHtml(largo || '—')}</span>
-        </div>
-        <div class="spec-row">
-          <span class="spec-key">Alto</span>
-          <span class="spec-val">${escHtml(alto || '—')}</span>
-        </div>
-        <div class="spec-row">
-          <span class="spec-key">Fondo</span>
-          <span class="spec-val">${escHtml(fondo || '—')}</span>
-        </div>
+          <span class="spec-key">${m.ancho_cm} cm</span>
+          <span class="spec-val">${formatCurrency(m.precio)}</span>
+        </div>`).join('')}` : ''}
 
-        <!-- Sección 2: Accesorios incluidos -->
-        <div class="spec-section-title" style="margin-top:18px;"><i data-lucide="droplets"></i> Accesorios incluidos</div>
-        <div class="spec-row">
-          <span class="spec-key">Ovalín</span>
-          <span class="spec-val">${escHtml(ovalin || '—')}</span>
-        </div>
-        <div class="spec-row">
-          <span class="spec-key">Monomando</span>
-          <span class="spec-val">${escHtml(monomando || '—')}</span>
-        </div>
-        <div class="spec-row">
-          <span class="spec-key">Incluye</span>
-          <span class="spec-val">${escHtml(incluye || '—')}</span>
-        </div>
-
-        <!-- Sección 3: Espejo opcional (solo si aplica) -->
-        ${espejo && espejo !== 'No incluye' ? `
-        <div class="spec-section-title" style="margin-top:18px;"><i data-lucide="sun"></i> Espejo opcional</div>
-        <div class="spec-row spec-row-highlight">
-          <span class="spec-key">Espejo LED/Touch</span>
-          <span class="spec-val">${escHtml(espejo)}</span>
-        </div>
-        ` : ''}
-
-        <!-- Fabricación -->
-        <div class="spec-section-title" style="margin-top:18px;"><i data-lucide="wrench"></i> Fabricación</div>
-        <div class="spec-row">
-          <span class="spec-key">Producción</span>
-          <span class="spec-val">Bajo pedido · 10-15 días hábiles</span>
-        </div>
-        <div class="spec-row">
-          <span class="spec-key">Garantía</span>
-          <span class="spec-val">1 año en defectos de fabricación</span>
-        </div>
-      `;
-      _refreshIcons();
-    }
+      <div class="spec-section-title" style="margin-top:18px;"><i data-lucide="wrench"></i> Fabricación</div>
+      <div class="spec-row">
+        <span class="spec-key">Producción</span>
+        <span class="spec-val">8 días hábiles desde que se confirma el anticipo</span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-key">Garantía</span>
+        <span class="spec-val">1 año en la estructura del mueble y herrajes</span>
+      </div>
+    `;
   }
+  renderSelectorAncho();
+  renderAccesorios();
+  _refreshIcons();
 
   const imagenes = p.imagenes || [];
   const mainImg  = document.getElementById('mainImage');
@@ -289,20 +241,126 @@ function cambiarCantidad(delta) {
   input.value = val;
 }
 
+// ---- Ancho del mueble (catálogo 2026: el precio depende del ancho) ----
+let anchoSeleccionado = null;
+
+function renderSelectorAncho() {
+  const p = productoActual;
+  const cont = document.getElementById('anchoSelector');
+  const chips = document.getElementById('anchoChips');
+  if (!cont || !chips) return;
+  const medidas = p.medidas || [];
+  if (!medidas.length) { cont.style.display = 'none'; return; }
+  cont.style.display = '';
+  // Por defecto el más pedido (80 cm) si existe; si no, el más chico.
+  if (!anchoSeleccionado) anchoSeleccionado = (medidas.find(m => m.ancho_cm === 80) || medidas[0]).ancho_cm;
+  chips.innerHTML = medidas.map(m => `
+    <button type="button" class="ancho-chip ${m.ancho_cm === anchoSeleccionado ? 'active' : ''}"
+      data-call="seleccionarAncho" data-args="[${m.ancho_cm}]" aria-pressed="${m.ancho_cm === anchoSeleccionado}">
+      <strong>${m.ancho_cm} cm</strong><span>${formatCurrency(m.precio)}</span>
+    </button>`).join('');
+  actualizarPrecioAncho();
+}
+
+function seleccionarAncho(ancho) {
+  anchoSeleccionado = ancho;
+  renderSelectorAncho();
+}
+
+function precioSeleccionado() {
+  const p = productoActual;
+  const m = (p.medidas || []).find(x => x.ancho_cm === anchoSeleccionado);
+  const base = m ? m.precio : Number(p.precio_base || p.precio || 0);
+  return base + costoAdicionales();
+}
+
+// ---- Accesorios (catálogo 2026, págs. 10-14 — ver includes/accesorios.php) ----
+// Ovalín y monomando van incluidos (solo se elige cuál) cuando el paquete
+// dice "a elegir"; los modelos premium (París) ya traen los suyos.
+function adicionalesElegidos() {
+  return [...document.querySelectorAll('#adicionalesLista input:checked')].map(i => i.value);
+}
+function costoAdicionales() {
+  const A = (window.WH_ACCESORIOS || {}).adicionales || {};
+  return adicionalesElegidos().reduce((s, k) => s + (A[k]?.precio || 0), 0);
+}
+function renderAccesorios() {
+  const acc = window.WH_ACCESORIOS;
+  const p = productoActual;
+  if (!acc || !p) return;
+  const sinAc = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const spec = k => (p.especificaciones || []).find(s => sinAc(s.clave).includes(k))?.valor || '';
+  const eligeOvalin = sinAc(spec('ovalin')).includes('elegir');
+  const eligeMono   = sinAc(spec('monomando')).includes('elegir');
+
+  const boxAcc = document.getElementById('accesoriosBox');
+  if (boxAcc && (eligeOvalin || eligeMono)) {
+    boxAcc.style.display = '';
+    const selO = document.getElementById('selOvalin');
+    const grupo = (linea, titulo) => `<optgroup label="${titulo}">${acc.ovalines.filter(o => o.linea === linea)
+      .map(o => `<option value="${escHtml(o.codigo)}">${escHtml(o.codigo)} — ${escHtml(o.medidas)}</option>`).join('')}</optgroup>`;
+    selO.innerHTML = `<option value="">Lo elijo con un asesor</option>${grupo('incluido', 'Incluidos')}${grupo('economica', 'Línea económica')}`;
+    selO.closest('.acc-campo').style.display = eligeOvalin ? '' : 'none';
+    const selM = document.getElementById('selMonomando');
+    const acabados = [...new Set(acc.monomandos.map(m => m.acabado))];
+    selM.innerHTML = `<option value="">Lo elijo con un asesor</option>` + acabados.map(a =>
+      `<optgroup label="${escHtml(a)}">${acc.monomandos.filter(m => m.acabado === a)
+        .map(m => `<option value="${escHtml(m.codigo)}">${escHtml(m.codigo)} (${escHtml(a.toLowerCase())})</option>`).join('')}</optgroup>`).join('');
+    selM.closest('.acc-campo').style.display = eligeMono ? '' : 'none';
+  }
+
+  const boxAd = document.getElementById('adicionalesBox');
+  const lista = document.getElementById('adicionalesLista');
+  if (boxAd && lista) {
+    boxAd.style.display = '';
+    const paso = document.getElementById('adicionalesPaso');
+    if (paso) paso.textContent = boxAcc && boxAcc.style.display !== 'none' ? '4' : '3';
+    lista.innerHTML = Object.entries(acc.adicionales).map(([k, a]) => `
+      <label class="adic-item">
+        <input type="checkbox" value="${escHtml(k)}">
+        <span><strong>${escHtml(a.nombre)}</strong><small>${escHtml(a.detalle)}</small></span>
+        <em>+${formatCurrency(a.precio)}</em>
+      </label>`).join('') + `
+      <p class="acc-nota">¿Espejo con LED, color especial o cubierta de piedra? Varían según el tamaño: <a href="/solicitudes">pídelos en una cotización</a>.</p>`;
+    lista.querySelectorAll('input').forEach(i => i.addEventListener('change', actualizarPrecioAncho));
+  }
+}
+
+function actualizarPrecioAncho() {
+  const el = document.getElementById('pPrecio');
+  if (el) el.textContent = formatCurrency(precioSeleccionado());
+  const nota = document.getElementById('pPrecioNota');
+  if (nota) nota.textContent = anchoSeleccionado ? `Mueble de ${anchoSeleccionado} cm de ancho · sin instalación` : '';
+}
+
 // ---- Agregar al carrito ----
 function agregarAlCarrito() {
   if (!productoActual) return;
   const cantidad = parseInt(document.getElementById('cantidad')?.value || 1);
   let carrito = JSON.parse(sessionStorage.getItem('wh_carrito') || '[]');
+  const tieneMedidas = (productoActual.medidas || []).length > 0;
+  const ancho = tieneMedidas ? anchoSeleccionado : null;
+  const ovalin = document.getElementById('selOvalin')?.value || '';
+  const monomando = document.getElementById('selMonomando')?.value || '';
+  const adicionales = adicionalesElegidos();
+  const A = (window.WH_ACCESORIOS || {}).adicionales || {};
+  const detalle = [
+    ovalin ? `Ovalín ${ovalin}` : '', monomando ? `Monomando ${monomando}` : '',
+    ...adicionales.map(k => A[k]?.nombre || k),
+  ].filter(Boolean).join(' · ');
+  const clave = JSON.stringify([ancho, ovalin, monomando, [...adicionales].sort()]);
 
-  const exist = carrito.find(i => i.id == productoActual.id);
+  // Cada combinación (ancho + accesorios) es un renglón distinto del carrito.
+  const exist = carrito.find(i => i.id == productoActual.id && (i.clave || JSON.stringify([i.ancho_cm || null, '', '', []])) === clave);
   if (exist) {
     exist.cantidad += cantidad;
   } else {
     carrito.push({
       id:       productoActual.id,
-      nombre:   productoActual.nombre,
-      precio:   productoActual.precio_base || productoActual.precio,
+      nombre:   productoActual.nombre + (ancho ? ` — ${ancho} cm` : ''),
+      precio:   precioSeleccionado(),
+      ancho_cm: ancho,
+      ovalin, monomando, adicionales, detalle, clave,
       imagen:   productoActual.imagenes?.[0]?.url_imagen || '',
       cantidad: cantidad,
     });
@@ -313,7 +371,7 @@ function agregarAlCarrito() {
   const btn = document.getElementById('btnVerCarrito');
   if (btn) btn.style.display = 'inline-block';
 
-  showToast(`${cantidad}x ${escHtml(productoActual.nombre)} agregado al carrito`);
+  showToast(`${cantidad}x ${escHtml(productoActual.nombre)}${ancho ? ` (${ancho} cm)` : ''} agregado al carrito`);
 }
 
 // ---- Cargar productos relacionados ----
@@ -335,7 +393,7 @@ async function cargarRelacionados(catId, excludeId) {
           <div class="related-img">${img}</div>
           <div class="related-info">
             <div class="related-name">${escHtml(p.nombre)}</div>
-            <div class="related-price">${formatCurrency(p.precio)}</div>
+            <div class="related-price">${(p.medidas || []).length ? 'Desde ' : ''}${formatCurrency(p.precio)}</div>
           </div>
         </a>
       `;
@@ -375,3 +433,5 @@ function showToast(msg, type = 'success') {
 // Globales
 window.cambiarImagen   = cambiarImagen;
 window.cambiarCantidad = cambiarCantidad;
+
+window.seleccionarAncho = seleccionarAncho;

@@ -815,7 +815,7 @@
           id:'milano',
           sku:'MLN-001',
           nombre:'Milano',
-          categoria:'A Piso',
+          categoria:'Muebles de baño',
           badge:'Nuevo',
           estado:'activo',
           precio:8500,
@@ -851,7 +851,7 @@
           id:'venecia',
           sku:'VNC-002',
           nombre:'Venecia',
-          categoria:'Flotados',
+          categoria:'Muebles de baño',
           badge:'Popular',
           estado:'activo',
           precio:12800,
@@ -962,7 +962,7 @@
               <div class="cat-title">${escapeHtml(p.nombre)} <span style="color:var(--muted);font-size:12px;">(${escapeHtml(p.categoria || '')})</span></div>
               <div class="cat-desc" style="color: var(--muted);font-size:13px;margin:6px 0;">${escapeHtml((p.descripcion || p.descLarga || '').substring(0, 80))}${(p.descripcion||'').length > 80 ? '...' : ''}</div>
               <div class="cat-footer">
-                <div class="cat-price">${money(p.precio || p.precio_base || 0)}</div>
+                <div class="cat-price">${precioCatalogoTexto(p)}</div>
                 <div class="cat-actions">
                   <button class="btn btn-secondary btn-small btn-ver-prod">Ver</button>
                   <button class="btn btn-secondary btn-small btn-edit-prod" title="Editar"><i data-lucide="pen"></i></button>
@@ -996,7 +996,7 @@
             <td>${escapeHtml(String(p.id))}</td>
             <td>${escapeHtml(p.nombre)}</td>
             <td>${escapeHtml(p.categoria || '—')}</td>
-            <td style="color:var(--accent);font-weight:900;">${money(p.precio || p.precio_base || 0)}</td>
+            <td style="color:var(--accent);font-weight:900;">${precioCatalogoTexto(p)}</td>
             <td><span class="status-badge ${p.estado === 'activo' ? 'status-completed' : 'status-disabled'}">${p.estado === 'activo' ? 'Activo' : 'Inactivo'}</span></td>
             <td>
               <button class="btn btn-secondary btn-small btn-ver-prod">Ver</button>
@@ -1361,9 +1361,22 @@
     }
 
     let _detailCurrentId = '';
-    function openProductoDetalle(id){
-      const p = getProductos().find(x => String(x.id) === String(id));
+    // "Desde $5,800 · 60–120 cm" cuando el modelo maneja precio por ancho.
+    function precioCatalogoTexto(p) {
+      const med = p.medidas || [];
+      if (!med.length) return money(p.precio || p.precio_base || 0);
+      const rango = med.length > 1 ? `${med[0].ancho_cm}–${med[med.length - 1].ancho_cm} cm` : `${med[0].ancho_cm} cm`;
+      return `Desde ${money(Math.min(...med.map(m => m.precio)))} <span style="color:var(--muted);font-size:11px;font-weight:600;">· ${rango}</span>`;
+    }
+
+    async function openProductoDetalle(id){
+      let p = getProductos().find(x => String(x.id) === String(id));
       if(!p){ showNotification('No se encontró el producto', 'error'); return; }
+      // La lista no trae las especificaciones: pedir el detalle completo.
+      try {
+        const d = await apiFetch(`${API_BASE}/productos.php?id=${id}`);
+        if (d.success && d.producto) p = { ...p, especificaciones: d.producto.especificaciones || [], medidas: d.producto.medidas || p.medidas || [] };
+      } catch (e) { /* se muestra con lo que haya */ }
       _detailCurrentId = id;
 
       $('#detalleModalTitle').textContent = `Detalle: ${p.nombre}`;
@@ -1388,7 +1401,7 @@
                 ${escapeHtml(p.categoria || '')}
                 ${p.etiqueta || p.badge ? ` • <span style="background:#8b7355;color:#fff;padding:2px 8px;border-radius:4px;font-size:12px;">${escapeHtml(p.etiqueta || p.badge)}</span>` : ''}
               </div>
-              <div class="detail-price">${money(p.precio || p.precio_base || 0)}</div>
+              <div class="detail-price">${precioCatalogoTexto(p)}</div>
               <div class="detail-desc" style="margin-top:10px;color:var(--muted2);font-size:14px;line-height:1.6;">${escapeHtml(p.descripcion || p.descLarga || 'Sin descripción')}</div>
             </div>
           </div>
@@ -1397,9 +1410,11 @@
             <div class="kv"><span>ID en BD</span><b>${escapeHtml(String(p.id))}</b></div>
             <div class="kv"><span>Categoría</span><b>${escapeHtml(p.categoria || '—')}</b></div>
             <div class="kv"><span>Estado</span><b><span class="status-badge ${p.estado === 'activo' ? 'status-completed' : 'status-disabled'}">${p.estado || 'inactivo'}</span></b></div>
-            <div class="kv"><span>Precio</span><b style="color:var(--accent);">${money(p.precio || p.precio_base || 0)}</b></div>
+            ${(p.medidas || []).length
+              ? `<h4 style="margin-top:14px;">Precio por ancho (sin instalación)</h4>${p.medidas.map(m => `<div class="kv"><span>${m.ancho_cm} cm</span><b style="color:var(--accent);">${money(m.precio)}</b></div>`).join('')}`
+              : `<div class="kv"><span>Precio</span><b style="color:var(--accent);">${money(p.precio || p.precio_base || 0)}</b></div>`}
             <div style="margin-top:14px;"></div>
-            <h4>Especificaciones</h4>
+            <h4>Qué incluye el paquete</h4>
             ${specsHTML}
           </div>
         </div>
@@ -2228,6 +2243,7 @@ async function cargarProductosAPI() {
         imagen_principal: p.imagen_principal || '',
         imgs:             p.imagen_principal ? [p.imagen_principal] : [],
         especificaciones: [],  // se cargan en detalle si se necesitan
+        medidas:          p.medidas || [],
         descLarga:        p.descripcion || '',
       }));
       window._apiProductos = apiProductos;
@@ -2352,8 +2368,10 @@ async function actualizarEstadoPedido(id, estado) {
         if (saldo > 0.009) {
           const cobrado = confirm(`Este pedido tiene un saldo pendiente de ${money(saldo)} (anticipo). ¿Se cobró el saldo en efectivo/en persona al momento de la instalación/entrega?`);
           if (cobrado) {
+            const metodo = await elegirMetodoCobro();
+            if (!metodo) { cargarPedidosAPI(); return; }
             const r = await apiFetch(`${API_BASE}/pagos.php?action=marcar_saldo_manual`, {
-              method: 'POST', body: JSON.stringify({ pedido_id: id }),
+              method: 'POST', body: JSON.stringify({ pedido_id: id, metodo }),
             });
             if (!r.success) {
               showNotification('<i data-lucide="x"></i> ' + (r.error || 'Error al registrar el saldo'), 'error');
@@ -2528,7 +2546,7 @@ async function verDetallePedidoAdmin(id) {
 
     let entrega;
     if (p.tipo_entrega === 'recoger') {
-      entrega = '🏪 Recoge en tienda';
+      entrega = '🏪 Pasa a recogerlo al taller';
     } else {
       // Pedidos cargados a mano (ver pedido-manual.js) suelen traer un link de
       // ubicación pegado directo en direccion_envio en vez de texto — usarlo
@@ -2580,8 +2598,9 @@ async function verDetallePedidoAdmin(id) {
               <td style="padding:8px 6px;color:var(--muted2);">
                 <div>${escapeHtml(i.nombre_producto||i.producto_nombre||'Producto')}</div>
                 ${renderSpecs(i.especificaciones)}
+                ${detalleLineaHtml(i)}
               </td>
-              <td style="padding:8px 6px;text-align:center;color:var(--muted2);">${i.cantidad}${i.unidad&&i.unidad!=="pza"?" "+escapeHtml(i.unidad):""}</td>
+              <td style="padding:8px 6px;text-align:center;color:var(--muted2);">${Number(i.cantidad)}${i.unidad&&i.unidad!=="pza"?" "+escapeHtml(i.unidad):""}</td>
               <td style="padding:8px 6px;text-align:right;color:var(--muted2);">${money(i.precio_unitario)}</td>
               <td style="padding:8px 6px;text-align:right;font-weight:700;color:var(--accent);">${money(i.total||i.precio_unitario*i.cantidad)}</td>
             </tr>`).join('')}
@@ -2606,14 +2625,14 @@ async function verDetallePedidoAdmin(id) {
     const pagos = p.pagos || [];
     const pagosHtml = pagos.length
       ? pagos.map(pg=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:1px solid var(--border);color:var(--muted2);">
-          <span>${pg.metodo_pago||'Pago'} — ${(pg.fecha_creacion||'').substring(0,10)}</span>
+          <span>${escapeHtml(pg.metodo||pg.metodo_pago||'Pago')} — ${(pg.fecha_creacion||'').substring(0,10)}</span>
           <span style="font-weight:700;color:var(--ok);">${money(pg.monto||0)}</span>
         </div>`).join('')
       : '<p style="color:var(--muted);font-style:italic;font-size:12px;padding:6px 0;">Sin pagos registrados</p>';
 
     body.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:18px;">
-        <span class="status-badge ${cls}">${label}</span>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;"><span class="status-badge ${cls}">${label}</span>${tipoProyectoBadge(p.tipo_proyecto)}</div>
         <div style="text-align:right;">
           <div style="font-size:22px;font-weight:900;color:var(--accent);">${money(p.total)}</div>
           <div style="font-size:11px;color:var(--muted);">Sub ${money(p.subtotal)} + Envío ${money(p.costo_envio)} + Inst. ${money(p.costo_instalacion)}</div>
@@ -2624,12 +2643,12 @@ async function verDetallePedidoAdmin(id) {
         <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Cliente</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;color:var(--muted2);">
           <div><span style="color:var(--muted);display:block;font-size:10px;">Nombre</span><strong>${escapeHtml(p.nombre_cliente)}</strong></div>
-          <div><span style="color:var(--muted);display:block;font-size:10px;">Teléfono</span><strong>${escapeHtml(p.telefono_cliente||'—')}</strong></div>
+          <div><span style="color:var(--muted);display:block;font-size:10px;">Teléfono</span><strong>${escapeHtml(p.telefono_cliente||'—')}${telefonosSecundariosHtml(p.telefonos_secundarios)}</strong></div>
           <div><span style="color:var(--muted);display:block;font-size:10px;">Correo</span><strong>${escapeHtml(p.correo_cliente)}</strong></div>
-          <div><span style="color:var(--muted);display:block;font-size:10px;">Fecha estimada</span><strong>${p.fecha_estimada||'—'}</strong></div>
+          <div><span style="color:var(--muted);display:block;font-size:10px;">Fecha de entrega / instalación</span><strong>${p.fecha_estimada||'—'}</strong></div>
           <div style="grid-column:1/-1;"><span style="color:var(--muted);display:block;font-size:10px;">Entrega</span><strong>${entrega}</strong></div>
           <div style="grid-column:1/-1;"><span style="color:var(--muted);display:block;font-size:10px;">Instalación</span><strong>${instalacion}</strong></div>
-          ${p.notas?`<div style="grid-column:1/-1;"><span style="color:var(--muted);display:block;font-size:10px;">Notas</span><strong>${escapeHtml(p.notas)}</strong></div>`:''}
+          ${p.notas?`<div style="grid-column:1/-1;"><span style="color:var(--muted);display:block;font-size:10px;">Notas</span><strong style="white-space:pre-line;">${escapeHtml(p.notas)}</strong></div>`:''}
           ${p.cliente_id?`<div style="grid-column:1/-1;margin-top:4px;"><span style="background:#2d6a3f20;color:#2d6a3f;border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700;"><i data-lucide="user-check"></i> Cliente registrado #${p.cliente_id}</span></div>`:''}
         </div>
       </div>
@@ -2816,11 +2835,12 @@ async function registrarPagoManual(id) {
 }
 
 async function marcarSaldoManualAdmin(id) {
-  if (!confirm('¿Confirmas que el saldo restante se cobró en efectivo, transferencia o terminal? Esto marcará el pedido como pagado.')) return;
+  const metodo = await elegirMetodoCobro();
+  if (!metodo) return;
   try {
     const data = await apiFetch(`${API_BASE}/pagos.php?action=marcar_saldo_manual`, {
       method: 'POST',
-      body: JSON.stringify({ pedido_id: id }),
+      body: JSON.stringify({ pedido_id: id, metodo }),
     });
     if (data.success) {
       showNotification('✅ Saldo registrado como pagado', 'success');
@@ -2933,7 +2953,7 @@ async function cambiarEstadoCitaAdmin(id, estado) {
 }
 
 // ── Ver detalle de COTIZACIÓN ──────────────────────────────────
-const COTIZADOR_TIPO_LABELS = { cocina:'Cocina', closet:'Closet', lavamanos:'Lavamanos', otro:'Otro' };
+const COTIZADOR_TIPO_LABELS = { cocina:'Cocina', closet:'Closet', lavamanos:'Mueble de baño', otro:'Otro' };
 
 async function cargarCatalogoCotizador(forzar) {
   if (window._cotizadorCatalogo && !forzar) return window._cotizadorCatalogo;
@@ -3020,8 +3040,8 @@ function renderCatalogoCotizadorBody() {
       <span style="flex:1 1 140px;font-size:13px;color:var(--muted2);">${escapeHtml(it.nombre)} <span style="color:var(--muted);font-size:11px;">(${escapeHtml(it.unidad)})</span></span>
       <input type="number" min="0" step="0.01" value="${it.precio_unitario_default}" id="catPrecio_${it.id}"
         style="width:110px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:6px;color:var(--text);font-size:13px;">
-      <button class="btn btn-secondary btn-small" onclick="guardarPrecioCatalogo(${it.id})"><i data-lucide="save"></i></button>
-      <button class="btn btn-danger btn-small" onclick="desactivarPartidaCatalogo(${it.id})"><i data-lucide="trash-2"></i></button>
+      <button class="btn btn-secondary btn-small" data-call="guardarPrecioCatalogo" data-args="[${it.id}]"><i data-lucide="save"></i></button>
+      <button class="btn btn-danger btn-small" data-call="desactivarPartidaCatalogo" data-args="[${it.id}]"><i data-lucide="trash-2"></i></button>
     </div>
   `).join('') : '<p style="color:var(--muted);font-size:12px;">Sin partidas en el catálogo todavía.</p>';
 }
@@ -3107,9 +3127,9 @@ async function verDetalleCotAdmin(id) {
       aceptada: [], en_produccion: [], lista: [], entregada: [], cancelada: [], convertida_a_pedido: [],
     };
     const botonesHtml = (acciones[est] || []).map(([estado, label, cls]) =>
-      `<button class="btn ${cls} btn-small" onclick="cambiarEstadoCotAdmin(${cot.id},'${estado}')">${label}</button>`
+      `<button class="btn ${cls} btn-small" data-call="cambiarEstadoCotAdmin" data-args='[${cot.id},"${estado}"]'>${label}</button>`
     ).join(' ') + (est === 'aceptada'
-      ? ` <button class="btn btn-primary btn-small" onclick="convertirCotizacionAPedido(${cot.id})"><i data-lucide="factory"></i> Enviar a producción</button>`
+      ? ` <button class="btn btn-primary btn-small" data-call="convertirCotizacionAPedido" data-args="[${cot.id}]"><i data-lucide="factory"></i> Enviar a producción</button>`
       : '') + (est === 'convertida_a_pedido' && cot.numero_pedido
       ? ` <span class="status-badge status-completed"><i data-lucide="check"></i> Pedido ${escapeHtml(cot.numero_pedido)}</span>`
       : '');
@@ -3186,7 +3206,7 @@ async function verDetalleCotAdmin(id) {
             </div>
 
             <div id="cotizadorPartidasWrap"></div>
-            <button class="btn btn-secondary btn-small" onclick="agregarPartidaCotizador()" style="margin:8px 0 14px;">
+            <button class="btn btn-secondary btn-small" data-call="agregarPartidaCotizador" style="margin:8px 0 14px;">
               <i data-lucide="plus"></i> Agregar partida
             </button>
 
@@ -3257,10 +3277,10 @@ async function verDetalleCotAdmin(id) {
 
             ${cot.pdf_url ? `<p style="font-size:12px;margin-bottom:10px;"><a href="${cot.pdf_url}" target="_blank" rel="noopener" style="color:var(--accent);"><i data-lucide="file-text"></i> Ver el PDF ya enviado</a></p>` : ''}
 
-            <button class="btn btn-secondary btn-small" onclick="guardarCamposCotizacion(${cot.id})">
+            <button class="btn btn-secondary btn-small" data-call="guardarCamposCotizacion" data-args="[${cot.id}]">
               <i data-lucide="save"></i> Guardar borrador
             </button>
-            <button class="btn btn-primary" id="btnResponderCliente" onclick="generarPDFCotizacion(${cot.id})">
+            <button class="btn btn-primary" id="btnResponderCliente" data-call="generarPDFCotizacion" data-args="[${cot.id}]">
               <i data-lucide="send"></i> Responder al cliente (genera PDF)
             </button>
           </div>
@@ -3289,20 +3309,20 @@ function renderCotizadorPartidas() {
 
   wrap.innerHTML = items.map((it, idx) => `
     <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap;">
-      <select onchange="seleccionarPartidaCatalogo(${idx}, this.value)" style="flex:1 1 130px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:6px;color:var(--text);font-size:12px;">
+      <select data-onchange="seleccionarPartidaCatalogo" data-args="[${idx}]" style="flex:1 1 130px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:6px;color:var(--text);font-size:12px;">
         <option value="">Personalizada…</option>
         ${catalogo.map(c => `<option value="${c.clave}" ${c.clave === it.clave ? 'selected' : ''}>${escapeHtml(c.nombre)}</option>`).join('')}
       </select>
-      <input type="text" value="${escapeHtml(it.nombre)}" placeholder="Nombre" oninput="actualizarPartidaCotizador(${idx},'nombre',this.value)"
+      <input type="text" value="${escapeHtml(it.nombre)}" placeholder="Nombre" data-oninput="actualizarPartidaCotizador" data-args='[${idx},"nombre"]'
         style="flex:1 1 110px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:6px;color:var(--text);font-size:12px;">
-      <input type="number" min="0" step="0.01" value="${it.cantidad}" placeholder="Cant." oninput="actualizarPartidaCotizador(${idx},'cantidad',this.value)"
+      <input type="number" min="0" step="0.01" value="${it.cantidad}" placeholder="Cant." data-oninput="actualizarPartidaCotizador" data-args='[${idx},"cantidad"]'
         style="width:64px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:6px;color:var(--text);font-size:12px;">
-      <input type="text" value="${escapeHtml(it.unidad)}" placeholder="Unidad" oninput="actualizarPartidaCotizador(${idx},'unidad',this.value)"
+      <input type="text" value="${escapeHtml(it.unidad)}" placeholder="Unidad" data-oninput="actualizarPartidaCotizador" data-args='[${idx},"unidad"]'
         style="width:56px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:6px;color:var(--text);font-size:12px;">
-      <input type="number" min="0" step="0.01" value="${it.precio_unitario}" placeholder="P. unit." oninput="actualizarPartidaCotizador(${idx},'precio_unitario',this.value)"
+      <input type="number" min="0" step="0.01" value="${it.precio_unitario}" placeholder="P. unit." data-oninput="actualizarPartidaCotizador" data-args='[${idx},"precio_unitario"]'
         style="width:82px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:6px;color:var(--text);font-size:12px;">
       <span style="width:82px;text-align:right;font-size:12px;color:var(--muted2);font-weight:700;">${money((it.cantidad||0) * (it.precio_unitario||0))}</span>
-      <button type="button" onclick="quitarPartidaCotizador(${idx})" style="background:none;border:none;color:var(--danger);cursor:pointer;padding:4px;"><i data-lucide="trash-2"></i></button>
+      <button type="button" data-call="quitarPartidaCotizador" data-args="[${idx}]" style="background:none;border:none;color:var(--danger);cursor:pointer;padding:4px;"><i data-lucide="trash-2"></i></button>
     </div>
   `).join('') || '<p style="color:var(--muted);font-size:12px;">Sin partidas — agrega al menos una.</p>';
 
@@ -4731,4 +4751,44 @@ async function generarRutaDiaAdmin(fecha) {
   } catch(e) {
     if (body) body.innerHTML = `<div style="color:var(--danger);padding:24px;text-align:center;"><i data-lucide="circle-alert"></i> Error: ${escapeHtml(e.message)}</div>`;
   }
+}
+
+
+/* ── Datos extra de pedidos cargados a mano (ver pedido-manual.js) ──────
+   Teléfonos adicionales del cliente y "medidas personalizadas" por mueble:
+   tienen que llegarle tal cual a quien instala, no quedarse en ventas. */
+function telefonosSecundariosHtml(raw) {
+  let tels = [];
+  try { tels = Array.isArray(raw) ? raw : JSON.parse(raw || '[]'); } catch (e) { tels = []; }
+  if (!Array.isArray(tels) || !tels.length) return '';
+  return tels.map(t => `<div style="margin-top:2px;"><a href="tel:${encodeURIComponent(String(t).replace(/[^\d+]/g, ''))}" style="color:inherit;">${escapeHtml(t)}</a></div>`).join('');
+}
+function medidasPersonalizadasHtml(txt) {
+  if (!txt || !String(txt).trim()) return '';
+  return `<div style="margin-top:4px;padding:6px 8px;border:1px dashed var(--accent);border-radius:6px;font-size:11px;line-height:1.5;color:var(--text);white-space:pre-line;"><strong style="color:var(--accent);">Medidas personalizadas:</strong> ${escapeHtml(txt)}</div>`;
+}
+// Todo lo que se eligió para ese mueble: ancho, cubierta, color, ovalín,
+// monomando, adicionales,
+// información extra, medidas y la foto del modelo si no es de catálogo.
+const _CUBIERTA_LABELS = { mdf: 'Tapa de MDF', cuarzo: 'Cuarzo', granito: 'Granito', marmol: 'Mármol' };
+function detalleLineaHtml(i) {
+  const chips = [
+    i.ancho_cm ? `Ancho: <strong>${escapeHtml(String(i.ancho_cm))} cm</strong>` : '',
+    i.cubierta ? `Cubierta: <strong>${escapeHtml(_CUBIERTA_LABELS[i.cubierta] || i.cubierta)}</strong>` : '',
+    i.color ? `Color: <strong>${escapeHtml(i.color)}</strong>` : '',
+    i.ovalin ? `Ovalín: <strong>${escapeHtml(i.ovalin)}</strong>` : '',
+    i.monomando ? `Monomando: <strong>${escapeHtml(i.monomando)}</strong>` : '',
+    i.adicionales ? `Adicionales: <strong>${escapeHtml(i.adicionales)}</strong>` : '',
+  ].filter(Boolean);
+  return `
+    ${chips.length ? `<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11px;color:var(--muted2);">${chips.map(c => `<span>${c}</span>`).join('')}</div>` : ''}
+    ${medidasPersonalizadasHtml(i.medidas_personalizadas)}
+    ${i.info_extra ? `<div style="margin-top:4px;font-size:11px;line-height:1.5;color:var(--text);white-space:pre-line;"><strong style="color:var(--accent);">Información extra:</strong> ${escapeHtml(i.info_extra)}</div>` : ''}
+    ${i.imagen_referencia ? `<a href="${escapeHtml(i.imagen_referencia)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:6px;"><img src="${escapeHtml(i.imagen_referencia)}" alt="Foto del modelo" style="width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>` : ''}`;
+}
+const _TIPO_PROYECTO_LABELS = { bano: 'Mueble de baño', cocina: 'Cocina a la medida', closet: 'Clóset a la medida' };
+function tipoProyectoBadge(tipo) {
+  if (!tipo) return '';
+  const ico = { bano: 'bath', cocina: 'cooking-pot', closet: 'shirt' }[tipo] || 'box';
+  return `<span class="status-badge status-info"><i data-lucide="${ico}"></i> ${escapeHtml(_TIPO_PROYECTO_LABELS[tipo] || tipo)}</span>`;
 }

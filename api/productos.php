@@ -3,12 +3,55 @@ require_once __DIR__ . '/_helpers.php';
 
 function validarUrlImagen(string $url): bool {
     if (empty($url) || strlen($url) > 2048) return false;
+    // Fotos del catálogo que viven en el propio sitio (ver
+    // database/migracion_2026_10_catalogo_banos.sql) — sin esto, guardar el
+    // producto desde el panel las borraría por no ser de Firebase.
+    if (preg_match('#^/assets/img/catalogo/[a-z0-9_-]+\.(jpe?g|png|webp)$#i', $url)) return true;
     if (!filter_var($url, FILTER_VALIDATE_URL)) return false;
     $parsed = parse_url($url);
     if (($parsed['scheme'] ?? '') !== 'https') return false;
     $host = $parsed['host'] ?? '';
     $allowedHosts = ['firebasestorage.googleapis.com', 'storage.googleapis.com'];
     return in_array($host, $allowedHosts, true) || str_ends_with($host, '.firebasestorage.app');
+}
+
+// Precio por ancho (catálogo 2026: cada modelo se vende de 60 a 120 cm).
+// precio_base del producto queda siempre como el "desde" = el ancho más barato.
+function medidasDeProductos(array $ids): array {
+    $ids = array_values(array_filter(array_map('intval', $ids)));
+    if (!$ids) return [];
+    $ph = implode(',', array_fill(0, count($ids), '?'));
+    try {
+        $rows = dbRows("SELECT producto_id, ancho_cm, precio FROM producto_medidas WHERE producto_id IN ($ph) ORDER BY ancho_cm", $ids);
+    } catch (\Throwable $e) {
+        return []; // migración aún no aplicada
+    }
+    $out = [];
+    foreach ($rows as $r) {
+        $out[(int)$r['producto_id']][] = ['ancho_cm' => (int)$r['ancho_cm'], 'precio' => (float)$r['precio']];
+    }
+    return $out;
+}
+
+function leerMedidasBody(array $body): ?array {
+    if (!isset($body['medidas']) || !is_array($body['medidas'])) return null;
+    $medidas = [];
+    foreach ($body['medidas'] as $m) {
+        $ancho  = sanitizeInt($m['ancho_cm'] ?? 0);
+        $precio = sanitizeFloat($m['precio'] ?? 0);
+        if ($ancho < 20 || $ancho > 400) jsonError('Cada medida necesita un ancho entre 20 y 400 cm', 422);
+        if ($precio <= 0) jsonError("El precio de {$ancho} cm debe ser mayor a 0", 422);
+        $medidas[$ancho] = $precio;
+    }
+    ksort($medidas);
+    return $medidas;
+}
+
+function guardarMedidas(int $productoId, array $medidas): void {
+    dbQuery("DELETE FROM producto_medidas WHERE producto_id = ?", [$productoId]);
+    foreach ($medidas as $ancho => $precio) {
+        dbInsert('producto_medidas', ['producto_id' => $productoId, 'ancho_cm' => $ancho, 'precio' => $precio]);
+    }
 }
 
 $method = requestMethod();
@@ -39,6 +82,7 @@ switch ($method) {
 
             $producto['imagenes']          = $imagenes;
             $producto['especificaciones']  = $specs;
+            $producto['medidas']           = medidasDeProductos([$id])[$id] ?? [];
             $producto['imagen_principal']  = $imagenes[0]['url_imagen'] ?? null;
 
             jsonSuccess(['producto' => $producto]);
@@ -85,7 +129,7 @@ switch ($method) {
             'precio-asc'  => 'p.precio_base ASC',
             'precio-desc' => 'p.precio_base DESC',
             'nombre'      => 'p.nombre ASC',
-            'recientes'   => 'p.fecha_creacion DESC',
+            'recientes'   => 'p.fecha_creacion DESC, p.id ASC',
             'populares'   => 'p.etiqueta ASC, p.nombre ASC',
         ];
         $orderBy = $orderMap[$orden] ?? 'p.fecha_creacion DESC';
@@ -110,6 +154,10 @@ switch ($method) {
             $params
         );
 
+        $medidas = medidasDeProductos(array_column($productos, 'id'));
+        foreach ($productos as &$prod) $prod['medidas'] = $medidas[(int)$prod['id']] ?? [];
+        unset($prod);
+
         jsonSuccess([
             'productos'  => $productos,
             'paginacion' => getPaginacion($total, $page, $limit),
@@ -131,6 +179,8 @@ switch ($method) {
         $etiqueta   = sanitize($body['etiqueta'] ?? '');
         $activo     = isset($body['activo']) ? (int)(bool)$body['activo'] : 1;
 
+        $medidasNuevas = leerMedidasBody($body);
+        if ($medidasNuevas) $precio = min($medidasNuevas);
         if ($precio <= 0) jsonError('precio_base debe ser mayor a 0', 422);
         if (!dbRow("SELECT id FROM categorias WHERE id = ?", [$catId])) {
             jsonError('categoria_id no válido', 422);
@@ -174,6 +224,8 @@ switch ($method) {
             }
         }
 
+        if ($medidasNuevas) guardarMedidas($productoId, $medidasNuevas);
+
         jsonSuccess(['id' => $productoId, 'mensaje' => 'Producto creado'], 201);
         break;
 
@@ -196,9 +248,13 @@ switch ($method) {
         if (isset($body['etiqueta']))          $update['etiqueta']         = sanitize($body['etiqueta']) ?: null;
         if (isset($body['activo']))            $update['activo']           = (int)(bool)$body['activo'];
         if (isset($body['categoria_id']))      $update['categoria_id']     = sanitizeInt($body['categoria_id']);
+        $medidasNuevas = leerMedidasBody($body);
+        if ($medidasNuevas) $update['precio_base'] = min($medidasNuevas);
 
-        if (empty($update)) jsonError('No hay campos para actualizar', 422);
-        dbUpdate('productos', $update, 'id = ?', [$id]);
+        if (empty($update) && $medidasNuevas === null) jsonError('No hay campos para actualizar', 422);
+        if ($update) dbUpdate('productos', $update, 'id = ?', [$id]);
+        // Lista vacía = el modelo vuelve a precio único (sin selector de ancho).
+        if ($medidasNuevas !== null) guardarMedidas($id, $medidasNuevas);
 
         if (isset($body['imagenes']) && is_array($body['imagenes'])) {
             dbQuery("DELETE FROM imagenes_producto WHERE producto_id = ?", [$id]);

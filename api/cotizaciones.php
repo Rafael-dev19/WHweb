@@ -187,13 +187,17 @@ switch ($method) {
             if (!preg_match('/^COT-\d{4,}-\d+$/i', $numero)) {
                 jsonError('Formato de número inválido', 422);
             }
+            // Folio consecutivo: sin nombre completo ni la descripción libre
+            // (puede traer domicilio/detalles). El detalle completo va por
+            // ?token= (enlace del correo de la propuesta).
+            checkRateLimit('cotizaciones_folio', 30, 600);
             $cot = dbRow(
-                "SELECT numero_cotizacion, nombre_cliente, modelo_mueble,
-                        descripcion_solicitud, estado, fecha_creacion
+                "SELECT numero_cotizacion, nombre_cliente, modelo_mueble, estado, fecha_creacion
                  FROM cotizaciones WHERE numero_cotizacion = ?",
                 [$numero]
             );
             if (!$cot) jsonError('Cotización no encontrada', 404);
+            $cot['nombre_cliente'] = enmascararNombre($cot['nombre_cliente']);
             jsonSuccess(['cotizacion' => $cot]);
         }
 
@@ -289,7 +293,7 @@ switch ($method) {
         $tipoMueble = in_array($body['tipo_mueble'] ?? '', $tiposMuebleValidos, true) ? $body['tipo_mueble'] : 'otro';
         // Se conserva modelo_mueble (legado) con el mismo valor para no romper
         // las pantallas/reportes que todavía lo muestran (admin, seguimiento, emails).
-        $modeloMuebleLabels = ['cocina' => 'Cocina', 'closet' => 'Closet', 'lavamanos' => 'Lavamanos', 'otro' => 'Otro'];
+        $modeloMuebleLabels = ['cocina' => 'Cocina', 'closet' => 'Closet', 'lavamanos' => 'Mueble de baño', 'otro' => 'Otro'];
         $modeloMueble = $modeloMuebleLabels[$tipoMueble];
 
         // Nota: 'rango_presupuesto' y 'requiere_instalacion' YA NO se leen del

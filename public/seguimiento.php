@@ -21,7 +21,7 @@ header('Content-Type: text/html; charset=utf-8');
   <link rel="stylesheet" href="./assets/<?= av('css/animations.css') ?>">
   <link rel="stylesheet" href="./assets/<?= av('css/modal-auth.css') ?>">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+  <script src="/assets/vendor/lucide-1.55.0.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous" defer></script>
 </head>
 <body data-site-email="<?= htmlspecialchars(SITE_EMAIL) ?>">
@@ -146,7 +146,7 @@ header('Content-Type: text/html; charset=utf-8');
   <script src="./assets/<?= av('js/seguimiento.js') ?>"></script>
   <script src="./assets/<?= av('js/event-delegation.js') ?>"></script>
   <script src="./assets/<?= av('js/animations.js') ?>"></script>
-  <script>
+  <script nonce="<?= cspNonce() ?>">
     document.addEventListener('DOMContentLoaded', function () {
       if (window.lucide) window.lucide.createIcons();
     });

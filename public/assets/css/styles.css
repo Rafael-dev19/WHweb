@@ -9,7 +9,14 @@ html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden;
+  /* clip y no hidden: con overflow-x:hidden en html Y body a la vez, WebKit
+     (Safari, y Chrome/Firefox en iPhone, que usan el mismo motor) convierte
+     a body en un contenedor de scroll propio — el header position:sticky
+     deja de pegarse arriba y la barra inferior fija "salta" al hacer scroll.
+     clip recorta igual el desborde horizontal sin crear contenedor de
+     scroll. Un navegador sin soporte de clip ignora la línea y deja html
+     visible, que también evita el problema (body sigue en hidden). */
+  overflow-x: clip;
   width: 100%;
 }
 
@@ -19,6 +26,7 @@ body {
   color: var(--color-text-main, #e0e0e0);
   line-height: var(--line-height-base, 1.6);
   overflow-x: hidden;
+  overflow-x: clip;
   width: 100%;
 }
 
