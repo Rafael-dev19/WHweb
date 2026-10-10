@@ -337,6 +337,9 @@ if ($action === 'paypal_capturar') {
 }
 
 // ── Liquidar saldo manualmente (efectivo/transferencia/terminal) ──
+// Nota: se deja abierta a todo el personal (requerirPersonal) a propósito
+// — instalación la usa para marcar el saldo cobrado contra entrega en el
+// momento de instalar. No tocar sin confirmar con el dueño del negocio.
 if ($action === 'marcar_saldo_manual') {
     if ($method !== 'POST') jsonError('Método no permitido', 405);
     requerirPersonal();
@@ -361,6 +364,47 @@ if ($action === 'marcar_saldo_manual') {
     registrarPagoAprobado($pedidoId, $saldo);
 
     jsonSuccess(['mensaje' => 'Saldo registrado como pagado', 'monto' => $saldo]);
+}
+
+// ── Registrar un pago manual por un MONTO específico (anticipo parcial,
+// transferencia, efectivo, terminal) — a diferencia de marcar_saldo_manual
+// (que liquida TODO lo que falta), aquí se captura exactamente lo que se
+// recibió. Necesario para cotizaciones ya cerradas fuera del sitio (ej. un
+// anticipo del 60% recibido por transferencia antes de cargar el pedido).
+if ($action === 'registrar_pago_manual') {
+    if ($method !== 'POST') jsonError('Método no permitido', 405);
+    requerirVentasOGestion();
+    requerirCsrf();
+    $body     = $_jsonBody;
+    requireFields($body, ['pedido_id', 'monto']);
+    $pedidoId = sanitizeInt($body['pedido_id']);
+    $monto    = round((float)$body['monto'], 2);
+    $metodo   = in_array($body['metodo'] ?? '', ['transferencia', 'efectivo', 'terminal', 'tarjeta'], true)
+        ? $body['metodo'] : 'transferencia';
+    $referencia = trim((string)($body['referencia'] ?? ''));
+
+    if ($monto <= 0) jsonError('El monto debe ser mayor a cero', 422);
+
+    $pedido = dbRow("SELECT id, total, monto_pagado, estado FROM pedidos WHERE id = ?", [$pedidoId]);
+    if (!$pedido) jsonError('Pedido no encontrado', 404);
+
+    $saldoPendiente = round((float)$pedido['total'] - (float)$pedido['monto_pagado'], 2);
+    if ($saldoPendiente <= 0) jsonError('Este pedido ya está liquidado', 400);
+    if ($monto > $saldoPendiente + 0.01) {
+        jsonError("El monto (\$" . number_format($monto, 2) . ") no puede ser mayor al saldo pendiente (\$" . number_format($saldoPendiente, 2) . ")", 422);
+    }
+
+    dbInsert('pagos', [
+        'pedido_id'          => $pedidoId,
+        'metodo'             => $metodo,
+        'referencia_externa' => 'manual-' . date('YmdHis') . ($referencia !== '' ? '-' . sanitize(mb_substr($referencia, 0, 40)) : ''),
+        'monto'              => $monto,
+        'moneda'             => 'MXN',
+        'estado'             => 'aprobado',
+    ]);
+    registrarPagoAprobado($pedidoId, $monto);
+
+    jsonSuccess(['mensaje' => 'Pago registrado', 'monto' => $monto]);
 }
 
 // ── GET: Listar pagos (jefe/administrador — ledger financiero) ────

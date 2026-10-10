@@ -233,6 +233,9 @@ unset($_usuario);
           <div class="section-header">
             <h2 class="section-title">Cotizaciones</h2>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn btn-primary btn-small" data-call="abrirNuevaCotizacion">
+                <i data-lucide="plus"></i> Crear cotización
+              </button>
               <button class="btn btn-secondary btn-small" data-call="abrirCatalogoCotizador">
                 <i data-lucide="tags"></i> Catálogo de precios
               </button>
@@ -318,6 +321,7 @@ unset($_usuario);
   </div>
 
   <?php include dirname(__DIR__) . '/_modal_pedido_manual.php'; ?>
+  <?php include dirname(__DIR__) . '/_modal_cotizacion_manual.php'; ?>
 
   <!-- ═══ MODAL: DETALLE CITA (admin) ════════════════════════════ -->
   <div class="modal" id="adminCitaDetalleModal">

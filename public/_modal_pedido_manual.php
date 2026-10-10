@@ -25,6 +25,23 @@
     </div>
 
     <div class="form-group">
+      <label class="form-label">Productos del pedido</label>
+      <div style="display:flex;gap:8px;">
+        <input type="text" class="form-input" id="pm_buscar_producto" placeholder="Buscar modelo del catálogo... (ej. Estambul)" style="flex:1;">
+        <button type="button" class="btn btn-secondary" data-call="pmBuscarProducto"><i data-lucide="search"></i></button>
+      </div>
+      <div id="pm_buscar_resultados" style="margin-top:6px;display:flex;flex-direction:column;gap:4px;"></div>
+      <div id="pm_items_tabla" style="margin-top:10px;"></div>
+      <button type="button" class="btn btn-secondary btn-small" style="margin-top:6px;" data-call="pmAgregarLineaCustom">
+        <i data-lucide="plus"></i> Agregar línea personalizada (a la medida)
+      </button>
+      <div id="pm_items_total_wrap" style="display:none;text-align:right;margin-top:8px;font-weight:700;color:var(--accent);font-size:14px;">
+        Total: <span id="pm_items_total">$0.00</span>
+      </div>
+      <div class="help">Si es un modelo del catálogo, búscalo arriba. Si es a la medida (como la mayoría de las cotizaciones de baños/closets), usa "línea personalizada" — nombre, cantidad/unidad y precio libres, igual que en el cotizador.</div>
+    </div>
+
+    <div class="form-group">
       <label class="form-label">Descripción del proyecto</label>
       <textarea class="form-textarea" id="pm_descripcion" rows="4" placeholder="Describe qué debe diseñar el diseñador (o graba una nota de voz abajo, o usa ambas)"></textarea>
     </div>

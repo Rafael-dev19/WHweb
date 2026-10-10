@@ -122,6 +122,44 @@ if ($method === 'POST' && $action === 'convertir_pedido') {
     try {
         $pedidoId = dbInsert('pedidos', $datosPedido);
         dbUpdate('cotizaciones', ['pedido_id' => $pedidoId, 'estado' => 'convertida_a_pedido'], 'id = ?', [$id]);
+
+        // Copiar las partidas cotizadas a detalle_pedido — antes esto nunca
+        // pasaba, y taller/instalación veían "Productos del Pedido" vacío en
+        // cualquier pedido nacido de una cotización manual (el detalle real
+        // solo vivía en cotizacion_respuesta_items, una tabla aparte que ni
+        // siquiera se mostraba en el mismo lugar del detalle del pedido).
+        $itemsCot = dbRows(
+            "SELECT nombre_item, cantidad, unidad, precio_unitario, subtotal
+             FROM cotizacion_respuesta_items WHERE cotizacion_id = ? ORDER BY orden ASC, id ASC",
+            [$id]
+        );
+        if ($itemsCot) {
+            foreach ($itemsCot as $it) {
+                dbInsert('detalle_pedido', [
+                    'pedido_id'       => $pedidoId,
+                    'producto_id'     => null,
+                    'nombre_producto' => $it['nombre_item'],
+                    'precio_unitario' => $it['precio_unitario'],
+                    'cantidad'        => $it['cantidad'],
+                    'unidad'          => $it['unidad'],
+                    'total_linea'     => $it['subtotal'],
+                ]);
+            }
+        } else {
+            // Cotización sin partidas estructuradas (ej. respondida solo con
+            // precio_cotizado y descripción) — placeholder para no dejar
+            // "Productos del Pedido" totalmente vacío.
+            dbInsert('detalle_pedido', [
+                'pedido_id'       => $pedidoId,
+                'producto_id'     => null,
+                'nombre_producto' => $cot['descripcion_respuesta'] ?: ('Cotización ' . $cot['numero_cotizacion']),
+                'precio_unitario' => $total,
+                'cantidad'        => 1,
+                'unidad'          => 'pza',
+                'total_linea'     => $total,
+            ]);
+        }
+
         db()->commit();
     } catch (Throwable $e) {
         db()->rollBack();

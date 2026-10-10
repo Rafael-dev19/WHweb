@@ -7,6 +7,7 @@
 // paneles (crearGrabadorAudio viene de voice-recorder.js).
 
 let _pmFotosPendientes = [];
+let _pmItems = []; // [{nombre, cantidad, unidad, precio_unitario}]
 
 const _pmGrabador = crearGrabadorAudio({
   btnGrabarId: 'pm_btn_grabar',
@@ -33,6 +34,113 @@ function _pmResetForm() {
   _pmGrabador.borrar();
   const progreso = document.getElementById('pm_progreso');
   if (progreso) progreso.style.display = 'none';
+  _pmItems = [];
+  const buscarResultados = document.getElementById('pm_buscar_resultados');
+  if (buscarResultados) buscarResultados.innerHTML = '';
+  const buscarInput = document.getElementById('pm_buscar_producto');
+  if (buscarInput) buscarInput.value = '';
+  _pmRenderItemsTabla();
+}
+
+/* ── Productos del pedido: catálogo o línea personalizada ─────────────── */
+async function pmBuscarProducto() {
+  const input = document.getElementById('pm_buscar_producto');
+  const resultados = document.getElementById('pm_buscar_resultados');
+  const q = input?.value?.trim() || '';
+  if (!resultados) return;
+  if (q.length < 2) {
+    resultados.innerHTML = '<div style="font-size:12px;color:var(--muted);">Escribe al menos 2 letras.</div>';
+    return;
+  }
+  resultados.innerHTML = '<div style="font-size:12px;color:var(--muted);"><i class="wh-icon-spin" data-lucide="loader-circle"></i> Buscando...</div>';
+  window.lucide?.createIcons();
+  try {
+    const data = await apiFetch(`${API_BASE}/productos.php?busqueda=${encodeURIComponent(q)}&limit=8`);
+    const productos = data?.productos || [];
+    if (!productos.length) {
+      resultados.innerHTML = '<div style="font-size:12px;color:var(--muted);">Sin resultados en el catálogo — usa "línea personalizada" si es a la medida.</div>';
+      return;
+    }
+    resultados.innerHTML = productos.map(p => `
+      <button type="button" class="btn btn-secondary btn-small" style="justify-content:flex-start;text-align:left;"
+        data-call="pmSeleccionarProducto" data-args='[${p.id}, ${JSON.stringify(p.nombre)}, ${Number(p.precio)||0}]'>
+        <i data-lucide="box"></i> ${escapeHtml(p.nombre)} — ${fmtMoneyPM(p.precio)}
+      </button>
+    `).join('');
+    window.lucide?.createIcons();
+  } catch (e) {
+    resultados.innerHTML = '<div style="font-size:12px;color:var(--danger,#e57373);">Error al buscar.</div>';
+  }
+}
+
+function pmSeleccionarProducto(productoId, nombre, precio) {
+  // producto_id viaja hasta detalle_pedido — igual que cuando el cliente lo
+  // agrega desde el catálogo en el sitio, así se liga a sus especificaciones
+  // reales (medidas, material) en vez de quedar como una línea suelta.
+  _pmItems.push({ producto_id: productoId, nombre, cantidad: 1, unidad: 'pza', precio_unitario: precio || 0 });
+  document.getElementById('pm_buscar_resultados').innerHTML = '';
+  document.getElementById('pm_buscar_producto').value = '';
+  _pmRenderItemsTabla();
+}
+
+function pmAgregarLineaCustom() {
+  _pmItems.push({ producto_id: null, nombre: '', cantidad: 1, unidad: 'pza', precio_unitario: 0 });
+  _pmRenderItemsTabla();
+}
+
+function pmEliminarItem(idx) {
+  _pmItems.splice(idx, 1);
+  _pmRenderItemsTabla();
+}
+
+function pmActualizarItemCampo(idx, campo, valor) {
+  if (!_pmItems[idx]) return;
+  _pmItems[idx][campo] = (campo === 'cantidad' || campo === 'precio_unitario') ? parseFloat(valor) || 0 : valor;
+  _pmRenderItemsTabla(true);
+}
+
+function fmtMoneyPM(n) { return '$' + Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 }); }
+
+function _pmRenderItemsTabla(soloTotal) {
+  const totalWrap = document.getElementById('pm_items_total_wrap');
+  const totalSpan = document.getElementById('pm_items_total');
+  const total = _pmItems.reduce((s, it) => s + (it.cantidad || 0) * (it.precio_unitario || 0), 0);
+  if (totalWrap) totalWrap.style.display = _pmItems.length ? '' : 'none';
+  if (totalSpan) totalSpan.textContent = fmtMoneyPM(total);
+  if (soloTotal) return; // el usuario está escribiendo en un input — no reconstruir la tabla y robarle el foco
+
+  const tabla = document.getElementById('pm_items_tabla');
+  if (!tabla) return;
+  if (!_pmItems.length) { tabla.innerHTML = ''; return; }
+  tabla.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead><tr style="background:var(--bg);">
+        <th style="padding:6px 4px;text-align:left;color:var(--accent);">Producto / descripción</th>
+        <th style="padding:6px 4px;width:70px;color:var(--accent);">Cant.</th>
+        <th style="padding:6px 4px;width:70px;color:var(--accent);">Unidad</th>
+        <th style="padding:6px 4px;width:90px;color:var(--accent);">P. Unit.</th>
+        <th style="padding:6px 4px;width:30px;"></th>
+      </tr></thead>
+      <tbody>
+        ${_pmItems.map((it, idx) => `
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:4px;"><input type="text" class="form-input" style="font-size:12px;padding:4px 6px;" value="${escapeHtml(it.nombre)}" placeholder="ej: Mueble de baño 280cm" oninput="pmActualizarItemCampo(${idx},'nombre',this.value)"></td>
+            <td style="padding:4px;"><input type="number" class="form-input" style="font-size:12px;padding:4px 6px;" value="${it.cantidad}" min="0" step="0.01" oninput="pmActualizarItemCampo(${idx},'cantidad',this.value)"></td>
+            <td style="padding:4px;">
+              <select class="form-select" style="font-size:12px;padding:4px 6px;" onchange="pmActualizarItemCampo(${idx},'unidad',this.value)">
+                ${['pza','ml','m2','juego'].map(u => `<option value="${u}" ${it.unidad===u?'selected':''}>${u}</option>`).join('')}
+              </select>
+            </td>
+            <td style="padding:4px;"><input type="number" class="form-input" style="font-size:12px;padding:4px 6px;" value="${it.precio_unitario}" min="0" step="0.01" oninput="pmActualizarItemCampo(${idx},'precio_unitario',this.value)"></td>
+            <td style="padding:4px;text-align:center;">
+              <button type="button" class="btn-eliminar-img" data-call="pmEliminarItem" data-args="[${idx}]" style="background:rgba(180,0,0,.85);border:none;color:#fff;border-radius:50%;width:20px;height:20px;font-size:13px;cursor:pointer;line-height:1;">×</button>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+  window.lucide?.createIcons();
 }
 
 /* ── Fotos ───────────────────────────────────────────────────────────── */
@@ -122,9 +230,11 @@ async function guardarPedidoManual() {
   const direccion   = document.getElementById('pm_direccion').value.trim();
   const descripcion = document.getElementById('pm_descripcion').value.trim();
 
+  const itemsValidos = _pmItems.filter(it => it.nombre.trim() && it.cantidad > 0);
+
   if (!nombre) { showNotification('Falta el nombre del cliente', 'error'); return; }
-  if (!descripcion && !_pmGrabador.tieneBlob()) {
-    showNotification('Describe el proyecto por texto o graba una nota de voz (o ambas)', 'error');
+  if (!descripcion && !_pmGrabador.tieneBlob() && !itemsValidos.length) {
+    showNotification('Describe el proyecto por texto, graba una nota de voz, o agrega al menos un producto', 'error');
     return;
   }
 
@@ -144,6 +254,7 @@ async function guardarPedidoManual() {
       descripcion,
       fotos,
       audio_url: audioUrl,
+      items: itemsValidos,
     };
 
     const data = await apiFetch(`${API_BASE}/pedidos.php?action=crear_manual`, {
@@ -186,13 +297,24 @@ document.addEventListener('DOMContentLoaded', () => {
       pmPreviewFotos(e.dataTransfer.files);
     });
   }
+  const buscarInput = document.getElementById('pm_buscar_producto');
+  if (buscarInput) {
+    buscarInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); pmBuscarProducto(); }
+    });
+  }
   const fileInput = document.getElementById('pm_fotos_files');
   if (fileInput) {
     fileInput.addEventListener('change', function () { pmPreviewFotos(this.files); });
   }
 });
 
-window.abrirModalCrearPedido = abrirModalCrearPedido;
-window.guardarPedidoManual   = guardarPedidoManual;
-window.pmPreviewFotos        = pmPreviewFotos;
-window.pmEliminarFoto        = pmEliminarFoto;
+window.abrirModalCrearPedido  = abrirModalCrearPedido;
+window.guardarPedidoManual    = guardarPedidoManual;
+window.pmPreviewFotos         = pmPreviewFotos;
+window.pmEliminarFoto         = pmEliminarFoto;
+window.pmBuscarProducto       = pmBuscarProducto;
+window.pmSeleccionarProducto  = pmSeleccionarProducto;
+window.pmAgregarLineaCustom   = pmAgregarLineaCustom;
+window.pmEliminarItem         = pmEliminarItem;
+window.pmActualizarItemCampo  = pmActualizarItemCampo;

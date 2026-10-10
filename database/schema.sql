@@ -789,3 +789,14 @@ ALTER TABLE pedido_imagenes_diseno
 
 ALTER TABLE pedido_imagenes_diseno
   ADD COLUMN grupo VARCHAR(80) NULL DEFAULT NULL AFTER tipo;
+
+-- ================================================================
+-- detalle_pedido.cantidad era INT — no alcanzaba para partidas cotizadas
+-- a mano con medidas fraccionarias (ej. "12.5 ml" de cubierta de cuarzo),
+-- que es como realmente se cotiza. Por eso convertir_pedido nunca escribía
+-- ahí (ver api/cotizaciones.php) y taller veía "Productos del Pedido"
+-- vacío en cualquier pedido que viniera de una cotización manual — el
+-- detalle real solo vivía en "Partidas cotizadas", una tabla distinta.
+-- ================================================================
+ALTER TABLE detalle_pedido MODIFY COLUMN cantidad DECIMAL(10,3) NOT NULL DEFAULT 1;
+ALTER TABLE detalle_pedido ADD COLUMN unidad VARCHAR(30) NOT NULL DEFAULT 'pza' AFTER cantidad;

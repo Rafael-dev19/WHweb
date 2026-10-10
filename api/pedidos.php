@@ -28,8 +28,35 @@ if ($method === 'POST' && $action === 'crear_manual') {
 
     $descripcion = sanitize($body['descripcion'] ?? '');
     $audioUrl    = trim($body['audio_url'] ?? '');
-    if ($descripcion === '' && $audioUrl === '') {
-        jsonError('Describe el proyecto por texto o adjunta una nota de voz', 422);
+
+    // Productos del pedido: del catálogo o líneas a la medida (nombre libre +
+    // cantidad/unidad/precio) — mismas columnas que usa el flujo del cliente
+    // (detalle_pedido), para que taller/instalación vean siempre la misma
+    // tabla sin importar si el pedido nació del carrito o se cargó a mano.
+    $itemsRaw = is_array($body['items'] ?? null) ? $body['items'] : [];
+    $items = [];
+    foreach ($itemsRaw as $it) {
+        if (!is_array($it)) continue;
+        $nombreItem = sanitize(mb_substr((string)($it['nombre'] ?? ''), 0, 180));
+        $cantidad   = max(0, (float)($it['cantidad'] ?? 0));
+        if ($nombreItem === '' || $cantidad <= 0) continue;
+        $unidad = in_array($it['unidad'] ?? '', ['pza', 'ml', 'm2', 'juego'], true) ? $it['unidad'] : 'pza';
+        $precio = max(0, (float)($it['precio_unitario'] ?? 0));
+        // Si viene de un modelo del catálogo (no línea a la medida), se liga
+        // producto_id — igual que cuando el cliente lo agrega desde el sitio —
+        // para que sus especificaciones reales (medidas, material) se puedan
+        // mostrar junto a la línea. Se valida que el producto exista de verdad.
+        $productoId = null;
+        if (!empty($it['producto_id'])) {
+            $pid = sanitizeInt($it['producto_id']);
+            if ($pid && dbRow("SELECT id FROM productos WHERE id = ?", [$pid])) $productoId = $pid;
+        }
+        $items[] = ['producto_id' => $productoId, 'nombre' => $nombreItem, 'cantidad' => $cantidad, 'unidad' => $unidad, 'precio_unitario' => $precio];
+    }
+    $totalItems = array_sum(array_map(fn($it) => round($it['cantidad'] * $it['precio_unitario'], 2), $items));
+
+    if ($descripcion === '' && $audioUrl === '' && !$items) {
+        jsonError('Describe el proyecto por texto, adjunta una nota de voz, o agrega al menos un producto', 422);
     }
 
     // Los adjuntos deben venir de Firebase Storage del proyecto — nunca una URL arbitraria.
@@ -65,18 +92,34 @@ if ($method === 'POST' && $action === 'crear_manual') {
             'disenador_id'      => $disenadorId,
             'mensaje_disenador' => $descripcion,
             'notas'             => 'Pedido cargado a mano desde el panel (encargo directo/WhatsApp).',
+            'subtotal'          => $totalItems,
+            'total'             => $totalItems,
         ]);
 
-        // Placeholder: el detalle real (medidas, materiales) lo define el
-        // diseñador durante el trabajo — no hay catálogo/precio en el origen.
-        dbInsert('detalle_pedido', [
-            'pedido_id'       => $pedidoId,
-            'producto_id'     => null,
-            'nombre_producto' => 'Pedido personalizado — ver descripción para el diseñador',
-            'cantidad'        => 1,
-            'precio_unitario' => 0,
-            'total_linea'     => 0,
-        ]);
+        if ($items) {
+            foreach ($items as $it) {
+                dbInsert('detalle_pedido', [
+                    'pedido_id'       => $pedidoId,
+                    'producto_id'     => $it['producto_id'],
+                    'nombre_producto' => $it['nombre'],
+                    'cantidad'        => $it['cantidad'],
+                    'unidad'          => $it['unidad'],
+                    'precio_unitario' => $it['precio_unitario'],
+                    'total_linea'     => round($it['cantidad'] * $it['precio_unitario'], 2),
+                ]);
+            }
+        } else {
+            // Sin productos capturados — el detalle real (medidas, materiales)
+            // lo define el diseñador durante el trabajo.
+            dbInsert('detalle_pedido', [
+                'pedido_id'       => $pedidoId,
+                'producto_id'     => null,
+                'nombre_producto' => 'Pedido personalizado — ver descripción para el diseñador',
+                'cantidad'        => 1,
+                'precio_unitario' => 0,
+                'total_linea'     => 0,
+            ]);
+        }
 
         foreach ($fotos as $url) {
             dbInsert('pedido_adjuntos', [

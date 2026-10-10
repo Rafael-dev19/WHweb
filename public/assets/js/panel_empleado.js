@@ -1397,7 +1397,7 @@ async function verDetallePedidoEmp(id) {
                 <div>${escapeHtml(i.nombre_producto||i.producto_nombre||'Producto')}</div>
                 ${renderSpecsEmp(i.especificaciones)}
               </td>
-              <td style="padding:8px 6px;text-align:center;color:var(--muted2);">${i.cantidad}</td>
+              <td style="padding:8px 6px;text-align:center;color:var(--muted2);">${i.cantidad}${i.unidad&&i.unidad!=="pza"?" "+escapeHtml(i.unidad):""}</td>
               <td style="padding:8px 6px;text-align:right;color:var(--muted2);">${money(i.precio_unitario)}</td>
               <td style="padding:8px 6px;text-align:right;font-weight:700;color:var(--accent);">${money(i.total_linea||i.precio_unitario*i.cantidad)}</td>
             </tr>`).join('')}

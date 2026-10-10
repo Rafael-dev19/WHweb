@@ -2581,7 +2581,7 @@ async function verDetallePedidoAdmin(id) {
                 <div>${escapeHtml(i.nombre_producto||i.producto_nombre||'Producto')}</div>
                 ${renderSpecs(i.especificaciones)}
               </td>
-              <td style="padding:8px 6px;text-align:center;color:var(--muted2);">${i.cantidad}</td>
+              <td style="padding:8px 6px;text-align:center;color:var(--muted2);">${i.cantidad}${i.unidad&&i.unidad!=="pza"?" "+escapeHtml(i.unidad):""}</td>
               <td style="padding:8px 6px;text-align:right;color:var(--muted2);">${money(i.precio_unitario)}</td>
               <td style="padding:8px 6px;text-align:right;font-weight:700;color:var(--accent);">${money(i.total||i.precio_unitario*i.cantidad)}</td>
             </tr>`).join('')}
@@ -2716,6 +2716,19 @@ async function verDetallePedidoAdmin(id) {
       <div style="margin-bottom:14px;">
         <div style="font-weight:700;color:var(--accent);margin-bottom:6px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Historial de Pagos</div>
         ${pagosHtml}
+        ${p.total > p.monto_pagado ? `
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
+          <input type="number" id="pagoManualMonto_${id}" class="form-input" placeholder="Monto recibido" style="max-width:140px;font-size:12px;" step="0.01" min="0.01" max="${(p.total - p.monto_pagado).toFixed(2)}">
+          <select id="pagoManualMetodo_${id}" class="form-select" style="max-width:150px;font-size:12px;">
+            <option value="transferencia">Transferencia</option>
+            <option value="efectivo">Efectivo</option>
+            <option value="terminal">Terminal</option>
+            <option value="tarjeta">Tarjeta</option>
+          </select>
+          <button class="btn btn-secondary btn-small" data-call="registrarPagoManual" data-args="[${id}]"><i data-lucide="banknote"></i> Registrar pago recibido</button>
+        </div>
+        <div class="help" style="margin-top:4px;">Saldo pendiente: ${money(p.total - p.monto_pagado)}. Para un anticipo parcial (ej. 60%), pon aquí solo el monto recibido.</div>
+        ` : ''}
       </div>
 
       <div style="padding-top:14px;border-top:1px solid var(--border);">
@@ -2773,6 +2786,32 @@ async function _subirAdjuntoPedido(id, file) {
     }
   } catch (e) {
     showNotification('Error: ' + e.message, 'error');
+  }
+}
+
+async function registrarPagoManual(id) {
+  const montoInput = document.getElementById(`pagoManualMonto_${id}`);
+  const metodoSel  = document.getElementById(`pagoManualMetodo_${id}`);
+  const monto = parseFloat(montoInput?.value || '0');
+  if (!monto || monto <= 0) {
+    showNotification('<i data-lucide="triangle-alert"></i> Ingresa el monto recibido.', 'error');
+    return;
+  }
+  if (!confirm(`¿Confirmas que se recibió ${money(monto)} (${metodoSel?.value || 'transferencia'})? Esto se suma al pedido.`)) return;
+  try {
+    const data = await apiFetch(`${API_BASE}/pagos.php?action=registrar_pago_manual`, {
+      method: 'POST',
+      body: JSON.stringify({ pedido_id: id, monto, metodo: metodoSel?.value || 'transferencia' }),
+    });
+    if (data.success) {
+      showNotification('<i data-lucide="circle-check"></i> Pago registrado', 'success');
+      verDetallePedidoAdmin(id);
+      cargarPedidosAPI();
+    } else {
+      showNotification('<i data-lucide="circle-x"></i> ' + (data.error || 'Error'), 'error');
+    }
+  } catch(e) {
+    showNotification('<i data-lucide="circle-x"></i> Error de conexión', 'error');
   }
 }
 
@@ -2906,6 +2945,64 @@ async function cargarCatalogoCotizador(forzar) {
   }
   return window._cotizadorCatalogo;
 }
+
+// ── Crear cotización desde cero (cliente que llamó, no vino del sitio) ──
+// Solo captura datos básicos del cliente; las partidas se llenan después
+// en el mismo cotizador de dos columnas (verDetalleCotAdmin) — no duplica
+// esa UI, solo crea el registro y brinca directo a él.
+function abrirNuevaCotizacion() {
+  ['nc_nombre','nc_correo','nc_telefono','nc_direccion','nc_descripcion'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  const tipo = document.getElementById('nc_tipo_mueble'); if (tipo) tipo.value = 'otro';
+  const err = document.getElementById('nc_error'); if (err) err.style.display = 'none';
+  openModal('nuevaCotizacionModal');
+}
+
+async function guardarNuevaCotizacion() {
+  const nombre      = document.getElementById('nc_nombre')?.value.trim() || '';
+  const correo      = document.getElementById('nc_correo')?.value.trim() || '';
+  const telefono    = document.getElementById('nc_telefono')?.value.trim() || '';
+  const tipoMueble  = document.getElementById('nc_tipo_mueble')?.value || 'otro';
+  const direccion   = document.getElementById('nc_direccion')?.value.trim() || '';
+  const descripcion = document.getElementById('nc_descripcion')?.value.trim() || '';
+  const err = document.getElementById('nc_error');
+  const showErr = (msg) => { if (err) { err.textContent = msg; err.style.display = 'block'; } };
+  if (err) err.style.display = 'none';
+
+  if (!nombre) { showErr('Falta el nombre del cliente'); return; }
+  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!correo || !emailRe.test(correo)) { showErr('Correo inválido'); return; }
+  if (!telefono || telefono.replace(/\D/g,'').length < 10) { showErr('Teléfono inválido (mínimo 10 dígitos)'); return; }
+  if (!descripcion || descripcion.length < 5) { showErr('Describe el proyecto'); return; }
+
+  const btn = document.getElementById('nc_btn_guardar');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="wh-icon-spin" data-lucide="loader-circle"></i> Creando...'; }
+  try {
+    const data = await apiFetch(`${API_BASE}/cotizaciones.php`, {
+      method: 'POST',
+      body: JSON.stringify({
+        nombre_cliente: nombre, correo_cliente: correo, telefono_cliente: telefono,
+        tipo_mueble: tipoMueble, direccion,
+        descripcion_solicitud: descripcion,
+      }),
+    });
+    if (data.success) {
+      showNotification('<i data-lucide="circle-check"></i> Cotización creada', 'success');
+      closeModal('nuevaCotizacionModal');
+      cargarCotizacionesAPI();
+      if (data.cotizacion_id) verDetalleCotAdmin(data.cotizacion_id);
+    } else {
+      showErr(data.error || 'Error al crear la cotización');
+    }
+  } catch (e) {
+    showErr('Error de conexión');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="arrow-right"></i> Crear y continuar al cotizador'; }
+  }
+}
+window.abrirNuevaCotizacion  = abrirNuevaCotizacion;
+window.guardarNuevaCotizacion = guardarNuevaCotizacion;
 
 // ── Catálogo de precios del cotizador — configurar una sola vez ──
 async function abrirCatalogoCotizador() {
