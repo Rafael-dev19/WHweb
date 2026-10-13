@@ -1,5 +1,9 @@
 <?php
 require_once dirname(__DIR__) . '/includes/config.php';
+// 403 real: antes respondía 200 con el texto "Acceso restringido" y Google
+// lo reportaba como "Soft 404" al seguir enlaces a /ventas o /disenador.
+http_response_code(403);
+header('X-Robots-Tag: noindex, nofollow');
 
 $area = htmlspecialchars(trim($_GET['area'] ?? ''), ENT_QUOTES, 'UTF-8');
 
@@ -29,6 +33,7 @@ if ($area === 'admin') {
 <!DOCTYPE html>
 <html lang="es">
 <head>
+  <meta name="robots" content="noindex, nofollow">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Acceso restringido — Wooden House</title>

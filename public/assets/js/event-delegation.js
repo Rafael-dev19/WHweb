@@ -130,15 +130,18 @@
       return;
     }
 
-    // [data-entrega="tipo"] → seleccionarEntrega() en carrito
-    t = e.target.closest('[data-entrega]');
+    // [data-entrega="tipo"] → seleccionarEntrega() en carrito. Solo las tarjetas
+    // de opción del carrito: antes cualquier elemento con data-entrega (como
+    // las filas de pedidos del panel de empleado) se tragaba TODOS los clics
+    // de adentro, incluido el botón "Ver".
+    t = e.target.closest('.option-card[data-entrega]');
     if (t) {
       if (typeof window.seleccionarEntrega === 'function') window.seleccionarEntrega(t.dataset.entrega);
       return;
     }
 
     // [data-instalacion="bool"] → seleccionarInstalacion() en carrito
-    t = e.target.closest('[data-instalacion]');
+    t = e.target.closest('.option-card[data-instalacion]');
     if (t) {
       if (typeof window.seleccionarInstalacion === 'function') {
         window.seleccionarInstalacion(t.dataset.instalacion === 'true');
@@ -147,7 +150,7 @@
     }
 
     // [data-tipopago="completo|anticipo"] → seleccionarTipoPago() en carrito
-    t = e.target.closest('[data-tipopago]');
+    t = e.target.closest('.option-card[data-tipopago]');
     if (t) {
       if (typeof window.seleccionarTipoPago === 'function') window.seleccionarTipoPago(t.dataset.tipopago);
       return;

@@ -2731,37 +2731,7 @@ async function verDetallePedidoAdmin(id) {
       <details class="wh-collapse" open style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;">
         <summary><i data-lucide="ruler"></i> Diseño <span class="wh-collapse-count">(${(p.imagenes_diseno||[]).length})</span></summary>
         <div class="wh-collapse-body">
-        ${(() => {
-          const diseno = p.imagenes_diseno || [];
-          const renders = diseno.filter(i => i.tipo === 'sketchup');
-          const skp     = diseno.filter(i => i.tipo === 'skp');
-          const cortes  = diseno.filter(i => i.tipo === 'vcarve');
-          const otros   = diseno.filter(i => !['sketchup','skp','vcarve'].includes(i.tipo));
-          let html = '';
-          if (renders.length) html += `<div style="margin-bottom:8px;"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Render (SketchUp)</div><div style="display:flex;gap:8px;flex-wrap:wrap;">
-            ${renders.map(img => `<a href="${img.url_imagen}" target="_blank" rel="noopener"><img src="${img.url_imagen}" alt="Render" style="width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}
-          </div></div>`;
-          if (skp.length) html += `<div style="margin-bottom:8px;"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Proyecto SketchUp (.skp)</div><div style="display:flex;gap:8px;flex-wrap:wrap;">
-            ${skp.map((f,i) => `<a href="${f.url_imagen}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:6px;background:var(--surface,#1a1a1a);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--accent);"><i data-lucide="box"></i> Proyecto .skp ${skp.length>1?(i+1):''}</a>`).join('')}
-          </div></div>`;
-          if (cortes.length) {
-            const grupos = {};
-            cortes.forEach(c => { const g = c.grupo || 'Sin variante'; (grupos[g] = grupos[g] || []).push(c); });
-            html += `<div style="margin-bottom:8px;"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Cortes para CNC (DXF / VCarve)</div>`
-              + Object.entries(grupos).map(([g, files]) => `
-                <details class="wh-subcollapse" open>
-                  <summary><i data-lucide="folder"></i> ${escapeHtml(g)} <span class="wh-collapse-count">(${files.length})</span></summary>
-                  <div class="wh-collapse-body" style="display:flex;gap:8px;flex-wrap:wrap;">
-                    ${files.map((f,i) => `<a href="${f.url_imagen}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:6px;background:var(--surface,#1a1a1a);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--accent);"><i data-lucide="file-text"></i> Corte ${i+1}</a>`).join('')}
-                  </div>
-                </details>
-              `).join('') + `</div>`;
-          }
-          if (otros.length) html += `<div style="display:flex;gap:8px;flex-wrap:wrap;">
-            ${otros.map(img => `<a href="${img.url_imagen}" target="_blank" rel="noopener"><img src="${img.url_imagen}" alt="Referencia" style="width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}
-          </div>`;
-          return html;
-        })()}
+        ${htmlArchivosDiseno(p.imagenes_diseno || [], id)}
         ${p.mensaje_disenador ? `<div style="font-size:12px;color:var(--muted2);margin-top:6px;"><strong>Mensaje del diseñador:</strong> ${escapeHtml(p.mensaje_disenador)}</div>` : ''}
         </div>
       </details>

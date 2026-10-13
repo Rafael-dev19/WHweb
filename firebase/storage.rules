@@ -27,13 +27,16 @@ service firebase.storage {
       allow read: if true;
       allow write: if esPersonal() && request.resource.size < 5 * 1024 * 1024 && esImagen();
     }
-    // Archivos de corte (.dxf) y proyecto SketchUp (.skp) por pedido.
-    match /proyectos/pedidos/{pedidoId}/{fileName} {
+    // Entregables del diseñador por pedido: proyecto SketchUp (.skp) y la
+    // carpeta de cortes del CNC (.nc; también .tap/.dxf), en subcarpetas
+    // (proyecto/<ts>/Baños5.skp, cortes/<carpeta>-<ts>/HOJA 1 LINO.nc).
+    match /proyectos/pedidos/{pedidoId}/{allPaths=**} {
       allow read: if true;
       allow write: if esPersonal()
                    && (
-                        (fileName.matches('.*[.]dxf') && request.resource.size < 25 * 1024 * 1024)
-                        || (fileName.matches('.*[.]skp') && request.resource.size < 60 * 1024 * 1024)
+                        (request.resource.name.matches('(?i).*[.](nc|tap|dxf)$') && request.resource.size < 25 * 1024 * 1024)
+                        || (request.resource.name.matches('(?i).*[.]skp$') && request.resource.size < 60 * 1024 * 1024)
+                        || (esImagen() && request.resource.size < 5 * 1024 * 1024)
                       );
     }
 

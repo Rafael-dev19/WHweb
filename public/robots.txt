@@ -8,6 +8,11 @@ Allow: /
 # Paneles privados
 Disallow: /admin
 Disallow: /empleado
+Disallow: /ventas
+Disallow: /disenador
+Disallow: /acceso-denegado
+Disallow: /notificaciones-push
+Disallow: /invitacion
 
 # Páginas de sesión/usuario (sin valor SEO)
 Disallow: /login
@@ -41,6 +46,11 @@ User-agent: Googlebot
 Allow: /
 Disallow: /admin
 Disallow: /empleado
+Disallow: /ventas
+Disallow: /disenador
+Disallow: /acceso-denegado
+Disallow: /notificaciones-push
+Disallow: /invitacion
 Disallow: /login
 Disallow: /mi-cuenta
 Disallow: /carrito

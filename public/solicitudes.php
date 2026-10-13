@@ -20,6 +20,7 @@ if (empty($_SESSION['cliente_email_verified'])) {
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Solicitudes - Wooden House</title>
+  <link rel="canonical" href="<?= APP_URL ?>/solicitudes">
   <meta name="description" content="Solicita una cotización personalizada o agenda una visita técnica con Wooden House. Asesoría gratuita para tu proyecto de muebles a medida.">
   
   <link rel="preconnect" href="https://fonts.googleapis.com">

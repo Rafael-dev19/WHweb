@@ -519,6 +519,7 @@ unset($_usuario);
   <script src="../assets/<?= av('js/theme-toggle.js') ?>"></script>
   <script src="../assets/<?= av('js/firebase-config.js') ?>"></script>
   <script src="../assets/<?= av('js/metodo-cobro.js') ?>"></script>
+  <script src="../assets/<?= av('js/archivos-diseno.js') ?>"></script>
   <script src="../assets/<?= av('js/panel_disenador.js') ?>"></script>
   <script src="../assets/<?= av('js/voice-recorder.js') ?>"></script>
   <script src="../assets/<?= av('js/pedido-manual.js') ?>"></script>

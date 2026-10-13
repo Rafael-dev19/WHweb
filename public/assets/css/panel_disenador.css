@@ -1058,3 +1058,13 @@
 .wh-subcollapse > summary::-webkit-details-marker { display:none; }
 .wh-subcollapse > summary::before { content:"\25B8"; display:inline-block; transition: transform .15s; font-size:9px; }
 .wh-subcollapse[open] > summary::before { transform: rotate(90deg); }
+
+  /* Acción "→ Siguiente estado" en la tabla de pedidos: botón con borde y
+     color de acento para que se distinga en tema claro y oscuro. */
+  .btn-avanzar-estado{
+    display:inline-flex; align-items:center; gap:5px;
+    padding:5px 10px; border-radius:6px; cursor:pointer;
+    font-size:12px; font-weight:700; white-space:nowrap;
+    background:transparent; color:var(--accent); border:1.5px solid var(--accent);
+  }
+  .btn-avanzar-estado:hover{ background:var(--accent); color:#fff; }

@@ -409,6 +409,124 @@ if ($method === 'POST' && $action === 'agregar_adjunto') {
     jsonSuccess(['id' => $adjId, 'mensaje' => 'Adjunto agregado'], 201);
 }
 
+// ── Descarga de los entregables del diseñador (proyecto .skp y cortes del
+// CNC). Pasa por aquí y no directo a Firebase porque: 1) el taller necesita
+// el archivo con su NOMBRE ORIGINAL ("HOJA 1 BLANCA.nc") y Firebase lo
+// entregaría con la ruta completa codificada; 2) una carpeta de cortes se
+// baja de una sola vez en un .zip con la misma estructura que generó el
+// programa de corte. Parámetros: archivo=<id> | grupo=<nombre> | todos=1.
+if ($method === 'GET' && $action === 'descargar_diseno') {
+    requerirPersonal();
+    checkRateLimit('pedidos_descargar_diseno', 120, 3600);
+
+    // Los errores se muestran como texto: esto se abre como enlace, no por fetch.
+    $falla = function (string $msg, int $code) {
+        http_response_code($code);
+        header('Content-Type: text/plain; charset=utf-8');
+        echo $msg;
+        exit;
+    };
+    if (!$id) $falla('Pedido no indicado.', 400);
+    $pedidoDl = dbRow("SELECT id, numero_pedido FROM pedidos WHERE id = ?", [$id]);
+    if (!$pedidoDl) $falla('Pedido no encontrado.', 404);
+
+    if (isset($_GET['archivo'])) {
+        $filas = dbRows("SELECT id, url_imagen, tipo, grupo FROM pedido_imagenes_diseno WHERE pedido_id = ? AND id = ?",
+                        [$id, sanitizeInt($_GET['archivo'])]);
+    } elseif (isset($_GET['grupo'])) {
+        $filas = dbRows("SELECT id, url_imagen, tipo, grupo FROM pedido_imagenes_diseno WHERE pedido_id = ? AND tipo = 'vcarve' AND COALESCE(grupo, 'Cortes') = ? ORDER BY id",
+                        [$id, (string)$_GET['grupo']]);
+    } else {
+        $filas = dbRows("SELECT id, url_imagen, tipo, grupo FROM pedido_imagenes_diseno WHERE pedido_id = ? AND tipo = 'vcarve' ORDER BY grupo, id", [$id]);
+    }
+    if (!$filas) $falla('No se encontró el archivo.', 404);
+
+    // Solo se descarga del bucket del proyecto (evita usar el servidor como
+    // proxy hacia cualquier URL guardada en la base de datos).
+    $bucket = getenv('FIREBASE_STORAGE_BUCKET') ?: 'woodenhouse-898de.firebasestorage.app';
+    $prefijo = 'https://firebasestorage.googleapis.com/v0/b/' . $bucket . '/o/';
+    $nombreDe = function (string $url) use ($prefijo): ?string {
+        if (strpos($url, $prefijo) !== 0) return null;
+        $ruta = rawurldecode(explode('?', substr($url, strlen($prefijo)), 2)[0]);
+        $nombre = basename(str_replace('\\', '/', $ruta));
+        $nombre = preg_replace('/[\x00-\x1F"\/\\\\:*?<>|]/u', '_', $nombre);
+        return ($nombre === '' || $nombre === '.' || $nombre === '..') ? null : $nombre;
+    };
+    $bajar = function (string $url, int $max) use ($falla): string {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => false,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT        => 120,
+            CURLOPT_PROTOCOLS      => CURLPROTO_HTTPS,
+            CURLOPT_NOPROGRESS     => false,
+            CURLOPT_PROGRESSFUNCTION => fn($c, $dlTotal, $dl) => ($dl > $max || $dlTotal > $max) ? 1 : 0,
+        ]);
+        $datos = curl_exec($ch);
+        $code  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if ($datos === false || $code !== 200) $falla('No se pudo obtener el archivo del almacenamiento. Intenta de nuevo.', 502);
+        return $datos;
+    };
+    $enviar = function (string $nombre, string $tipo, string $datos) {
+        $ascii = preg_replace('/[^A-Za-z0-9._ -]/', '_', $nombre);
+        header_remove('Pragma');
+        header('Content-Type: ' . $tipo);
+        header('Content-Length: ' . strlen($datos));
+        header("Content-Disposition: attachment; filename=\"{$ascii}\"; filename*=UTF-8''" . rawurlencode($nombre));
+        header('Cache-Control: private, no-store');
+        echo $datos;
+        exit;
+    };
+
+    // Un solo archivo: tal cual, con su nombre original.
+    if (isset($_GET['archivo'])) {
+        $f = $filas[0];
+        $nombre = $nombreDe($f['url_imagen']);
+        if ($nombre === null) $falla('Este archivo no está en el almacenamiento del proyecto.', 404);
+        $enviar($nombre, 'application/octet-stream', $bajar($f['url_imagen'], 80 * 1024 * 1024));
+    }
+
+    // Carpeta(s) de cortes → .zip con "Carpeta/HOJA 1 BLANCA.nc". ZIP sin
+    // compresión armado a mano (el servidor no siempre trae la extensión zip;
+    // los .nc son texto chico, comprimir no ahorra nada que importe).
+    $entradas = [];
+    $total = 0;
+    foreach ($filas as $f) {
+        $nombre = $nombreDe($f['url_imagen']);
+        if ($nombre === null) continue;
+        $carpeta = html_entity_decode((string)($f['grupo'] ?? 'Cortes'), ENT_QUOTES, 'UTF-8');
+        $carpeta = trim(preg_replace('/[\x00-\x1F"\/\\\\:*?<>|]/u', '_', $carpeta), ' .') ?: 'Cortes';
+        $ruta = $carpeta . '/' . $nombre;
+        for ($n = 2; isset($entradas[$ruta]); $n++) {
+            $ruta = $carpeta . '/' . pathinfo($nombre, PATHINFO_FILENAME) . " ($n)." . pathinfo($nombre, PATHINFO_EXTENSION);
+        }
+        $datos = $bajar($f['url_imagen'], 30 * 1024 * 1024);
+        $total += strlen($datos);
+        if ($total > 150 * 1024 * 1024) $falla('La descarga es demasiado grande; baja las carpetas una por una.', 413);
+        $entradas[$ruta] = $datos;
+    }
+    if (!$entradas) $falla('No hay archivos de corte para descargar.', 404);
+
+    $t = getdate();
+    $dosHora  = ($t['hours'] << 11) | ($t['minutes'] << 5) | intdiv($t['seconds'], 2);
+    $dosFecha = (max(0, $t['year'] - 1980) << 9) | ($t['mon'] << 5) | $t['mday'];
+    $zip = ''; $central = '';
+    foreach ($entradas as $ruta => $datos) {
+        $crc = crc32($datos); $tam = strlen($datos); $offset = strlen($zip);
+        // 0x0800 = nombres en UTF-8 (para "BAÑOS5", acentos, etc.)
+        $zip .= pack('VvvvvvVVVvv', 0x04034b50, 20, 0x0800, 0, $dosHora, $dosFecha, $crc, $tam, $tam, strlen($ruta), 0) . $ruta . $datos;
+        $central .= pack('VvvvvvvVVVvvvvvVV', 0x02014b50, 20, 20, 0x0800, 0, $dosHora, $dosFecha, $crc, $tam, $tam, strlen($ruta), 0, 0, 0, 0, 0, $offset) . $ruta;
+    }
+    $inicioCentral = strlen($zip);
+    $zip .= $central . pack('VvvvvVVv', 0x06054b50, 0, 0, count($entradas), count($entradas), strlen($central), $inicioCentral, 0);
+
+    $base = ($pedidoDl['numero_pedido'] ?: 'Pedido-' . $id);
+    if (isset($_GET['grupo'])) $base .= '-' . explode('/', array_key_first($entradas))[0];
+    $enviar($base . '-cortes.zip', 'application/zip', $zip);
+}
+
 switch ($method) {
     case 'GET':
         if ($numero) {
@@ -914,19 +1032,22 @@ switch ($method) {
                         if (!filter_var($url, FILTER_VALIDATE_URL)) {
                             jsonError('Una de las imágenes/archivos de diseño no es una URL válida', 422);
                         }
+                        if (strlen($url) > 350) {
+                            jsonError('El nombre de un archivo de diseño es demasiado largo; acórtalo y vuelve a subirlo', 422);
+                        }
                         $archivosDiseno[] = ['url' => $url, 'tipo' => $tipo, 'grupo' => $grupo];
                     }
                 }
 
                 // El diseñador (flujo normal, no el override de jefe/administrador) debe
-                // entregar los DOS deliverables: al menos un render (sketchup) y al
-                // menos un archivo de corte (vcarve) — un solo adjunto genérico ya no
-                // basta, porque taller/instalación necesitan saber cuál es cuál.
+                // entregar lo que el taller necesita: el proyecto de SketchUp (.skp)
+                // y la carpeta de cortes para el CNC (.nc). El render en imagen es
+                // opcional.
                 if ($usuarioActual['rol'] === 'disenador') {
-                    $tieneRender = count(array_filter($archivosDiseno, fn($a) => $a['tipo'] === 'sketchup')) > 0;
-                    $tieneCorte  = count(array_filter($archivosDiseno, fn($a) => $a['tipo'] === 'vcarve')) > 0;
-                    if (!$tieneRender || !$tieneCorte) {
-                        jsonError('Adjunta al menos un render (SketchUp) y al menos un archivo de corte (DXF/VCarve) antes de marcar listo para producción', 422);
+                    $tieneSkp   = count(array_filter($archivosDiseno, fn($a) => $a['tipo'] === 'skp')) > 0;
+                    $tieneCorte = count(array_filter($archivosDiseno, fn($a) => $a['tipo'] === 'vcarve')) > 0;
+                    if (!$tieneSkp || !$tieneCorte) {
+                        jsonError('Adjunta el proyecto de SketchUp (.skp) y la carpeta de cortes para el CNC antes de marcar listo para producción', 422);
                     }
                     foreach ($archivosDiseno as $a) {
                         dbInsert('pedido_imagenes_diseno', [

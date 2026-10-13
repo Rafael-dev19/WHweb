@@ -400,6 +400,8 @@ unset($_usuario);
 
   <script src="../assets/<?= av('js/metodo-cobro.js') ?>"></script>
 
+  <script src="../assets/<?= av('js/archivos-diseno.js') ?>"></script>
+
   <script src="../assets/<?= av('js/panel_ventas.js') ?>"></script>
   <script src="../assets/<?= av('js/voice-recorder.js') ?>"></script>
   <script src="../assets/<?= av('js/pedido-manual.js') ?>"></script>

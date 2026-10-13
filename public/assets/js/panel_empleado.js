@@ -31,7 +31,10 @@ function showNotification(message, type='info'){
   const icons = { success: 'circle-check', error: 'circle-x', info: 'info', warning: 'triangle-alert' };
   const notif = document.createElement('div');
   notif.className = `notification ${type}`;
-  notif.innerHTML = `<i data-lucide="${icons[type] || 'info'}" style="margin-right:8px;"></i>${message}`;
+  // Si el mensaje ya trae su ícono no se agrega otro (salía doble: "✓ ✓ Estado actualizado").
+  notif.innerHTML = String(message).includes('<i ')
+    ? message
+    : `<i data-lucide="${icons[type] || 'info'}" style="margin-right:8px;"></i>${message}`;
   document.body.appendChild(notif);
   window.lucide?.createIcons();
   const delay = type === 'error' ? 5000 : 3500;
@@ -1156,9 +1159,8 @@ async function cargarPedidosEmpleadoAPI() {
 
     tbody.innerHTML = (data.pedidos || []).map(p => {
       const siguientes = estadosSiguientesPedidoEmp(p.estado);
-      const opciones = [p.estado, ...siguientes];
       return `
-      <tr data-status="${p.estado}" data-id="${p.id}" data-entrega="${p.fecha_estimada||''}">
+      <tr data-status="${p.estado}" data-id="${p.id}" data-fecha-entrega="${p.fecha_estimada||''}">
         <td>${p.numero_pedido}</td>
         <td>${escapeHtml(p.nombre_cliente)}${p.cliente_id?` <span class="status-badge status-active" style="font-size:10px;padding:2px 8px;" title="Cliente registrado #${p.cliente_id}"><i data-lucide="user-check"></i> #${p.cliente_id}</span>`:''}</td>
         <td>${p.correo_cliente}</td>
@@ -1169,11 +1171,11 @@ async function cargarPedidosEmpleadoAPI() {
           <button data-call="verDetallePedidoEmp" data-args="[${p.id}]" style="background:var(--accent);color:#fff;border:none;padding:5px 12px;border-radius:4px;cursor:pointer;font-size:12px;white-space:nowrap;flex-shrink:0;">
             <i data-lucide="eye"></i> Ver
           </button>
-          <select class="form-select" style="width:120px;font-size:12px;" data-onchange="actualizarEstadoPedidoEmp" data-id="${p.id}" ${siguientes.length===0?'disabled':''}>
-            ${opciones.map(s =>
-              `<option value="${s}" ${s===p.estado?'selected':''}>${ESTADO_PEDIDO_LABELS[s]||s}</option>`
-            ).join('')}
-          </select>
+          ${siguientes.map(s => `
+            <button type="button" class="btn-avanzar-estado" data-call="avanzarEstadoPedidoEmp" data-args='[${p.id}, "${s}"]'
+              title="Cambiar el pedido a: ${ESTADO_PEDIDO_LABELS[s] || s}">
+              <i data-lucide="${s === 'finalizado' ? 'circle-check' : 'arrow-right'}"></i> ${ESTADO_PEDIDO_LABELS[s] || s}
+            </button>`).join('')}
         </td>
       </tr>
     `;
@@ -1339,7 +1341,7 @@ async function verDetallePedidoEmp(id) {
 
     if (currentPedidoRow) {
       currentPedidoRow.dataset.status  = p.estado;
-      currentPedidoRow.dataset.entrega = p.tipo_entrega || '';
+      currentPedidoRow.dataset.tipoEntrega = p.tipo_entrega || '';
     }
 
     const estadoLabels = ESTADO_PEDIDO_LABELS;
@@ -1455,37 +1457,7 @@ async function verDetallePedidoEmp(id) {
       <details class="wh-collapse" open style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;">
         <summary><i data-lucide="ruler"></i> Diseño <span class="wh-collapse-count">(${(p.imagenes_diseno||[]).length})</span></summary>
         <div class="wh-collapse-body">
-        ${(() => {
-          const diseno = p.imagenes_diseno || [];
-          const renders = diseno.filter(i => i.tipo === 'sketchup');
-          const skp     = diseno.filter(i => i.tipo === 'skp');
-          const cortes  = diseno.filter(i => i.tipo === 'vcarve');
-          const otros   = diseno.filter(i => !['sketchup','skp','vcarve'].includes(i.tipo));
-          let html = '';
-          if (renders.length) html += `<div style="margin-bottom:8px;"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Render (SketchUp)</div><div style="display:flex;gap:8px;flex-wrap:wrap;">
-            ${renders.map(img => `<a href="${img.url_imagen}" target="_blank" rel="noopener"><img src="${img.url_imagen}" alt="Render" style="width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}
-          </div></div>`;
-          if (skp.length) html += `<div style="margin-bottom:8px;"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Proyecto SketchUp (.skp)</div><div style="display:flex;gap:8px;flex-wrap:wrap;">
-            ${skp.map((f,i) => `<a href="${f.url_imagen}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:6px;background:var(--surface,#1a1a1a);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--accent);"><i data-lucide="box"></i> Proyecto .skp ${skp.length>1?(i+1):''}</a>`).join('')}
-          </div></div>`;
-          if (cortes.length) {
-            const grupos = {};
-            cortes.forEach(c => { const g = c.grupo || 'Sin variante'; (grupos[g] = grupos[g] || []).push(c); });
-            html += `<div style="margin-bottom:8px;"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Cortes para CNC (DXF / VCarve)</div>`
-              + Object.entries(grupos).map(([g, files]) => `
-                <details class="wh-subcollapse" open>
-                  <summary><i data-lucide="folder"></i> ${escapeHtml(g)} <span class="wh-collapse-count">(${files.length})</span></summary>
-                  <div class="wh-collapse-body" style="display:flex;gap:8px;flex-wrap:wrap;">
-                    ${files.map((f,i) => `<a href="${f.url_imagen}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:6px;background:var(--surface,#1a1a1a);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--accent);"><i data-lucide="file-text"></i> Corte ${i+1}</a>`).join('')}
-                  </div>
-                </details>
-              `).join('') + `</div>`;
-          }
-          if (otros.length) html += `<div style="display:flex;gap:8px;flex-wrap:wrap;">
-            ${otros.map(img => `<a href="${img.url_imagen}" target="_blank" rel="noopener"><img src="${img.url_imagen}" alt="Referencia" style="width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}
-          </div>`;
-          return html;
-        })()}
+        ${htmlArchivosDiseno(p.imagenes_diseno || [], id)}
         ${p.mensaje_disenador ? `<div style="font-size:12px;color:var(--muted2);margin-top:6px;"><strong>Mensaje del diseñador:</strong> ${escapeHtml(p.mensaje_disenador)}</div>` : ''}
         </div>
       </details>
@@ -1512,27 +1484,6 @@ async function verDetallePedidoEmp(id) {
       </div>
 
 
-      ${window.WH_ROL === 'disenador' && ['anticipo_pagado','pagado'].includes(est) ? `
-      <div style="padding-top:14px;border-top:1px solid var(--border);margin-bottom:14px;">
-        <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;"><i data-lucide="ruler"></i> Diseñar — marcar listo para producción</div>
-        <div class="form-group" style="margin-bottom:8px;">
-          <label class="form-label" style="font-size:11px;">Render (SketchUp) — imagen *</label>
-          <input type="file" id="disenoRenderInput" accept="image/jpeg,image/jpg,image/png,image/webp" multiple class="form-input">
-          <div class="help">Para que taller/instalación vean cómo debe quedar.</div>
-        </div>
-        <div class="form-group" style="margin-bottom:8px;">
-          <label class="form-label" style="font-size:11px;">Corte para CNC (VCarve) — archivo .dxf *</label>
-          <input type="file" id="disenoDxfInput" accept=".dxf" multiple class="form-input">
-          <div class="help">El archivo que taller manda a la CNC para cortar.</div>
-        </div>
-        <div class="form-group" style="margin-bottom:8px;">
-          <label class="form-label" style="font-size:11px;">Mensaje para instaladores/taller (opcional)</label>
-          <textarea id="disenoMensajeInput" class="form-input" rows="2" placeholder="Ej: cuidado con la veta en el panel frontal..."></textarea>
-        </div>
-        <button class="btn btn-primary btn-small" id="btnMarcarListoProduccion" data-call="marcarListoParaProduccion" data-args="[${id}]">
-          <i data-lucide="check"></i> Marcar listo para producción
-        </button>
-      </div>` : ''}
 
       <div style="padding-top:14px;border-top:1px solid var(--border);">
         <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Cambiar Estado</div>
@@ -1550,107 +1501,6 @@ async function verDetallePedidoEmp(id) {
     `;
   } catch(e) {
     body.innerHTML = `<div style="color:var(--danger);padding:20px;text-align:center;"><i data-lucide="circle-alert"></i> Error: ${e.message}</div>`;
-  }
-}
-
-// ── Diseñador: subir imágenes de diseño y marcar listo para producción ──
-// Sube renders (imágenes) — validación real por magic bytes, igual que antes.
-async function subirImagenesDiseno(files, pedidoId) {
-  if (!window.firebaseStorage && typeof initFirebase === 'function') initFirebase();
-  if (!window.firebaseStorage) throw new Error('Firebase Storage no disponible. Verifica que hayas iniciado sesión correctamente.');
-
-  const resultados = [];
-  const ts = Date.now();
-  const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp'];
-
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    if (!ALLOWED_MIME.includes(file.type)) {
-      throw new Error(`Archivo "${file.name}" no es una imagen válida. Solo se permiten JPEG, PNG o WEBP.`);
-    }
-    const headerBuf = await file.slice(0, 12).arrayBuffer();
-    const hdr = new Uint8Array(headerBuf);
-    const isJpeg = hdr[0]===0xFF && hdr[1]===0xD8 && hdr[2]===0xFF;
-    const isPng  = hdr[0]===0x89 && hdr[1]===0x50 && hdr[2]===0x4E && hdr[3]===0x47;
-    const isWebp = hdr[8]===0x57 && hdr[9]===0x45 && hdr[10]===0x42 && hdr[11]===0x50;
-    if (!isJpeg && !isPng && !isWebp) {
-      throw new Error(`Archivo "${file.name}" no pasó la validación de imagen real.`);
-    }
-    const ext  = file.name.split('.').pop().toLowerCase() || 'jpg';
-    const path = `proyectos/pedidos/${pedidoId}/render-${ts}-${i}.${ext}`;
-    const ref  = window.firebaseStorage.ref(path);
-    const snap = await ref.put(file);
-    resultados.push({ url: await snap.ref.getDownloadURL(), tipo: 'sketchup' });
-  }
-  return resultados;
-}
-
-// Sube archivos de corte DXF (VCarve → CNC) — no son imágenes, se validan por
-// extensión (.dxf) y un límite de tamaño razonable, no por magic bytes.
-async function subirDxfDiseno(files, pedidoId) {
-  if (!window.firebaseStorage && typeof initFirebase === 'function') initFirebase();
-  if (!window.firebaseStorage) throw new Error('Firebase Storage no disponible. Verifica que hayas iniciado sesión correctamente.');
-
-  const resultados = [];
-  const ts = Date.now();
-  const MAX_BYTES = 25 * 1024 * 1024; // 25MB
-
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    if (!/\.dxf$/i.test(file.name)) {
-      throw new Error(`Archivo "${file.name}" no es un .dxf.`);
-    }
-    if (file.size > MAX_BYTES) {
-      throw new Error(`Archivo "${file.name}" supera el tamaño máximo (25MB).`);
-    }
-    const path = `proyectos/pedidos/${pedidoId}/corte-${ts}-${i}.dxf`;
-    const ref  = window.firebaseStorage.ref(path);
-    const snap = await ref.put(file);
-    resultados.push({ url: await snap.ref.getDownloadURL(), tipo: 'vcarve' });
-  }
-  return resultados;
-}
-
-async function marcarListoParaProduccion(id) {
-  const renderInput = document.getElementById('disenoRenderInput');
-  const dxfInput     = document.getElementById('disenoDxfInput');
-  const renderFiles  = renderInput?.files;
-  const dxfFiles     = dxfInput?.files;
-  const mensaje      = document.getElementById('disenoMensajeInput')?.value?.trim() || '';
-  if (!renderFiles || renderFiles.length === 0) {
-    showNotification('<i data-lucide="triangle-alert"></i> Adjunta al menos un render (SketchUp).', 'error');
-    return;
-  }
-  if (!dxfFiles || dxfFiles.length === 0) {
-    showNotification('<i data-lucide="triangle-alert"></i> Adjunta al menos un archivo de corte (.dxf) para VCarve/CNC.', 'error');
-    return;
-  }
-  const btn = document.getElementById('btnMarcarListoProduccion');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="wh-icon-spin" data-lucide="loader-circle"></i> Subiendo...'; }
-  try {
-    const [renders, cortes] = await Promise.all([
-      subirImagenesDiseno(renderFiles, id),
-      subirDxfDiseno(dxfFiles, id),
-    ]);
-    const data = await apiFetch(`${API_BASE}/pedidos.php?id=${id}`, {
-      method: 'PUT',
-      body: JSON.stringify({
-        estado: 'listo_para_produccion',
-        imagenes: [...renders, ...cortes],
-        mensaje_disenador: mensaje,
-      }),
-    });
-    if (data.success) {
-      showNotification('<i data-lucide="circle-check"></i> Pedido marcado listo para producción.', 'success');
-      cargarPedidosEmpleadoAPI();
-      verDetallePedidoEmp(id);
-    } else {
-      showNotification('<i data-lucide="circle-x"></i> ' + (data.error || 'Error'), 'error');
-    }
-  } catch (e) {
-    showNotification('<i data-lucide="circle-x"></i> ' + (e.message || 'Error al subir los archivos'), 'error');
-  } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="check"></i> Marcar listo para producción'; }
   }
 }
 
@@ -2278,3 +2128,13 @@ function estadoPagoBadge(estado) {
   const [cls, ico, txt] = map[estado] || map.sin_pago;
   return `<span class="status-badge ${cls}"><i data-lucide="${ico}"></i> ${txt}</span>`;
 }
+
+// Botones claros "→ Siguiente estado" (antes un <select> casi invisible en
+// tema claro y con el texto cortado). Piden confirmación para evitar un
+// cambio accidental con el dedo en el celular.
+function avanzarEstadoPedidoEmp(id, estado) {
+  const nombre = ESTADO_PEDIDO_LABELS[estado] || estado;
+  if (!confirm(`¿Cambiar el pedido a "${nombre}"?`)) return;
+  actualizarEstadoPedidoEmp(id, estado);
+}
+window.avanzarEstadoPedidoEmp = avanzarEstadoPedidoEmp;

@@ -7,6 +7,16 @@ Options -Indexes -ExecCGI
     RewriteEngine On
     RewriteBase /
 
+    # ── www.muebleswh.com → muebleswh.com (301) ──
+    # Sin esto, las dos direcciones servían el mismo contenido y Google las
+    # veía como páginas duplicadas.
+    RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+    RewriteRule ^ https://%1%{REQUEST_URI} [L,R=301]
+
+    # /index.php → / (misma página que la portada)
+    RewriteCond %{THE_REQUEST} \s/index\.php[\s?] [NC]
+    RewriteRule ^index\.php$ / [L,R=301]
+
     # ── Forzar HTTPS (excepto localhost, 127.0.0.1 y proxies que ya terminan SSL) ──
     RewriteCond %{HTTPS} off
     RewriteCond %{HTTP:X-Forwarded-Proto} !=https
