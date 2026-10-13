@@ -139,9 +139,14 @@ const notifDot   = document.getElementById('notifDot');
 const notifBtn   = document.getElementById('notifBtn');
 const notifPanel = document.getElementById('notifPanel');
 
-const NOTIF_KEY        = 'wh_emp_notifs';
-const NOTIF_UNREAD_KEY = 'wh_emp_notifs_unread';
-const NOTIF_SEEN_KEY   = 'wh_emp_notifs_seen';
+// Notificaciones guardadas POR CUENTA: antes jefe/ventas (y taller/diseño)
+// compartían el mismo almacén del navegador y en un equipo usado por varias
+// personas se mezclaban los avisos de todos.
+const _NOTIF_UID          = String(window.WH_UID || 'x');
+const NOTIF_KEY        = 'wh_emp_notifs_' + _NOTIF_UID;
+const NOTIF_UNREAD_KEY = 'wh_emp_notifs_unread_' + _NOTIF_UID;
+const NOTIF_SEEN_KEY   = 'wh_emp_notifs_seen_' + _NOTIF_UID;
+try { ['wh_emp_notifs', 'wh_emp_notifs_unread', 'wh_emp_notifs_seen'].forEach(k => localStorage.removeItem(k)); } catch (e) {}
 
 const NOTIF_ICONS = {
   pedido:      { icon:'box',          color:'var(--accent)' },
@@ -270,7 +275,7 @@ function clearAllNotifs(){
 // ── Cargar notificaciones desde la API (Firestore) ─────────────
 async function fetchNotificationsFromAPI() {
   try {
-    const res = await fetch('/api/notificaciones.php?destino=empleado', { credentials: 'same-origin' });
+    const res = await fetch('/api/notificaciones.php', { credentials: 'same-origin' });
     if (!res.ok) return;
     const json = await res.json();
     const items = json.notificaciones ?? [];
@@ -1100,6 +1105,7 @@ async function apiFetch(url, options = {}) {
 async function logout() {
   if (!confirm('¿Cerrar sesión?')) return;
   if (window._autoRefreshInterval) clearInterval(window._autoRefreshInterval);
+  if (typeof bajaPushDispositivo === 'function') await bajaPushDispositivo();
   try {
     if (typeof firebaseAuth !== 'undefined') await firebaseAuth.signOut();
   } catch(e) {}

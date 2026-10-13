@@ -18,6 +18,7 @@ $_rolPanel = $_usuario["rol"];
 $_esJefe   = $_rolPanel === "jefe";
 $_vistaCompleta = $_esJefe || $_rolPanel === "administrador";
 $_puedeCrearPedidoManual = $_esJefe;
+$_uidPanel = (int)$_usuario["id"];
 unset($_usuario);
 ?>
 
@@ -50,7 +51,7 @@ unset($_usuario);
 </head>
 
 <body>
-  <script nonce="<?= cspNonce() ?>">window.WH_VE_MONTOS = <?= json_encode($_esJefe) ?>; window.WH_ES_JEFE = <?= json_encode($_esJefe) ?>; window.WH_ROL = <?= json_encode($_rolPanel) ?>; window.WH_VISTA_COMPLETA = <?= json_encode($_vistaCompleta) ?>;</script>
+  <script nonce="<?= cspNonce() ?>">window.WH_UID = <?= $_uidPanel ?>; window.WH_FCM_VAPID_KEY = <?= json_encode(FCM_VAPID_KEY) ?>; window.WH_VE_MONTOS = <?= json_encode($_esJefe) ?>; window.WH_ES_JEFE = <?= json_encode($_esJefe) ?>; window.WH_ROL = <?= json_encode($_rolPanel) ?>; window.WH_VISTA_COMPLETA = <?= json_encode($_vistaCompleta) ?>;</script>
   <div class="header">
     <div class="header-left">
     <button class="menu-toggle" id="menuToggle" aria-label="Abrir menú" aria-expanded="false">

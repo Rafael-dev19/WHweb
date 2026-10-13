@@ -55,6 +55,8 @@ function _pmResetForm() {
     const el = document.getElementById(id);
     if (el) el.value = '0';
   });
+  const acordado = document.getElementById('pm_total_acordado');
+  if (acordado) acordado.value = '';
   const monto = document.getElementById('pm_monto_pagado');
   if (monto) { monto.value = ''; delete monto.dataset.editado; }
   const ref = document.getElementById('pm_referencia_pago');
@@ -120,13 +122,24 @@ function _pmTotales() {
   const subtotal = _pmTipoProyecto() === 'bano'
     ? _pmItems.reduce((s, it) => s + (it.cantidad || 0) * (it.precio_unitario || 0), 0)
     : _pmNum('pm_med_precio');
-  const total = Math.max(0, subtotal + _pmNum('pm_costo_envio') + _pmNum('pm_costo_instalacion') - _pmNum('pm_descuento'));
-  return { subtotal, total: Math.round(total * 100) / 100 };
+  const calculado = Math.round(Math.max(0, subtotal + _pmNum('pm_costo_envio') + _pmNum('pm_costo_instalacion') - _pmNum('pm_descuento')) * 100) / 100;
+  // Ventas puede cerrar un precio distinto a la suma de los muebles (proyecto
+  // grande, paquete, ajuste): si escribe un total acordado, ese manda.
+  const acordado = _pmNum('pm_total_acordado');
+  const total = acordado > 0 ? Math.round(acordado * 100) / 100 : calculado;
+  return { subtotal, calculado, acordado, total };
 }
 
 function pmActualizarPago() {
   if (!window.WH_PM_MONTOS) return;
-  const { total } = _pmTotales();
+  const { total, calculado, acordado } = _pmTotales();
+  const hint = document.getElementById('pm_total_hint');
+  if (hint) {
+    const dif = acordado > 0 ? acordado - calculado : 0;
+    hint.innerHTML = acordado > 0
+      ? `Calculado (muebles + envío + instalación − descuento): <strong>${fmtMoneyPM(calculado)}</strong> · Diferencia: <strong>${dif >= 0 ? '+' : '−'}${fmtMoneyPM(Math.abs(dif))}</strong>`
+      : `Calculado automáticamente: <strong>${fmtMoneyPM(calculado)}</strong>. Si acordaste otro total con el cliente, escríbelo aquí.`;
+  }
   const tipo = _pmValorRadio('pm_tipo_pago') || 'completo';
   const detalle = document.getElementById('pm_pago_detalle');
   const monto = document.getElementById('pm_monto_pagado');
@@ -281,7 +294,31 @@ function pmElegirAncho(idx, ancho) {
   if (!it) return;
   const m = it._medidas.find(x => x.ancho_cm === ancho);
   it.ancho_cm = ancho;
+  it._anchoOtro = false;
   if (m) it.precio_unitario = m.precio + _pmCostoAdicionales(it);
+  _pmRenderItemsTabla();
+}
+
+// "Otra medida": anchos que no están en la lista del catálogo (ej. 55 cm).
+// El precio lo pone ventas en "Precio c/u"; el ancho queda como dato
+// (Ancho: 55 cm) para taller e instalación, igual que uno de la lista.
+function pmAnchoOtro(idx) {
+  const it = _pmItems[idx];
+  if (!it) return;
+  it._anchoOtro = true;
+  if (it._medidas.some(m => m.ancho_cm === it.ancho_cm)) it.ancho_cm = '';
+  _pmRenderItemsTabla();
+  _pmEnfocarItem(idx, '[data-pm-campo="ancho_cm"]');
+}
+
+// "Sin accesorios": ovalín y monomando = No lleva, y sin adicionales.
+function pmSinAccesorios(idx) {
+  const it = _pmItems[idx];
+  if (!it) return;
+  it.precio_unitario = Math.max(0, (it.precio_unitario || 0) - _pmCostoAdicionales(it));
+  it.ovalin = 'NO_LLEVA';
+  it.monomando = 'NO_LLEVA';
+  it.adicionales = [];
   _pmRenderItemsTabla();
 }
 
@@ -301,23 +338,29 @@ function pmToggleAdicional(idx, clave, activo) {
   _pmRenderItemsTabla();
 }
 
-function _pmSelectAccesorios(it) {
+function _pmSelectAccesorios(it, idx) {
   const acc = window.WH_ACCESORIOS;
   if (!acc) return '';
   const ovGrupo = (linea, titulo) => `<optgroup label="${titulo}">${acc.ovalines.filter(o => o.linea === linea)
     .map(o => `<option value="${escapeHtml(o.codigo)}" ${it.ovalin === o.codigo ? 'selected' : ''}>${escapeHtml(o.codigo)} — ${escapeHtml(o.medidas)}</option>`).join('')}</optgroup>`;
   const acabados = [...new Set(acc.monomandos.map(m => m.acabado))];
   return `
+      <div class="pm-acc-top">
+        <span class="pm-campo" style="margin:0;">Accesorios</span>
+        <button type="button" class="pm-link" data-call="pmSinAccesorios" data-args="[${idx}]">No lleva accesorios</button>
+      </div>
       <div class="pm-dos">
         <label class="pm-campo">Ovalín
           <select class="form-select" data-pm-campo="ovalin">
             <option value="">Por definir con el cliente</option>
+            <option value="NO_LLEVA" ${it.ovalin === 'NO_LLEVA' ? 'selected' : ''}>No lleva</option>
             ${ovGrupo('incluido', 'Incluidos')}${ovGrupo('economica', 'Línea económica')}
           </select>
         </label>
         <label class="pm-campo">Monomando
           <select class="form-select" data-pm-campo="monomando">
             <option value="">Por definir con el cliente</option>
+            <option value="NO_LLEVA" ${it.monomando === 'NO_LLEVA' ? 'selected' : ''}>No lleva</option>
             ${acabados.map(a => `<optgroup label="${escapeHtml(a)}">${acc.monomandos.filter(m => m.acabado === a)
               .map(m => `<option value="${escapeHtml(m.codigo)}" ${it.monomando === m.codigo ? 'selected' : ''}>${escapeHtml(m.codigo)}</option>`).join('')}</optgroup>`).join('')}
           </select>
@@ -411,14 +454,23 @@ function _pmRenderItemCard(it, idx) {
         <strong>${escapeHtml(it.nombre)}</strong>
         <button type="button" class="pm-link" data-call="pmCambiarModelo" data-args="[${idx}]">Cambiar</button>
       </div>
-      ${it._medidas.length ? `
-        <div class="pm-campo">Ancho del mueble
-          <div class="pm-anchos">${it._medidas.map(m => `
-            <button type="button" class="pm-ancho ${m.ancho_cm === it.ancho_cm ? 'activo' : ''}" data-call="pmElegirAncho" data-args="[${idx}, ${m.ancho_cm}]" aria-pressed="${m.ancho_cm === it.ancho_cm}">
-              <strong>${m.ancho_cm} cm</strong>${montos ? `<span>${fmtMoneyPM(m.precio)}</span>` : ''}
-            </button>`).join('')}
-          </div>
-        </div>` : ''}`;
+      <div class="pm-campo">Ancho del mueble
+        ${it._medidas.length ? `<div class="pm-anchos">${it._medidas.map(m => `
+          <button type="button" class="pm-ancho ${!it._anchoOtro && m.ancho_cm === it.ancho_cm ? 'activo' : ''}" data-call="pmElegirAncho" data-args="[${idx}, ${m.ancho_cm}]" aria-pressed="${!it._anchoOtro && m.ancho_cm === it.ancho_cm}">
+            <strong>${m.ancho_cm} cm</strong>${montos ? `<span>${fmtMoneyPM(m.precio)}</span>` : ''}
+          </button>`).join('')}
+          <button type="button" class="pm-ancho pm-ancho--otro ${it._anchoOtro ? 'activo' : ''}" data-call="pmAnchoOtro" data-args="[${idx}]" aria-pressed="${!!it._anchoOtro}">
+            <strong>Otra medida</strong><span>escríbela</span>
+          </button>
+        </div>` : ''}
+        ${it._anchoOtro || !it._medidas.length ? `
+          <div class="pm-ancho-otro">
+            <label class="pm-campo">Ancho (cm)
+              <input type="number" class="form-input" data-pm-campo="ancho_cm" value="${escapeHtml(String(it.ancho_cm ?? ''))}" min="20" max="400" step="1" inputmode="numeric" placeholder="ej. 55">
+            </label>
+            ${montos ? '<span class="pm-hint">Pon el precio que acordaste en "Precio c/u".</span>' : ''}
+          </div>` : ''}
+      </div>`;
   } else {
     // Modelo que el cliente trae (foto de internet, de otra tienda...).
     cabecera = `
@@ -466,7 +518,7 @@ function _pmRenderItemCard(it, idx) {
         ${montos ? `<label>Precio c/u ($)<input type="number" class="form-input" data-pm-campo="precio_unitario" value="${it.precio_unitario}" min="0" step="0.01" inputmode="decimal"></label>` : ''}
       </div>
       ${montos && it.cubierta !== 'mdf' ? '<div class="pm-hint">La cubierta de piedra se cobra aparte (granito/mármol $3,800 y cuarzo $4,800 por metro lineal): súmala al precio.</div>' : ''}
-      ${_pmSelectAccesorios(it)}
+      ${_pmSelectAccesorios(it, idx)}
       <label class="pm-campo">Información extra
         <textarea class="form-textarea" rows="2" data-pm-campo="info_extra" placeholder="ej. Espejo LED de 60×80, jaladeras negras, lo que pidió el cliente…">${escapeHtml(it.info_extra)}</textarea>
       </label>
@@ -649,6 +701,12 @@ async function guardarPedidoManual() {
     showNotification('Hay un mueble del catálogo sin modelo elegido — búscalo o quítalo', 'error');
     return;
   }
+  const sinAncho = _pmItems.findIndex(it => it._catalogo && it._anchoOtro && !(parseInt(it.ancho_cm, 10) >= 20));
+  if (tipoProyecto === 'bano' && sinAncho >= 0) {
+    showNotification(`En el mueble ${sinAncho + 1} elegiste "Otra medida": escribe el ancho en cm (ej. 55).`, 'error');
+    _pmEnfocarItem(sinAncho, '[data-pm-campo="ancho_cm"]');
+    return;
+  }
   if (tipoProyecto === 'bano' && _pmItems.some(it => !it._catalogo && !it.nombre.trim())) {
     showNotification('Ponle nombre o descripción al modelo que no está en el catálogo', 'error');
     return;
@@ -664,8 +722,13 @@ async function guardarPedidoManual() {
     const { total } = _pmTotales();
     const tipoPago = _pmValorRadio('pm_tipo_pago') || 'completo';
     const monto = tipoPago === 'sin_pago' ? 0 : _pmNum('pm_monto_pagado');
-    if (tipoPago === 'anticipo' && (monto <= 0 || monto >= total)) {
-      showNotification('En "Dejó anticipo" el monto recibido debe ser mayor a $0 y menor al total. Si pagó todo, elige "Pagó completo".', 'error');
+    if (tipoPago === 'anticipo' && monto <= 0) {
+      showNotification('Escribe cuánto dejó de anticipo.', 'error');
+      return;
+    }
+    if (tipoPago === 'anticipo' && monto >= total) {
+      showNotification(`El anticipo (${fmtMoneyPM(monto)}) no puede ser igual o mayor al total del pedido (${fmtMoneyPM(total)}). Si el cliente acordó otro total, escríbelo en "Total acordado con el cliente"; si ya pagó todo, elige "Pagó completo".`, 'error');
+      document.getElementById('pm_total_acordado')?.focus();
       return;
     }
     if (tipoPago === 'completo' && total <= 0) {
@@ -678,6 +741,7 @@ async function guardarPedidoManual() {
       descuento: _pmNum('pm_descuento'),
       tipo_pago: tipoPago,
       monto_pagado: monto,
+      total_acordado: _pmNum('pm_total_acordado'),
       metodo_pago: document.getElementById('pm_metodo_pago')?.value || 'efectivo',
       referencia_pago: document.getElementById('pm_referencia_pago')?.value.trim() || '',
     };
@@ -797,7 +861,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (m) delete m.dataset.editado; // al cambiar de opción, volver a sugerir el monto
     pmActualizarPago();
   }));
-  ['pm_costo_envio', 'pm_costo_instalacion', 'pm_descuento'].forEach(id =>
+  ['pm_costo_envio', 'pm_costo_instalacion', 'pm_descuento', 'pm_total_acordado'].forEach(id =>
     document.getElementById(id)?.addEventListener('input', pmActualizarPago));
   document.getElementById('pm_monto_pagado')?.addEventListener('input', function () {
     this.dataset.editado = '1';
@@ -828,6 +892,8 @@ window.pmAgregarModelo        = pmAgregarModelo;
 window.pmCambiarModelo        = pmCambiarModelo;
 window.pmToggleMedidas        = pmToggleMedidas;
 window.pmElegirAncho          = pmElegirAncho;
+window.pmAnchoOtro            = pmAnchoOtro;
+window.pmSinAccesorios        = pmSinAccesorios;
 window.pmQuitarFotoModelo     = pmQuitarFotoModelo;
 window.pmAgregarTelefono      = pmAgregarTelefono;
 window.pmEliminarTelefono     = pmEliminarTelefono;

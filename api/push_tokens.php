@@ -43,6 +43,14 @@ switch ($method) {
     case 'POST':
         $usuario = requerirPersonal();
         requerirCsrf();
+        // El administrador (soporte técnico) no recibe push — ver
+        // includes/notifications.php. Si este dispositivo era de otra
+        // cuenta, se da de baja para que no le lleguen avisos ajenos.
+        if ($usuario['rol'] === 'administrador') {
+            $tokAdm = trim(getJsonBody()['fcm_token'] ?? '');
+            if ($tokAdm !== '') dbQuery("UPDATE dispositivos_push SET activo = 0 WHERE fcm_token = ?", [$tokAdm]);
+            jsonSuccess(['mensaje' => 'El administrador no recibe notificaciones push']);
+        }
         $body  = getJsonBody();
         $token = trim($body['fcm_token'] ?? '');
         if (empty($token) || strlen($token) > 255) {

@@ -47,9 +47,14 @@
     /* =========================
        NOTIFICACIONES (PANEL)
     ========================= */
-    const NOTIF_KEY_ADM        = 'wh_adm_notifs';
-    const NOTIF_UNREAD_KEY_ADM = 'wh_adm_notifs_unread';
-    const NOTIF_SEEN_KEY_ADM   = 'wh_adm_notifs_seen';
+    // Notificaciones guardadas POR CUENTA: antes jefe/ventas (y taller/diseño)
+    // compartían el mismo almacén del navegador y en un equipo usado por varias
+    // personas se mezclaban los avisos de todos.
+    const _NOTIF_UID          = String(window.WH_UID || 'x');
+    const NOTIF_KEY_ADM        = 'wh_adm_notifs_' + _NOTIF_UID;
+    const NOTIF_UNREAD_KEY_ADM = 'wh_adm_notifs_unread_' + _NOTIF_UID;
+    const NOTIF_SEEN_KEY_ADM   = 'wh_adm_notifs_seen_' + _NOTIF_UID;
+    try { ['wh_adm_notifs', 'wh_adm_notifs_unread', 'wh_adm_notifs_seen'].forEach(k => localStorage.removeItem(k)); } catch (e) {}
 
     const NOTIF_ICONS_ADM = {
       pedido:     { icon:'box',           color:'var(--accent)' },
@@ -168,7 +173,7 @@
     }
     async function fetchNotificationsFromAPI(){
       try {
-        const res = await fetch('/api/notificaciones.php?destino=admin', { credentials:'same-origin' });
+        const res = await fetch('/api/notificaciones.php', { credentials:'same-origin' });
         if (!res.ok) return;
         const json = await res.json();
         const items = json.notificaciones ?? [];
@@ -394,6 +399,7 @@
       sessionStorage.setItem('wh_just_logged_out', '1');
       sessionStorage.removeItem('wh_firebase_token');
       sessionStorage.removeItem('wh_usuario');
+      if (typeof bajaPushDispositivo === 'function') await bajaPushDispositivo();
       try { if(typeof firebaseAuth !== 'undefined') await firebaseAuth.signOut(); } catch(e) {}
       await fetch('/api/auth.php?action=logout', { method: 'POST', credentials: 'same-origin' }).catch(()=>{});
       window.location.replace('/login?logout=1');
@@ -2157,6 +2163,7 @@ async function apiFetch(url, options = {}) {
 async function logoutAdmin() {
   if (window._adminRefreshInterval) clearInterval(window._adminRefreshInterval);
   if (!confirm('¿Cerrar sesión?')) return;
+  if (typeof bajaPushDispositivo === 'function') await bajaPushDispositivo();
   try {
     if (typeof logoutFirebase === 'function') await logoutFirebase();
     else if (typeof firebaseAuth !== 'undefined') await firebaseAuth.signOut();
@@ -2613,7 +2620,7 @@ async function verDetallePedidoAdmin(id) {
     const saldoHtml = saldoPendiente > 0.009
       ? `<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
           <div>
-            <div style="font-weight:700;color:var(--accent);margin-bottom:4px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">${esAnticipo ? 'Anticipo (50%)' : 'Pago pendiente'}</div>
+            <div style="font-weight:700;color:var(--accent);margin-bottom:4px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;">${esAnticipo ? `Anticipo (${p.total > 0 ? Math.round((p.monto_pagado || 0) / p.total * 100) : 0}%)` : 'Pago pendiente'}</div>
             <div style="font-size:12px;color:var(--muted2);">Pagado: <strong>${money(p.monto_pagado||0)}</strong> · Saldo pendiente: <strong style="color:var(--accent);">${money(saldoPendiente)}</strong></div>
           </div>
           <button class="btn btn-secondary btn-small" data-call="marcarSaldoManualAdmin" data-args="[${id}]"><i data-lucide="hand-coins"></i> ${p.monto_pagado>0?'Marcar saldo pagado':'Marcar como pagado'}</button>
@@ -2636,6 +2643,7 @@ async function verDetallePedidoAdmin(id) {
         <div style="text-align:right;">
           <div style="font-size:22px;font-weight:900;color:var(--accent);">${money(p.total)}</div>
           <div style="font-size:11px;color:var(--muted);">Sub ${money(p.subtotal)} + Envío ${money(p.costo_envio)} + Inst. ${money(p.costo_instalacion)}</div>
+          ${['cancelado', 'finalizado'].includes(p.estado) ? '' : `<button type="button" class="btn btn-secondary btn-small" style="margin-top:6px;" data-call="editarTotalPedido" data-args="[${id}, ${Number(p.total) || 0}, ${Number(p.monto_pagado) || 0}]"><i data-lucide="pencil"></i> Editar total</button>`}
         </div>
       </div>
 
@@ -4791,4 +4799,28 @@ function tipoProyectoBadge(tipo) {
   if (!tipo) return '';
   const ico = { bano: 'bath', cocina: 'cooking-pot', closet: 'shirt' }[tipo] || 'box';
   return `<span class="status-badge status-info"><i data-lucide="${ico}"></i> ${escapeHtml(_TIPO_PROYECTO_LABELS[tipo] || tipo)}</span>`;
+}
+
+// Corregir el total de un pedido (precio acordado distinto al de los muebles).
+// Después, si el cliente ya dejó dinero, se registra con "Registrar pago recibido".
+async function editarTotalPedido(id, totalActual, pagado) {
+  const nuevo = await pedirMonto({
+    titulo: 'Editar total del pedido',
+    texto: `Total actual: ${money(totalActual)}${pagado > 0 ? ` · Ya cobrado: ${money(pagado)}` : ''}. Escribe el total acordado con el cliente.`,
+    valor: totalActual,
+    minimo: Math.max(pagado, 0.01),
+  });
+  if (nuevo === null) return;
+  try {
+    const data = await apiFetch(`${API_BASE}/pedidos.php?id=${id}`, { method: 'PUT', body: JSON.stringify({ total: nuevo }) });
+    if (data.success) {
+      showNotification('Total actualizado', 'success');
+      if (typeof verDetallePedidoAdmin === 'function') verDetallePedidoAdmin(id);
+      if (typeof cargarPedidosAPI === 'function') cargarPedidosAPI();
+    } else {
+      showNotification(data.error || 'No se pudo cambiar el total', 'error');
+    }
+  } catch (e) {
+    showNotification('Error: ' + e.message, 'error');
+  }
 }

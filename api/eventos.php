@@ -63,38 +63,44 @@ sseEvent('conectado', [
 ]);
 
 $tick = 0;
+// Pedidos, citas y cotizaciones nuevas son trabajo de jefe y ventas. El
+// administrador (soporte técnico) también tiene este panel abierto, pero ya
+// no recibe esos avisos — solo mantiene viva la conexión.
+$recibeEventos = in_array($usuarioSse['rol'] ?? '', ['jefe', 'ventas'], true);
 
 while (!connection_aborted()) {
     try {
-        $p = dbRow(
-            "SELECT id, numero_pedido, nombre_cliente, total, estado
-             FROM pedidos WHERE id > ? ORDER BY id ASC LIMIT 1",
-            [$lastPedido]
-        );
-        if ($p) {
-            $lastPedido = (int)$p['id'];
-            if (!puedeVerMontos($usuarioSse)) unset($p['total']); // ver includes/auth.php
-            sseEvent('nuevo_pedido', $p);
-        }
+        if ($recibeEventos) {
+            $p = dbRow(
+                "SELECT id, numero_pedido, nombre_cliente, total, estado
+                 FROM pedidos WHERE id > ? ORDER BY id ASC LIMIT 1",
+                [$lastPedido]
+            );
+            if ($p) {
+                $lastPedido = (int)$p['id'];
+                if (!puedeVerMontos($usuarioSse)) unset($p['total']); // ver includes/auth.php
+                sseEvent('nuevo_pedido', $p);
+            }
 
-        $c = dbRow(
-            "SELECT id, numero_cita, nombre_cliente, fecha_cita, tipo
-             FROM citas WHERE id > ? ORDER BY id ASC LIMIT 1",
-            [$lastCita]
-        );
-        if ($c) {
-            $lastCita = (int)$c['id'];
-            sseEvent('nueva_cita', $c);
-        }
+            $c = dbRow(
+                "SELECT id, numero_cita, nombre_cliente, fecha_cita, tipo
+                 FROM citas WHERE id > ? ORDER BY id ASC LIMIT 1",
+                [$lastCita]
+            );
+            if ($c) {
+                $lastCita = (int)$c['id'];
+                sseEvent('nueva_cita', $c);
+            }
 
-        $q = dbRow(
-            "SELECT id, numero_cotizacion, nombre_cliente, descripcion_solicitud
-             FROM cotizaciones WHERE id > ? ORDER BY id ASC LIMIT 1",
-            [$lastCotizacion]
-        );
-        if ($q) {
-            $lastCotizacion = (int)$q['id'];
-            sseEvent('nueva_cotizacion', $q);
+            $q = dbRow(
+                "SELECT id, numero_cotizacion, nombre_cliente, descripcion_solicitud
+                 FROM cotizaciones WHERE id > ? ORDER BY id ASC LIMIT 1",
+                [$lastCotizacion]
+            );
+            if ($q) {
+                $lastCotizacion = (int)$q['id'];
+                sseEvent('nueva_cotizacion', $q);
+            }
         }
 
     } catch (\Throwable $e) {

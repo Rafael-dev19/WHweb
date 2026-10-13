@@ -11,6 +11,7 @@ if (!$_usuario || $_usuario["rol"] !== "ventas") {
     header("Location: /acceso-denegado?area=ventas");
     exit;
 }
+$_uidPanel = (int)$_usuario["id"];
 unset($_usuario);
 ?>
 
@@ -43,7 +44,7 @@ unset($_usuario);
 </head>
 
 <body>
-  <script nonce="<?= cspNonce() ?>">window.WH_ES_JEFE = false; window.WH_ROL = "ventas"; window.WH_VISTA_COMPLETA = false;</script>
+  <script nonce="<?= cspNonce() ?>">window.WH_UID = <?= $_uidPanel ?>; window.WH_FCM_VAPID_KEY = <?= json_encode(FCM_VAPID_KEY) ?>; window.WH_ES_JEFE = false; window.WH_ROL = "ventas"; window.WH_VISTA_COMPLETA = false;</script>
   <div class="header">
     <div class="header-left">
     <button class="menu-toggle" id="menuToggle" aria-label="Abrir menú" aria-expanded="false">
@@ -405,5 +406,7 @@ unset($_usuario);
   <script src="../assets/<?= av('js/event-delegation.js') ?>"></script>
   <script src="../assets/<?= av('js/animations.js') ?>"></script>
   <script src="../assets/<?= av('js/sse-notificaciones.js') ?>"></script>
+  <script src="../assets/<?= av('js/push-notifications.js') ?>"></script>
+  <script nonce="<?= cspNonce() ?>">initPushForegroundListener();</script>
 </body>
 </html>

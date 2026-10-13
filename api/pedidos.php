@@ -88,8 +88,11 @@ if ($method === 'POST' && $action === 'crear_manual') {
         $color    = mb_substr(trim(strip_tags((string)($it['color'] ?? ''))), 0, 80);
         $info     = mb_substr(trim(strip_tags((string)($it['info_extra'] ?? ''))), 0, 2000);
         $imgRef   = trim((string)($it['imagen_referencia'] ?? ''));
-        $ovalinIt    = is_string($it['ovalin'] ?? null) && whOvalinValido($it['ovalin']) ? $it['ovalin'] : null;
-        $monomandoIt = is_string($it['monomando'] ?? null) && whMonomandoValido($it['monomando']) ? $it['monomando'] : null;
+        // 'NO_LLEVA' = el cliente no quiere ovalín/monomando (distinto de "por definir").
+        $ovalinIt    = ($it['ovalin'] ?? '') === 'NO_LLEVA' ? 'No lleva'
+            : (is_string($it['ovalin'] ?? null) && whOvalinValido($it['ovalin']) ? $it['ovalin'] : null);
+        $monomandoIt = ($it['monomando'] ?? '') === 'NO_LLEVA' ? 'No lleva'
+            : (is_string($it['monomando'] ?? null) && whMonomandoValido($it['monomando']) ? $it['monomando'] : null);
         [$adicIt] = whAdicionalesElegidos($it['adicionales'] ?? []);
         if ($imgRef !== '' && strpos($imgRef, 'https://firebasestorage.googleapis.com/') !== 0) $imgRef = '';
         $items[] = [
@@ -146,6 +149,15 @@ if ($method === 'POST' && $action === 'crear_manual') {
         $totalItems = 0;
     }
     $totalPedido = round(max(0, $totalItems + $costoEnvio + $costoInst - $descuento), 2);
+    $subtotalPedido = $totalItems;
+    // Total acordado con el cliente (proyecto grande, paquete, ajuste): manda
+    // sobre la suma de los muebles. El subtotal se ajusta para que el desglose
+    // (subtotal + envío + instalación − descuento) siga cuadrando.
+    $totalAcordado = $veMontos ? round(max(0, (float)($body['total_acordado'] ?? 0)), 2) : 0.0;
+    if ($totalAcordado > 0) {
+        $totalPedido = $totalAcordado;
+        $subtotalPedido = round(max(0, $totalAcordado - $costoEnvio - $costoInst + $descuento), 2);
+    }
     if ($tipoPagoSel === 'completo') {
         if ($totalPedido <= 0) jsonError('Para "Pagó completo" captura el precio de los muebles (el total no puede ser $0).', 422);
         $montoRecibido = $totalPedido;
@@ -265,7 +277,7 @@ if ($method === 'POST' && $action === 'crear_manual') {
             'disenador_id'      => $disenadorId,
             'mensaje_disenador' => $descripcion,
             'notas'             => $notas,
-            'subtotal'          => $totalItems,
+            'subtotal'          => $subtotalPedido,
             'costo_envio'       => $costoEnvio,
             'costo_instalacion' => $costoInst,
             'descuento'         => $descuento,
@@ -965,6 +977,29 @@ switch ($method) {
             $update['fecha_estimada'] = $fe;
         }
         if (isset($body['notas'])) $update['notas'] = sanitize(mb_substr((string)$body['notas'], 0, 2000));
+
+        // Corregir el total de un pedido ya creado (precio acordado distinto,
+        // pedido cargado con total incompleto): solo jefe/ventas. Nunca menor
+        // a lo ya cobrado; el estado de pago se recalcula con el total nuevo.
+        if (isset($body['total'])) {
+            if (!puedeVerMontos($usuarioActual)) jsonError('Solo el jefe o ventas pueden cambiar el total del pedido', 403);
+            $nuevoTotal = round((float)$body['total'], 2);
+            if ($nuevoTotal <= 0) jsonError('El total debe ser mayor a $0', 422);
+            $pagadoYa = (float)($pedido['monto_pagado'] ?? 0);
+            if ($nuevoTotal < $pagadoYa - 0.01) {
+                jsonError('El total no puede ser menor a lo que ya se cobró ($' . number_format($pagadoYa, 2) . ')', 422);
+            }
+            $update['total']    = $nuevoTotal;
+            $update['subtotal'] = round(max(0, $nuevoTotal - (float)$pedido['costo_envio'] - (float)$pedido['costo_instalacion'] + (float)$pedido['descuento']), 2);
+            if ($pagadoYa > 0.009) $update['tipo_pago'] = $pagadoYa >= $nuevoTotal - 0.01 ? 'completo' : 'anticipo';
+            if (!isset($update['estado']) && in_array($pedido['estado'], ['pendiente', 'anticipo_pagado', 'pagado'], true)) {
+                $update['estado'] = $pagadoYa <= 0.009 ? 'pendiente' : ($pagadoYa >= $nuevoTotal - 0.01 ? 'pagado' : 'anticipo_pagado');
+            }
+            appLog('info', 'Total de pedido modificado', [
+                'pedido_id' => $id, 'antes' => (float)$pedido['total'], 'despues' => $nuevoTotal,
+                'usuario_id' => (int)$usuarioActual['id'], 'rol' => $usuarioActual['rol'],
+            ]);
+        }
 
         if ($update) {
             try {

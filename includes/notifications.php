@@ -179,6 +179,9 @@ function notificarPedidoNuevoPersonal(int $pedidoId, ?int $disenadorId = null, b
     $tokensGestion = $pushJefe ? _obtenerTokensPushPorRol(['jefe']) : [];
     _avisoCortoPersonal('aviso_pedido_ventas', _obtenerTokensPushPorRol(['ventas']), [],
         'Nuevo pedido', "Nuevo pedido $folio, ingresa al sitio para revisarlo.", '/ventas#pedidos');
+    $quien = trim($datos['nombre_cliente']) . ' · $' . number_format($datos['total'], 2);
+    notificarPanel(['jefe'], null, 'pedido_nuevo', "Nuevo pedido $folio", $quien, '/admin#pedidos');
+    notificarPanel(['ventas'], null, 'pedido_nuevo', "Nuevo pedido $folio", $quien, '/ventas#pedidos');
     if ($correosCopia || $tokensGestion) {
         $extra = [
             'datos_pedido' => json_encode($datos, JSON_UNESCAPED_UNICODE),
@@ -204,6 +207,8 @@ function notificarPedidoNuevoPersonal(int $pedidoId, ?int $disenadorId = null, b
         'Nuevo pedido para diseñar',
         "Hay un nuevo pedido ($folio) para diseñar. Ingresa a tu panel para ver los detalles.",
         '/disenador#pedidos');
+    notificarPanel(['disenador'], $disenadorId, 'pedido_para_disenar', 'Nuevo pedido para diseñar',
+        "Pedido $folio — ábrelo en Pedidos para ver lo que pidió el cliente.", '/disenador#pedidos');
 
     // Taller e instalación (rol empleado): lo verán en su panel cuando el
     // diseñador lo libere a producción, pero ya saben que viene en camino.
@@ -211,6 +216,8 @@ function notificarPedidoNuevoPersonal(int $pedidoId, ?int $disenadorId = null, b
         'Nuevo pedido',
         "Entró un nuevo pedido ($folio). Aparecerá en tu panel cuando pase a producción.",
         '/empleado#pedidos');
+    notificarPanel(['empleado'], null, 'pedido_en_camino', 'Viene un pedido nuevo',
+        "Pedido $folio — aparecerá en tu lista cuando el diseñador lo pase a producción.", '/empleado#pedidos');
 }
 
 function _avisoCortoPersonal(string $tipo, array $tokens, array $correos, string $titulo, string $mensaje, string $url): void {
@@ -221,17 +228,63 @@ function _avisoCortoPersonal(string $tipo, array $tokens, array $correos, string
     crearNotificacionFirestore($tipo, $titulo, $mensaje, $extra);
 }
 
-// Tokens de dispositivo activos de todo el personal con alguno de los roles dados.
+// ── Destinatarios ──────────────────────────────────────────────────
+// Un "destino" puede ser un rol ('jefe', 'ventas', 'disenador', 'empleado')
+// o un rol con área ('empleado:taller', 'empleado:instalacion'). Un empleado
+// sin área asignada (cuentas viejas) recibe los avisos de ambas áreas.
+function _condicionDestinos(array $destinos, string $alias = 'up'): array {
+    $partes = []; $params = [];
+    foreach (array_unique($destinos) as $d) {
+        if (strpos($d, ':') !== false) {
+            [$rol, $area] = explode(':', $d, 2);
+            $partes[] = "($alias.rol = ? AND ($alias.area = ? OR $alias.area IS NULL))";
+            array_push($params, $rol, $area);
+        } else {
+            $partes[] = "$alias.rol = ?";
+            $params[] = $d;
+        }
+    }
+    return [$partes ? '(' . implode(' OR ', $partes) . ')' : '1=0', $params];
+}
+
+// Bandeja de la campana del panel: una fila por persona, con su propio
+// "leído". Cada aviso se guarda SOLO para quien le corresponde — antes todo
+// el personal veía los avisos de todos (ver migracion_2026_10c).
+// $destinos: roles/áreas (ver _condicionDestinos); $usuarioId: una persona.
+function notificarPanel(array $destinos, ?int $usuarioId, string $tipo, string $titulo, string $mensaje, string $url = ''): void {
+    try {
+        if ($usuarioId) {
+            $ids = [$usuarioId];
+        } else {
+            [$cond, $params] = _condicionDestinos($destinos);
+            $ids = array_column(dbRows("SELECT up.id FROM usuarios_personal up WHERE up.activo = 1 AND $cond", $params), 'id');
+        }
+        foreach ($ids as $uid) {
+            dbInsert('notificaciones_personal', [
+                'usuario_personal_id' => (int)$uid,
+                'tipo'    => mb_substr($tipo, 0, 40),
+                'titulo'  => mb_substr($titulo, 0, 200),
+                'mensaje' => mb_substr($mensaje, 0, 500),
+                'url'     => $url !== '' ? mb_substr($url, 0, 200) : null,
+            ]);
+        }
+    } catch (\Throwable $e) {
+        appLog('warning', 'notificarPanel falló (¿falta migracion_2026_10c?)', ['tipo' => $tipo, 'e' => $e->getMessage()]);
+    }
+}
+
+// Tokens de dispositivo activos del personal con alguno de los destinos dados
+// (roles o rol:área, ver _condicionDestinos).
 function _obtenerTokensPushPorRol(array $roles): array {
     if (empty($roles)) return [];
     try {
-        $placeholders = implode(',', array_fill(0, count($roles), '?'));
+        [$cond, $params] = _condicionDestinos($roles);
         $rows = dbRows(
             "SELECT dp.fcm_token
              FROM dispositivos_push dp
              INNER JOIN usuarios_personal up ON up.id = dp.usuario_personal_id
-             WHERE dp.activo = 1 AND up.activo = 1 AND up.rol IN ($placeholders)",
-            $roles
+             WHERE dp.activo = 1 AND up.activo = 1 AND $cond",
+            $params
         );
         return array_column($rows, 'fcm_token');
     } catch (\Throwable $e) {
@@ -338,6 +391,23 @@ function notificarPedidoManualCreado(int $pedidoId, string $numeroPedido, ?int $
 }
 
 function notificarCambioPedido(array $pedido, string $estadoAnterior): void {
+    $etiquetas = [
+        'pendiente' => 'Pendiente', 'anticipo_pagado' => 'Anticipo pagado', 'pagado' => 'Pagado',
+        'listo_para_produccion' => 'Listo para producción', 'en_produccion' => 'En producción',
+        'alistando_pedido' => 'Alistando pedido', 'en_camino_instalacion' => 'En camino a instalación',
+        'finalizado' => 'Finalizado', 'cancelado' => 'Cancelado',
+    ];
+    $folio  = $pedido['numero_pedido'];
+    $nuevo  = $etiquetas[$pedido['estado']] ?? $pedido['estado'];
+    notificarPanel(['jefe'], null, 'pedido_estado', "Pedido $folio: $nuevo", 'Antes: ' . ($etiquetas[$estadoAnterior] ?? $estadoAnterior), '/admin#pedidos');
+    notificarPanel(['ventas'], null, 'pedido_estado', "Pedido $folio: $nuevo", 'Antes: ' . ($etiquetas[$estadoAnterior] ?? $estadoAnterior), '/ventas#pedidos');
+    // Instalación entra en juego cuando el taller termina: aviso solo a esa área.
+    if ($pedido['estado'] === 'alistando_pedido') {
+        notificarPanel(['empleado:instalacion'], null, 'pedido_para_entregar', 'Pedido listo para entregar',
+            "Pedido $folio — ya está alistado para entrega/instalación.", '/empleado#pedidos');
+        crearNotificacionPush('push_pedido_para_entregar', ['empleado:instalacion'], 'Pedido listo para entregar',
+            'Hay un pedido listo para entrega o instalación, ingresa al sitio para revisarlo.', '/empleado#pedidos');
+    }
     crearNotificacionFirestore(
         'estado_pedido',
         '📦 Estado de pedido actualizado',
@@ -386,6 +456,11 @@ function notificarNuevaCotizacion(array $cot): void {
         '/admin#cotizaciones',
         true
     );
+    crearNotificacionPush('push_nueva_cotizacion', ['ventas'], 'Nueva cotización',
+        'Hay una nueva cotización, ingresa al sitio para revisarla.', '/ventas#cotizaciones');
+    $txt = 'De ' . html_entity_decode((string)$cot['nombre_cliente'], ENT_QUOTES, 'UTF-8');
+    notificarPanel(['jefe'], null, 'cotizacion_nueva', "Nueva cotización {$cot['numero_cotizacion']}", $txt, '/admin#cotizaciones');
+    notificarPanel(['ventas'], null, 'cotizacion_nueva', "Nueva cotización {$cot['numero_cotizacion']}", $txt, '/ventas#cotizaciones');
 }
 
 // Push+email al jefe cuando el cliente confirma una cotización respondida
@@ -399,14 +474,23 @@ function notificarConfirmacionCotizacion(array $cot): void {
         '/admin#cotizaciones',
         true
     );
+    crearNotificacionPush('push_confirmacion_cotizacion', ['ventas'], 'Cotización confirmada',
+        'Un cliente confirmó su cotización, ingresa al sitio para continuar.', '/ventas#cotizaciones');
+    $num = $cot['numero_cotizacion'] ?? '';
+    notificarPanel(['jefe'], null, 'cotizacion_confirmada', "Cotización $num confirmada", 'El cliente aceptó la propuesta.', '/admin#cotizaciones');
+    notificarPanel(['ventas'], null, 'cotizacion_confirmada', "Cotización $num confirmada", 'El cliente aceptó la propuesta.', '/ventas#cotizaciones');
 }
 
 // Push a empleados cuando el diseñador libera un pedido a producción — es el
 // momento en que se vuelve visible/accionable para ellos.
 function notificarPedidoListoParaProduccion(array $pedido): void {
+    // Producción le toca al TALLER (instalación recibe su aviso cuando el
+    // pedido queda alistado — ver notificarCambioPedido).
+    notificarPanel(['empleado:taller'], null, 'pedido_a_produccion', 'Pedido listo para producción',
+        'Pedido ' . ($pedido['numero_pedido'] ?? '') . ' — el diseño está listo, ya puede fabricarse.', '/empleado#pedidos');
     crearNotificacionPush(
         'push_pedido_listo_produccion',
-        ['empleado'],
+        ['empleado:taller'],
         'Pedido listo para producción',
         'Hay un pedido listo para producción, ingresa al sitio para revisarlo.',
         '/empleado#pedidos'
@@ -526,9 +610,17 @@ function notificarNuevaCita(array $cita): void {
         '/admin#citas',
         true
     );
+    crearNotificacionPush('push_nueva_cita', ['ventas'], 'Nueva cita',
+        'Hay una nueva cita agendada, ingresa al sitio para revisarla.', '/ventas#citas');
+    $txt = html_entity_decode((string)$cita['nombre_cliente'], ENT_QUOTES, 'UTF-8') . ' · ' . $cita['fecha_cita'];
+    notificarPanel(['jefe'], null, 'cita_nueva', "Nueva cita {$cita['numero_cita']}", $txt, '/admin#citas');
+    notificarPanel(['ventas'], null, 'cita_nueva', "Nueva cita {$cita['numero_cita']}", $txt, '/ventas#citas');
 }
 
 function notificarInvitacionPersonal(array $inv): void {
+    // Aviso en la campana solo para quienes administran al personal.
+    notificarPanel(['jefe', 'administrador'], null, 'invitacion_enviada', 'Invitación enviada',
+        "Se invitó a {$inv['correo']} al panel.", '/admin#empleados');
     $appUrl = defined('APP_URL') ? rtrim(APP_URL, '/') : 'https://muebleswh.com';
     crearNotificacionFirestore(
         'invitacion_personal',

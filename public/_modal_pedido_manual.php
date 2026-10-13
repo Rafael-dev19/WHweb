@@ -67,6 +67,10 @@
   .pm-adic{ display:grid; grid-template-columns:repeat(auto-fill, minmax(180px,1fr)); gap:6px; }
   .pm-adic label{ display:flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:12px; color:var(--text); cursor:pointer; background:var(--panel); }
   .pm-adic input{ width:16px; height:16px; accent-color:var(--accent); flex-shrink:0; }
+  .pm-ancho--otro strong{ font-size:12px; }
+  .pm-ancho-otro{ display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; margin-top:6px; }
+  .pm-ancho-otro .form-input{ max-width:140px; }
+  .pm-acc-top{ display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
   .pm-adic em{ margin-left:auto; font-style:normal; color:var(--accent); font-weight:700; white-space:nowrap; }
   @media (max-width: 560px){
     .pm-opciones, .pm-costos, .pm-dos{ grid-template-columns:1fr; }
@@ -252,6 +256,11 @@ unset($_pmSesion);
           </select>
         </label>
         <label>Referencia (opcional)<input type="text" class="form-input" id="pm_referencia_pago" placeholder="folio, últimos 4 dígitos…"></label>
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label class="form-label" for="pm_total_acordado">Total acordado con el cliente ($)</label>
+        <input type="number" class="form-input" id="pm_total_acordado" min="0" step="0.01" inputmode="decimal" placeholder="Déjalo vacío para usar el calculado">
+        <div class="help" id="pm_total_hint"></div>
       </div>
       <div class="pm-resumen" aria-live="polite">
         <div><span>Total del pedido</span><strong id="pm_res_total">$0.00</strong></div>

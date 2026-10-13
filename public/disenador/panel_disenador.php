@@ -10,6 +10,7 @@ if (!$_usuario || $_usuario["rol"] !== "disenador") {
     header("Location: /acceso-denegado?area=disenador");
     exit;
 }
+$_uidPanel = (int)$_usuario["id"];
 unset($_usuario);
 ?>
 
@@ -42,7 +43,7 @@ unset($_usuario);
 </head>
 
 <body>
-  <script nonce="<?= cspNonce() ?>">window.WH_ROL = "disenador"; window.WH_AREA = null;</script>
+  <script nonce="<?= cspNonce() ?>">window.WH_UID = <?= $_uidPanel ?>; window.WH_FCM_VAPID_KEY = <?= json_encode(FCM_VAPID_KEY) ?>; window.WH_ROL = "disenador"; window.WH_AREA = null;</script>
   <div class="header">
     <div class="header-left">
     <button class="menu-toggle" id="menuToggle" aria-label="Abrir menú" aria-expanded="false">

@@ -17,6 +17,9 @@
 //     worker solo dispara con la pestaña en segundo plano).
 
 const WH_PUSH_LS_REGISTRADO  = 'wh_push_registrado';
+// Alguien desactivó el push en ESTE dispositivo a propósito (módulo de
+// notificaciones): no se vuelve a registrar solo al entrar al panel.
+const WH_PUSH_LS_OPTOUT      = 'wh_push_optout';
 
 function _avisoPush(msg, tipo) {
   console.warn('[Push] ' + msg);
@@ -68,10 +71,45 @@ async function initPushForegroundListener() {
     if (typeof firebase === 'undefined' || !firebase.messaging) return;
     if (!window.firebaseApp && typeof initFirebase === 'function') initFirebase();
     _bindForegroundOnMessage(firebase.messaging());
+    _reasignarDispositivo();
   } catch (e) {
     console.warn('[Push] initPushForegroundListener error:', e);
   }
 }
+
+/* El push de un dispositivo es de quien tiene la sesión abierta en él. En un
+   teléfono/PC que usan varias personas, antes seguía llegando el push de la
+   última cuenta que lo activó aunque ya hubiera entrado otra. Al cargar el
+   panel se reasigna el dispositivo a la cuenta actual (una vez por sesión);
+   el administrador nunca recibe push. */
+async function _reasignarDispositivo() {
+  try {
+    if (window.WH_ROL === 'administrador' || !window.WH_UID) return;
+    if (localStorage.getItem(WH_PUSH_LS_OPTOUT) === '1') return;
+    if (sessionStorage.getItem('wh_push_dueno') === String(window.WH_UID)) return;
+    const token = await _obtenerTokenActual();
+    if (!token) return;
+    const res = await fetch('/api/push_tokens.php', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': _leerCsrfCookie() },
+      body: JSON.stringify({ fcm_token: token }),
+    });
+    if (res.ok) sessionStorage.setItem('wh_push_dueno', String(window.WH_UID));
+  } catch (e) { /* sin push no pasa nada: el panel sigue funcionando */ }
+}
+
+/* Al cerrar sesión: este dispositivo deja de recibir push de esa cuenta
+   (si otra persona entra después, se le reasigna a ella). */
+async function bajaPushDispositivo() {
+  try {
+    sessionStorage.removeItem('wh_push_dueno');
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    const token = await Promise.race([_obtenerTokenActual(), new Promise(r => setTimeout(() => r(null), 3000))]);
+    if (token) await deactivatePush(token);
+  } catch (e) { /* no bloquear el cierre de sesión */ }
+}
+window.bajaPushDispositivo = bajaPushDispositivo;
 
 /* ── Registro real: pide permiso (dispara el diálogo nativo del navegador
    SOLO si el permiso está en "default") y registra el token en el servidor.
@@ -132,7 +170,7 @@ async function registerPush() {
 
     _bindForegroundOnMessage(messaging);
 
-    try { localStorage.setItem(WH_PUSH_LS_REGISTRADO, '1'); } catch (_) {}
+    try { localStorage.setItem(WH_PUSH_LS_REGISTRADO, '1'); localStorage.removeItem(WH_PUSH_LS_OPTOUT); } catch (_) {}
     return { ok: true, status: 'activado' };
   } catch (e) {
     return { ok: false, status: 'error', mensaje: e.message || 'error desconocido' };
@@ -319,6 +357,7 @@ function _mostrarGateEstado(container, destino, estado) {
     btn.disabled = true;
     btn.textContent = 'Desactivando…';
     const ok = estado.token ? await deactivatePush(estado.token) : false;
+    if (ok) { try { localStorage.setItem(WH_PUSH_LS_OPTOUT, '1'); } catch (_) {} }
     if (!ok) {
       _avisoPush('No se pudo desactivar. Intenta de nuevo.', 'error');
       btn.disabled = false;
