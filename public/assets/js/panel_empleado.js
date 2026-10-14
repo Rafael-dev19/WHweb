@@ -2109,7 +2109,17 @@ function detalleLineaHtml(i) {
     ${chips.length ? `<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11px;color:var(--muted2);">${chips.map(c => `<span>${c}</span>`).join('')}</div>` : ''}
     ${medidasPersonalizadasHtml(i.medidas_personalizadas)}
     ${i.info_extra ? `<div style="margin-top:4px;font-size:11px;line-height:1.5;color:var(--text);white-space:pre-line;"><strong style="color:var(--accent);">Información extra:</strong> ${escapeHtml(i.info_extra)}</div>` : ''}
-    ${i.imagen_referencia ? `<a href="${escapeHtml(i.imagen_referencia)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:6px;"><img src="${escapeHtml(i.imagen_referencia)}" alt="Foto del modelo" style="width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>` : ''}`;
+    ${fotosModeloHtml(i)}`;
+}
+// Fotos del modelo que trajo el cliente (fuera de catálogo): todas las que
+// se subieron; los pedidos viejos solo tienen una (imagen_referencia).
+function fotosModeloHtml(i) {
+  let fotos = [];
+  try { fotos = JSON.parse(i.imagenes_referencia || '[]'); } catch (e) { fotos = []; }
+  if (!Array.isArray(fotos) || !fotos.length) fotos = i.imagen_referencia ? [i.imagen_referencia] : [];
+  if (!fotos.length) return '';
+  return `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">${fotos.map((u, n) =>
+    `<a href="${escapeHtml(u)}" target="_blank" rel="noopener"><img src="${escapeHtml(u)}" alt="Foto ${n + 1} del modelo" style="width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>`).join('')}</div>`;
 }
 const _TIPO_PROYECTO_LABELS = { bano: 'Mueble de baño', cocina: 'Cocina a la medida', closet: 'Clóset a la medida' };
 function tipoProyectoBadge(tipo) {

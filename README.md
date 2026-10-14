@@ -1,30 +1,96 @@
-# Wooden House — Sitio Web
+# Wooden House — Sitio web y paneles internos
 
-Plataforma e-commerce completa para la venta y gestión de muebles de baño a medida.
-Incluye catálogo, carrito, cuentas de cliente, proceso de pago, cotizaciones, sistema de ofertas/marketing y paneles de administrador y empleado.
+Tienda en línea y sistema de trabajo interno de **Wooden House**, taller de muebles de baño, cocinas y clósets a la medida (Tlaquepaque, Jalisco).
+
+- **Sitio público:** catálogo de muebles de baño con precio por ancho, carrito, pago en línea, cotizaciones, citas de medición y seguimiento por folio.
+- **Paneles del personal:** pedidos de punta a punta (venta → diseño → taller → instalación), cotizaciones, citas, calendario de producción, catálogo, reportes y notificaciones por persona (campanita + push).
+
+> Versión actual: **2.5.x** — actualizado el 2026-10-14.
+
+---
+
+## Índice
+
+1. [Roles y paneles](#roles-y-paneles)
+2. [Flujo de un pedido](#flujo-de-un-pedido)
+3. [Tecnologías](#tecnologías)
+4. [Estructura del proyecto](#estructura-del-proyecto)
+5. [URLs del sitio](#urls-del-sitio)
+6. [Base de datos](#base-de-datos)
+7. [Instalación local](#instalación-local)
+8. [Variables de entorno (.env)](#variables-de-entorno-env)
+9. [Firebase](#firebase)
+10. [Servidor de producción y despliegue](#servidor-de-producción-y-despliegue)
+11. [Notificaciones](#notificaciones)
+12. [Seguridad](#seguridad)
+13. [Reglas para código nuevo](#reglas-para-código-nuevo)
+14. [API](#api)
+
+---
+
+## Roles y paneles
+
+Todo el personal entra con Firebase Auth (correo y contraseña). Las cuentas se crean **solo por invitación**: el jefe o el administrador invita, y la persona crea su propia contraseña en `/invitacion`.
+
+| Rol | Panel | Qué hace | ¿Ve montos? | ¿Recibe push? |
+|-----|-------|----------|:-----------:|:-------------:|
+| `jefe` | `/admin` | Todo: pedidos, cobros, cotizaciones, catálogo, personal, reportes | ✅ | ✅ |
+| `ventas` | `/ventas` | Pedidos (crear, editar, cobrar), cotizaciones, citas, clientes | ✅ | ✅ |
+| `administrador` | `/admin` | Soporte técnico: catálogo, personal, configuración | ❌ | ❌ |
+| `disenador` | `/disenador` | Diseña cada pedido y entrega el `.skp` + carpeta de cortes del CNC; puede crear y editar pedidos | ❌ | ✅ |
+| `empleado` (área `taller`) | `/empleado` | Fabrica; descarga los archivos de corte | ❌ | ✅ |
+| `empleado` (área `instalacion`) | `/empleado` | Entrega e instala; marca el pedido como finalizado | ❌ | ✅ |
+
+- **Montos:** solo el jefe y ventas ven cifras. Para los demás roles la API **quita** los importes del JSON (`ocultarMontosPedido()` en `api/pedidos.php`) y manda en su lugar `estado_pago` (`liquidado` / `saldo_pendiente` / `sin_pago`). Ver `puedeVerMontos()` en `includes/auth.php`.
+- Los **clientes** también usan Firebase Auth, pero se guardan en la tabla `clientes` y solo acceden al sitio público y a `/mi-cuenta`.
+
+---
+
+## Flujo de un pedido
+
+```
+pendiente ──► anticipo_pagado / pagado ──► listo_para_produccion ──► en_produccion
+ (sin pago)      (cobro en línea o manual)       (diseñador)             (taller)
+
+──► alistando_pedido ──► en_camino_instalacion ──► finalizado        (o cancelado)
+       (taller)              (instalación)          (instalación, solo si ya se pagó todo)
+```
+
+1. **Origen:** el cliente compra en el carrito (Stripe o PayPal, pago completo o anticipo), o el jefe/ventas/diseñador lo **carga a mano** con "Crear pedido" (encargos por WhatsApp o teléfono). Un pedido manual incluye:
+   - tipo de proyecto (baño, cocina o clóset), entrega (instalación, solo envío o recoger) y fecha acordada;
+   - teléfonos extra y dirección (también se acepta un link de Google Maps);
+   - muebles del catálogo con ancho, cubierta, color y accesorios;
+   - modelos **fuera de catálogo** con hasta **10 fotos** cada uno;
+   - descripción, nota de voz y fotos de referencia;
+   - el pago recibido (solo jefe/ventas).
+2. **Editar pedido:** desde el detalle, el botón "Editar pedido" abre el mismo formulario ya lleno. Los pagos ya registrados no cambian, y el total no puede quedar por debajo de lo ya cobrado (`action=editar_manual`).
+3. **Diseño:** para marcar el pedido como listo para producción, el diseñador debe subir:
+   - el **proyecto SketchUp (`.skp`)**, obligatorio;
+   - la **carpeta de cortes del CNC** (`.nc`, también `.tap` o `.dxf`), obligatoria y con los nombres de archivo originales;
+   - un render en imagen, opcional.
+4. **Taller:** descarga cada archivo con su nombre original, o la carpeta completa en `.zip` (`api/pedidos.php?action=descargar_diseno`).
+5. **Instalación:** ve la dirección (con botón al mapa), los teléfonos y si falta cobrar algo.
 
 ---
 
 ## Tecnologías
 
 | Capa | Tecnología |
-|------|-----------|
-| Frontend | HTML5, CSS3, JavaScript (Vanilla) |
-| Utilidades JS | Bootstrap 5.3.3 bundle (solo para compatibilidad; dropdowns y nav son custom CSS/JS) |
-| Backend | PHP 8+ |
-| Base de datos | MySQL 8 / MariaDB 10.4+ |
-| Autenticación | Firebase Auth SDK v10 modular (dynamic import) |
-| Base de datos RT | Firebase Firestore SDK v10 compat |
-| Almacenamiento | Firebase Storage SDK v10 compat |
-| Cloud Functions | Firebase Functions v2 (Node.js 22) |
-| Pasarela 1 | Stripe JS v3 + PHP vía cURL |
-| Pasarela 2 | PayPal JS SDK v5 + REST API v2 |
-| Correos | Firebase Cloud Functions → Brevo API (correos transaccionales) |
-| Iconos | Font Awesome 6.5.1 (cdnjs.cloudflare.com) |
-| Exportación Excel | SheetJS (xlsx) 0.20.3 — genera archivos `.xlsx` reales |
-| QR (2FA setup) | api.qrserver.com — imagen generada sin librería JS |
-| Servidor | Apache 2.4+ con mod_rewrite |
-| Control versiones | Git + GitHub |
+|------|------------|
+| Backend | PHP 8.2 (sin framework), PDO |
+| Base de datos | MariaDB 10.4+ / MySQL 8 (`utf8mb4`) |
+| Frontend | HTML, CSS y JavaScript sin framework; tema claro/oscuro |
+| Iconos | Lucide 1.55.0, servido desde el propio sitio (`public/assets/vendor/`) |
+| Autenticación | Firebase Auth (personal y clientes) |
+| Archivos | Firebase Storage (fotos, notas de voz, `.skp`, cortes del CNC, PDFs) |
+| Cola de correos/push | Firestore (colección `notificaciones`) → Cloud Functions |
+| Cloud Functions | Firebase Functions v7, Node.js 22 |
+| Correos | Brevo API (desde Cloud Functions) |
+| Push | Firebase Cloud Messaging (Web Push) |
+| Tiempo real en paneles | Server-Sent Events (`api/eventos.php`) |
+| Pagos | Stripe (JS v3 + API por cURL) y PayPal (JS SDK + REST v2) |
+| Reportes | SheetJS (`.xlsx`) |
+| Servidor | Ubuntu + Apache 2.4 (`mod_rewrite`, `mod_headers`), detrás de Cloudflare |
 
 ---
 
@@ -32,807 +98,264 @@ Incluye catálogo, carrito, cuentas de cliente, proceso de pago, cotizaciones, s
 
 ```
 Wooden House/
-├── public/                          # Raíz pública (DocumentRoot del servidor)
-│   ├── index.php                    # Página de inicio
-│   ├── catalogo.php                 # Catálogo de productos
-│   ├── detalle_producto.php         # Detalle de un producto
-│   ├── carrito-checkout.php         # Carrito + forma de pago (completo/anticipo) + fecha de entrega
-│   ├── pago.php                     # Proceso de pago (Stripe + PayPal) + modo "pagar saldo pendiente"
-│   ├── solicitudes.php              # Cotizaciones y citas (seguimiento es módulo aparte)
-│   ├── seguimiento.php              # Seguimiento público de pedidos/cotizaciones/citas por folio
-│   ├── mi-cuenta.php                # Portal del cliente registrado (pedidos, perfil)
-│   ├── invitacion.php               # Página pública de activación de cuenta para empleados invitados
-│   ├── login.php                    # Redirige a /inicio; AuthModal maneja el login
-│   ├── robots.txt
-│   ├── sitemap.xml
-│   ├── .htaccess                    # URLs limpias + CSP estricta + HTTPS + caché + compresión
-│   ├── admin/
-│   │   └── panel_administrador.php  # Panel completo del administrador
-│   ├── empleado/
-│   │   └── panel_empleado.php       # Panel del empleado
+├── public/                         # DocumentRoot del servidor
+│   ├── index.php, catalogo.php, detalle_producto.php
+│   ├── carrito-checkout.php        # Carrito + entrega/instalación + fecha + forma de pago
+│   ├── pago.php                    # Stripe / PayPal (también "pagar saldo pendiente")
+│   ├── solicitudes.php             # Cotizaciones y citas
+│   ├── seguimiento.php             # Seguimiento público por folio
+│   ├── mi-cuenta.php               # Portal del cliente
+│   ├── invitacion.php              # Activación de cuenta del personal invitado
+│   ├── notificaciones-push.php     # Paso para activar push entre el login y el panel
+│   ├── acceso-denegado.php, terminos.php, privacidad.php, login.php
+│   ├── sitemap.php (→ /sitemap.xml), robots.txt, firebase-messaging-sw.js
+│   ├── _modal_pedido_manual.php    # Modal "Crear / Editar pedido" (jefe, ventas, diseñador)
+│   ├── _modal_cotizacion_manual.php
+│   ├── _dev_login.php              # SOLO local (en .gitignore; Apache lo bloquea fuera de localhost)
+│   ├── admin/panel_administrador.php   # jefe y administrador
+│   ├── ventas/panel_ventas.php
+│   ├── disenador/panel_disenador.php
+│   ├── empleado/panel_empleado.php     # taller e instalación
 │   └── assets/
-│       ├── css/
-│       │   ├── variables.css        # Variables globales — paleta ámbar premium
-│       │   ├── styles.css           # Estilos compartidos (header, footer, nav)
-│       │   ├── animations.css       # Animaciones, reveal, skeleton, lightbox
-│       │   ├── index.css
-│       │   ├── catalogo.css
-│       │   ├── carrito.css          # Incluye estilos del selector de fechas
-│       │   ├── pago.css
-│       │   ├── solicitudes.css      # Incluye decision cards y status badges
-│       │   ├── login.css
-│       │   ├── detalle_producto.css
-│       │   ├── panel_administrador.css
-│       │   ├── panel_empleado.css
-│       │   ├── modal-auth.css       # Modal de login/registro + barra móvil inferior
-│       │   ├── mi-cuenta.css        # Estilos del portal del cliente
-│       │   └── terminos.css
+│       ├── css/                    # variables.css, styles.css, panel_*.css, …
 │       ├── js/
-│       │   ├── utils.js             # Funciones compartidas
-│       │   ├── firebase-config.js   # Inicialización Firebase (Auth+Firestore+Storage)
-│       │   ├── event-delegation.js  # Delegación central de eventos + lightbox de imágenes
-│       │   ├── page-init.js         # Inicialización (alertas, Escape modal, URL params)
-│       │   ├── animations.js        # IntersectionObserver scroll-reveal + ripple
-│       │   ├── index.js             # Inicio (FAQ, animaciones)
-│       │   ├── catalogo.js          # Carga de productos, filtros y carrito
-│       │   ├── detalle_producto.js  # Galería, tabs, agregar al carrito
-│       │   ├── carrito.js           # Gestión del carrito (sessionStorage)
-│       │   ├── checkout.js          # Selector de fechas y validación
-│       │   ├── pago.js              # Stripe Elements + PayPal Buttons
-│       │   ├── solicitudes.js       # Cotizaciones, citas y seguimiento (tabs)
-│       │   ├── panel_administrador.js  # Panel admin con auto-polling 30s + gestión 2FA
-│       │   ├── panel_empleado.js    # Panel empleado con auto-polling 30s + gestión 2FA
-│       │   ├── modal-auth.js        # Modal de autenticación + overlay verificación 2FA
-│       │   └── mi-cuenta.js         # Lógica del portal del cliente
+│       │   ├── panel_*.js          # Lógica de cada panel
+│       │   ├── pedido-manual.js    # Crear / editar pedido
+│       │   ├── archivos-diseno.js  # Entregables del diseñador (igual en los 4 paneles)
+│       │   ├── event-delegation.js # data-call / data-args (sin handlers inline)
+│       │   ├── push-notifications.js, sse-notificaciones.js
+│       │   ├── metodo-cobro.js, voice-recorder.js, maps-picker.js, theme-toggle.js
+│       │   └── firebase-config.js, utils.js, carrito.js, checkout.js, pago.js, …
+│       ├── vendor/lucide-1.55.0.min.js
 │       └── img/
-│           ├── logo-header.png
-│           └── logo-login.png
-│
-├── api/                             # Endpoints REST (PHP)
-│   ├── _helpers.php                 # Funciones comunes de API (auth, sanitize, JSON)
-│   ├── auth.php                     # Verificación tokens Firebase JWT + flags 2FA (personal + clientes)
-│   ├── clientes.php                 # CRUD clientes registrados (e-commerce)
-│   ├── ofertas.php                  # CRUD ofertas, descuentos y códigos promo
-│   ├── productos.php                # CRUD productos + imágenes + especificaciones
-│   ├── categorias.php               # CRUD categorías
-│   ├── pedidos.php                  # CRUD pedidos + cambio de estado
-│   ├── disponibilidad.php           # Fechas disponibles según capacidad real
-│   ├── capacidad.php                # Gestión de slots de producción (admin)
-│   ├── cotizaciones.php             # CRUD cotizaciones + flujo de 8 estados de producción
-│   ├── citas.php                    # CRUD citas y calendario
-│   ├── invitaciones.php             # Sistema de invitaciones de personal (crear/validar/activar)
-│   ├── empleados.php                # CRUD empleados (Firebase Auth + MySQL)
-│   ├── notificaciones.php           # Notificaciones vía Firestore REST
-│   ├── pagos.php                    # Stripe + PayPal: crear, capturar, webhooks
-│   ├── reportes.php                 # Reportes: resumen, pedidos, productos, ingresos, clientes
-│   ├── calendario.php               # Disponibilidad del calendario de citas
-│   └── .htaccess                    # CORS + bloqueo de acceso directo + preflight OPTIONS
-│
-├── includes/                        # Helpers PHP del servidor
-│   ├── config.php                   # Constantes de configuración (lee .env)
-│   ├── db.php                       # Conexión MySQL (PDO singleton)
-│   ├── auth.php                     # Verificación de token Firebase + sesión PHP + revocación 2FA
-│   ├── functions.php                # Helpers generales (sanitize, logs, Firestore)
-│   ├── notifications.php            # Escritura en Firestore → Cloud Functions envían correos
-│   ├── stripe.php                   # Wrapper de la API de Stripe vía cURL
-│   └── paypal.php                   # Wrapper de la API de PayPal + verificación de webhooks
-│
+├── api/                            # Endpoints JSON (Apache los expone con un Alias /api)
+├── includes/                       # Código compartido del servidor (no público)
+│   ├── env.php / config.php        # Lee .env y define constantes
+│   ├── db.php                      # PDO
+│   ├── auth.php                    # Sesión, roles, puedeVerMontos(), estadoPagoPedido()
+│   ├── csp.php                     # Content-Security-Policy con nonce por petición
+│   ├── assets.php                  # av(): versión de JS/CSS por hash del contenido
+│   ├── firebase_admin.php          # Cuenta de servicio de Firebase (OAuth, Firestore, claims)
+│   ├── notifications.php           # Campanita por persona, correos y push
+│   ├── accesorios.php              # Catálogo de ovalines, monomandos y adicionales
+│   ├── security.php, functions.php, stripe.php, paypal.php
 ├── database/
-│   ├── schema.sql                   # Estructura completa actualizada (15 tablas + migraciones integradas)
-│   ├── seed.sql                     # Datos de prueba + festivos 2026
-│   ├── invitaciones_migration.sql   # Migración: tabla invitaciones_personal (ya aplicada en servidor)
-│   └── cotizaciones_produccion_migration.sql  # Migración: flujo de producción cotizaciones (ya aplicada)
-│
+│   ├── schema.sql                  # Esquema completo y actual (solo para bases NUEVAS)
+│   └── seed.sql                    # Datos de ejemplo (catálogo anterior al 2026)
 ├── firebase/
-│   ├── firebase.json                # Configuración: Firestore, Storage, Functions, Hosting, Emulators
-│   ├── firestore.rules              # Reglas de seguridad Firestore (colección notificaciones)
-│   ├── firestore.indexes.json       # Índices compuestos para consultas ordenadas
-│   ├── storage.rules                # Reglas de seguridad Storage (imágenes de productos)
-│   └── functions/
-│       ├── package.json             # Dependencias (firebase-admin, firebase-functions, nodemailer, axios)
-│       └── index.js                 # Cloud Functions (Firestore triggers → correos vía Brevo):
-│                                    #   · nuevo_pedido          — confirma pedido al cliente + CC empleados
-│                                    #   · nueva_cita            — confirma cita al cliente + CC empleados
-│                                    #   · nueva_cotizacion      — avisa al admin de nueva solicitud
-│                                    #   · cotizacion_respondida — precio y propuesta al cliente
-│                                    #   · cotizacion_en_produccion — orden de fabricación (cliente + empleados)
-│                                    #   · cotizacion_lista      — avisa al cliente que está listo
-│                                    #   · cotizacion_entregada  — confirmación de entrega al cliente
-│                                    #   · invitacion_personal   — enlace de activación al empleado invitado
-│                                    #   · estado_pedido         — notifica cambio de estado al cliente
-│                                    #   · limpiarNotificacionesAntiguas — scheduled (cada 24 h)
-│
-├── logs/                            # Logs del servidor (excluidos de Git)
-├── .htaccess                        # Redirige a HTTPS + bloquea carpetas internas
-├── .env                             # Variables de entorno (excluido de Git)
-├── .env.example                     # Plantilla de variables de entorno
-├── .gitignore
+│   ├── firestore.rules             # Cerradas: solo el servidor (cuenta de servicio) escribe
+│   ├── storage.rules               # Subida solo para personal (claim staff) con tipos y tamaños fijos
+│   ├── firestore.indexes.json, firebase.json
+│   └── functions/index.js          # onNuevaNotificacion (correos + push) y limpieza diaria
+├── router.php                      # Solo para `php -S` en local (emula el Alias /api)
+├── .htaccess                       # HTTPS + bloquea includes/, database/, logs/, firebase/
+├── .env.example                    # Plantilla de configuración
+├── PRODUCT.md, DESIGN.md           # Producto y sistema visual
 └── README.md
 ```
 
 ---
 
-## URLs del sitio (URLs limpias)
+## URLs del sitio
 
-| URL visible | Archivo real |
-|-------------|-------------|
-| `/` o `/inicio` | `public/index.php` |
-| `/catalogo` | `public/catalogo.php` |
-| `/detalle/42` | `public/detalle_producto.php?id=42` |
-| `/carrito` | `public/carrito-checkout.php` |
-| `/pago` | `public/pago.php` |
-| `/solicitudes` | `public/solicitudes.php` |
-| `/seguimiento` | `public/solicitudes.php` |
-| `/login` | `public/login.php` |
-| `/mi-cuenta` | `public/mi-cuenta.php` |
-| `/terminos` | `public/terminos.php` |
-| `/invitacion` | `public/invitacion.php` |
-| `/admin/` | `public/admin/panel_administrador.php` |
-| `/empleado/` | `public/empleado/panel_empleado.php` |
+| URL | Archivo |
+|-----|---------|
+| `/` · `/inicio` | `index.php` (y `/index.php` redirige a `/`) |
+| `/catalogo` | `catalogo.php` |
+| `/detalle/42` | `detalle_producto.php?id=42` |
+| `/carrito` · `/pago` | `carrito-checkout.php` · `pago.php` |
+| `/solicitudes` · `/seguimiento` | `solicitudes.php` · `seguimiento.php` |
+| `/mi-cuenta` · `/login` | `mi-cuenta.php` · `login.php` |
+| `/terminos` · `/privacidad` | `terminos.php` · `privacidad.php` |
+| `/admin` · `/ventas` · `/disenador` · `/empleado` | paneles |
+| `/sitemap.xml` | `sitemap.php` |
 
-> Requiere Apache con `mod_rewrite` activo y `AllowOverride All`.
+Además, `www.` redirige con 301 al dominio sin `www`. Los paneles, `/mi-cuenta`, `/carrito`, `/pago` e `/invitacion` llevan `noindex` y están en `Disallow` de `robots.txt`.
 
 ---
 
-## Base de datos — Tablas
+## Base de datos
 
-| Tabla | Descripción |
-|-------|-------------|
-| `usuarios_personal` | Admins y empleados (espejo de Firebase Auth) + campos `totp_secreto`, `totp_activo`, `sesiones_revocadas_desde` |
-| `clientes` | Clientes registrados en la tienda (Firebase Auth) + `sesiones_revocadas_desde` |
-| `invitaciones_personal` | Tokens de invitación para que empleados creen su propia contraseña (expiran en 48 h) |
-| `ofertas` | Descuentos, cupones y promociones de marketing |
-| `categorias` | Categorías de productos |
-| `productos` | Productos con precio, stock y etiqueta |
-| `imagenes_producto` | Galería de imágenes por producto (URLs de Firebase Storage) |
-| `especificaciones_producto` | Specs técnicas clave-valor por producto |
-| `pedidos` | Pedidos con token de seguimiento y fecha estimada |
-| `detalle_pedido` | Líneas de cada pedido (productos + cantidades) |
-| `pagos` | Registro de transacciones Stripe y PayPal |
-| `cotizaciones` | Solicitudes de cotización — flujo completo de 8 estados de producción |
-| `citas` | Citas agendadas (medición e instalación) |
-| `capacidad_produccion` | Slots de producción y entrega por semana |
-| `dias_bloqueados` | Festivos y cierres del taller |
-| `carritos_guardados` | Recuperación de carritos abandonados |
+`database/schema.sql` contiene el **esquema completo al día** (25 tablas). Se usa **solo para crear una base nueva** (desarrollo local o servidor nuevo), porque **borra y vuelve a crear todas las tablas**.
 
-### Inicializar la base de datos
+| Grupo | Tablas |
+|-------|--------|
+| Personal | `usuarios_personal`, `invitaciones_personal`, `auditoria_seguridad_personal`, `dispositivos_push`, `notificaciones_personal` |
+| Clientes | `clientes`, `carritos_guardados` |
+| Catálogo | `categorias`, `productos`, `imagenes_producto`, `especificaciones_producto`, `producto_medidas` (precio por ancho), `ofertas` |
+| Pedidos | `pedidos`, `detalle_pedido`, `pagos`, `pedido_adjuntos`, `pedido_imagenes_diseno` |
+| Citas y cotizaciones | `citas`, `cotizaciones`, `cotizador_items_catalogo`, `cotizacion_respuesta_items`, `cotizacion_imagenes` |
+| Calendario | `capacidad_produccion`, `dias_bloqueados` |
+
+Cada tabla tiene un comentario en `schema.sql` que explica para qué sirve y qué significan sus columnas menos obvias.
+
+### Cambios en una base con datos (producción)
+
+**Nunca** se corre `schema.sql` en producción. Para un cambio de estructura:
+
+1. Escribe un archivo `database/migracion_AAAA_MM<letra>_<tema>.sql` que contenga **solo** los `ALTER`/`CREATE` nuevos.
+2. Si el código debe funcionar antes de que corra la migración, revisa si la columna existe (ver `columnasPedidoManual()` en `api/pedidos.php`) y guarda el dato en otro lado mientras tanto.
+3. Corre la migración en producción:
+   ```bash
+   mysql -u USUARIO -p wooden_house < database/migracion_….sql
+   ```
+4. Aplica el mismo cambio en `schema.sql`, para que una base nueva quede igual.
+
+---
+
+## Instalación local
+
+Entorno usado: **XAMPP** en Windows (Apache en `127.0.0.1:8080`, MariaDB, PHP 8.2).
 
 ```bash
-# 1. Crear la base de datos
-mysql -u root -p -e "CREATE DATABASE wooden_house CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+# 1. Base de datos nueva
+mysql -u root < database/schema.sql
+mysql -u root wooden_house < database/seed.sql        # opcional: datos de ejemplo
 
-# 2. Crear estructura completa (ya incluye todas las migraciones)
-mysql -u usuario -p wooden_house < database/schema.sql
+# 2. Configuración
+cp .env.example .env                                   # y llenar los valores (ver abajo)
 
-# 3. Cargar datos de prueba + festivos 2026
-mysql -u usuario -p wooden_house < database/seed.sql
+# 3. Apache: DocumentRoot → public/, con AllowOverride All y un Alias /api → api/
+#    (sin Apache: php -S 127.0.0.1:8080 -t public router.php)
 ```
 
-> **Nota:** Las migraciones `invitaciones_migration.sql` y `cotizaciones_produccion_migration.sql` ya están integradas en `schema.sql`. Solo son necesarias para actualizar instalaciones existentes.
+- **Probar los paneles sin Firebase:** `http://127.0.0.1:8080/_dev_login.php?rol=ventas` (también `jefe`, `administrador`, `disenador`, y `empleado&area=taller` o `empleado&area=instalacion`). Solo funciona en local, y el archivo está en `.gitignore`.
+- Si MariaDB no arranca desde el panel de XAMPP: `mysql\bin\mysqld --defaults-file=mysql\bin\my.ini --console`.
+- La subida a Firebase Storage necesita una sesión real de Firebase: con `_dev_login` se puede probar todo menos subir archivos.
 
 ---
 
-## Autenticación 2FA para personal (2026-06-18)
+## Variables de entorno (.env)
 
-Todo el personal (administrador y empleado) debe completar la verificación de dos factores (TOTP RFC 6238) al iniciar sesión.
+El archivo `.env` contiene **secretos reales**: nunca se sube a git ni se comparte. La plantilla está en `.env.example`.
 
-### Flujo de login con 2FA
+| Grupo | Variables |
+|-------|-----------|
+| App | `APP_ENV`, `APP_DEBUG`, `APP_URL`, `CORS_ALLOWED_ORIGINS` |
+| Base de datos | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS` |
+| Firebase | `FIREBASE_PROJECT_ID`, `FIREBASE_API_KEY`, `FCM_VAPID_KEY`, `FIREBASE_SERVICE_ACCOUNT_FILE`, `PUSH_CLEANUP_SECRET` |
+| Stripe | `STRIPE_PUBLISHABLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` |
+| PayPal | `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_MODE` (`sandbox`/`live`), `PAYPAL_WEBHOOK_ID` |
+| Correos | `BREVO_API_KEY`, `ADMIN_EMAIL`, `DESARROLLADOR_EMAIL`, `EMAIL_PEDIDOS`, `EMAIL_CITAS`, `EMAIL_COTIZACIONES`, `EMAIL_VENTAS` |
+| Negocio | `COSTO_INSTALACION`, `COSTO_ENVIO`, `LIMITE_DIA` (muebles por día), `MARGEN_HABILES` (días hábiles mínimos para la primera fecha de entrega) |
+| Datos del sitio | `SITE_PHONE`, `SITE_EMAIL`, `SITE_ADDRESS` |
 
-1. El admin/empleado ingresa su correo y contraseña en el modal de auth.
-2. El backend verifica el token Firebase en `api/auth.php?action=cliente-login`.
-3. Si `totp_activo = 1`: la respuesta incluye `"2fa_required": true` → `modal-auth.js` muestra un overlay de verificación TOTP antes de redirigir.
-4. Si `totp_activo = 0` (primer acceso): la respuesta incluye `"2fa_setup": true` → redirige al panel con `?setup_2fa=1`.
-
-### Configuración inicial de 2FA (primer acceso)
-
-Al entrar al panel con `?setup_2fa=1`, se abre automáticamente la sección **Seguridad**, que muestra:
-
-- Un código QR generado por `api.qrserver.com` a partir del `otpauth://` URI del secreto TOTP.
-- El secreto en texto (para ingreso manual en Google Authenticator, Authy, etc.).
-- Campo para ingresar el primer código de 6 dígitos y confirmar el setup.
-
-El endpoint `GET /api/auth.php?action=2fa-setup` genera el secreto y retorna el `qr_url`. El endpoint `POST /api/auth.php?action=2fa-check` verifica el código ingresado y activa el 2FA.
-
-### Campos en BD (`usuarios_personal`)
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `totp_secreto` | `VARCHAR(64) NULL` | Secreto Base32 del TOTP (solo se almacena al activar) |
-| `totp_activo` | `TINYINT(1) DEFAULT 0` | 1 = 2FA activo y requerido en cada login |
-| `sesiones_revocadas_desde` | `TIMESTAMP NULL` | Revocar todas las sesiones anteriores a esta fecha |
+`FIREBASE_SERVICE_ACCOUNT_FILE` es la **ruta** al JSON de la cuenta de servicio de Firebase, que debe estar **fuera de la carpeta web y de git**. En producción: `/etc/woodenhouse/firebase-service-account.json`.
 
 ---
 
-## Sistema de invitaciones de personal (2026-06-18)
+## Firebase
 
-El flujo anterior de creación de empleados tenía dos problemas graves: el admin conocía la contraseña del empleado, y llamar a `createUserWithEmailAndPassword()` desde el panel del admin cerraba la sesión del admin en Firebase. Fue reemplazado por un sistema de invitaciones.
+Proyecto: `woodenhouse-898de`.
 
-### Flujo
-
-1. El admin abre "Invitar Empleado" en su panel, ingresa nombre, correo y rol.
-2. `POST /api/invitaciones.php?action=crear` genera un token de 64 caracteres, lo guarda en `invitaciones_personal` con 48 h de expiración y envía el correo de invitación al empleado.
-3. El empleado recibe el correo con el enlace `https://dominio.com/invitacion.php?token=xxx`.
-4. En `invitacion.php`, el empleado ve su nombre y correo pre-cargados (solo lectura) y crea su propia contraseña.
-5. `POST /api/invitaciones.php?action=activar` crea la cuenta en Firebase Auth, registra al empleado en `usuarios_personal` y marca la invitación como usada.
-6. Al entrar al panel por primera vez, `?setup_2fa=1` fuerza la configuración del autenticador TOTP.
-
-### Seguridad del flujo
-
-- El admin **nunca conoce ni toca** la contraseña del empleado.
-- El token de invitación es de un solo uso — se invalida al activar.
-- Tokens expirados o ya usados devuelven error 404.
-- Si el backend falla después de crear la cuenta Firebase, el JS hace `cred.user.delete()` para evitar inconsistencias.
-
----
-
-## Flujo de producción de cotizaciones (2026-06-18)
-
-Las cotizaciones tienen un ciclo de vida completo de 8 estados que cubre desde la solicitud del cliente hasta la entrega física del mueble.
-
-### Estados y transiciones
-
-```
-nueva → en_revision → respondida → aceptada → en_produccion → lista → entregada
-                                  ↘                                   ↗
-                                   cancelada (desde cualquier estado)
-```
-
-| Estado | Descripción | Correo disparado |
-|--------|-------------|-----------------|
-| `nueva` | El cliente envió la solicitud | Admin notificado en panel |
-| `en_revision` | El admin está analizando la solicitud | — |
-| `respondida` | El admin envió precio y propuesta al cliente | Cliente recibe precio, descripción y fecha estimada |
-| `aceptada` | El cliente aceptó la propuesta | — |
-| `en_produccion` | Se inicia la fabricación | Cliente recibe enlace de seguimiento; empleados reciben orden de fabricación |
-| `lista` | El mueble está terminado | Cliente notificado para coordinar entrega |
-| `entregada` | Entregado al cliente | Confirmación de entrega al cliente |
-| `cancelada` | Cancelada en cualquier punto | — |
-
-### Campos añadidos a `cotizaciones`
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `precio_cotizado` | `DECIMAL(10,2) NULL` | Precio que el admin establece al responder |
-| `descripcion_respuesta` | `TEXT NULL` | Descripción formal de qué se fabricará |
-| `fecha_entrega_estimada` | `DATE NULL` | Fecha comprometida de entrega |
-| `token_seguimiento` | `VARCHAR(64) NULL UNIQUE` | Se asigna al pasar a `en_produccion`; permite seguimiento público |
-
-### Validaciones al cambiar a `respondida`
-
-`api/cotizaciones.php` requiere, antes de marcar como `respondida`:
-- `precio_cotizado > 0`
-- `strlen(descripcion_respuesta) >= 10`
-
-Si no se cumplen, devuelve `422` con mensaje de error descriptivo.
-
----
-
-## Sistema de disponibilidad de fechas
-
-El carrito consulta disponibilidad real antes de mostrar semanas de entrega:
-
-- `GET /api/disponibilidad.php` — devuelve semanas disponibles según capacidad y pedidos existentes
-- `GET|POST|PUT|DELETE /api/capacidad.php` — gestión de slots por semana (solo admin)
-- La tabla `capacidad_produccion` define cuántos pedidos caben por semana
-- La tabla `dias_bloqueados` contiene festivos y cierres (Semana Santa, etc.)
-- Si la API falla, el checkout calcula 8 semanas estimadas como fallback
-
----
-
-## Auto-actualización en tiempo real (Paneles)
-
-Tanto el panel de administrador como el de empleado se actualizan **automáticamente cada 30 segundos** sin necesidad de recargar la página:
-
-- La función `_autoRefreshAdmin()` / `_autoRefresh()` detecta la sección visible y recarga solo esos datos
-- El polling se **pausa** automáticamente cuando la pestaña no está activa (visibilitychange)
-- Al **volver a la pestaña** se dispara una actualización inmediata y se reinicia el ciclo
-- El intervalo se **cancela en logout** para no dejar procesos huérfanos
-
-| Sección | Función que se refresca |
-|---------|------------------------|
-| Dashboard | `refreshKPIsFromAPI()` |
-| Pedidos | `cargarPedidosAPI()` |
-| Catálogo | `cargarProductosAPI()` + `renderCatalogo()` |
-| Empleados | `cargarEmpleadosAPI()` |
-| Reportes | `cargarReportesAPI()` |
-| Citas | `renderCalendar()` |
-| Cotizaciones | `cargarCotizacionesAPI()` |
-
----
-
-## Configuración inicial
-
-### 1. Variables de entorno
-
-Copiar `.env.example` a `.env` y completar:
-
-```env
-# Base de datos
-DB_HOST=localhost
-DB_NAME=wooden_house
-DB_USER=tu_usuario
-DB_PASS=tu_contraseña
-
-# Firebase (backend PHP)
-FIREBASE_PROJECT_ID=woodenhouse-898de
-FIREBASE_API_KEY=...
-FIREBASE_AUTH_DOMAIN=woodenhouse-898de.firebaseapp.com
-FIREBASE_STORAGE_BUCKET=woodenhouse-898de.firebasestorage.app
-
-# Stripe
-STRIPE_SECRET_KEY=sk_live_...
-STRIPE_PUBLISHABLE_KEY=pk_live_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-
-# PayPal
-PAYPAL_CLIENT_ID=...
-PAYPAL_CLIENT_SECRET=...
-PAYPAL_WEBHOOK_ID=...          # Registrar endpoint en developer.paypal.com primero
-PAYPAL_MODE=sandbox            # Cambiar a 'live' en producción
-
-# Email SMTP (Brevo, Gmail, etc.)
-SMTP_HOST=smtp-relay.brevo.com
-SMTP_PORT=587
-SMTP_USER=tu@correo.com
-SMTP_PASS=tu_smtp_password
-EMAIL_FROM=noreply@woodenhouse.com.mx
-EMAIL_FROM_NAME=Wooden House
-ADMIN_EMAIL=contacto@woodenhouse.com.mx
-
-# URL base del sitio (usada en enlaces de correos de invitación, etc.)
-APP_URL=https://woodenhouse.com.mx
-```
-
-### 2. Firebase — Consola web
-
-1. Crear proyecto en [Firebase Console](https://console.firebase.google.com)
-2. Habilitar **Authentication** → Correo/contraseña
-   - Al registrarse, el sistema envía automáticamente un correo de verificación vía `sendEmailVerification()`
-3. Habilitar **Firestore** → Modo producción → desplegar `firebase/firestore.rules`
-4. Habilitar **Storage** → desplegar `firebase/storage.rules`
-5. Actualizar `public/assets/js/firebase-config.js` con las credenciales del proyecto
+- **Auth:** correo/contraseña para el personal y los clientes. Al iniciar sesión, el servidor marca al personal con el claim `staff: true` (`firebaseMarcarPersonal()`). Storage usa ese claim para permitir subidas.
+- **Firestore:** reglas **cerradas**; solo el servidor escribe, con la cuenta de servicio. La colección `notificaciones` funciona como cola: PHP escribe un documento y la Cloud Function manda el correo y/o el push.
+- **Storage:** solo el personal sube archivos, cada tipo en su carpeta, con su formato y su tamaño máximo:
+  - `productos/`: fotos del catálogo (5 MB).
+  - `pedidos/<carpeta>/adjuntos` y `modelos`: fotos y notas de voz (15 MB).
+  - `proyectos/pedidos/<id>/`: `.skp` (60 MB), cortes `.nc`/`.tap`/`.dxf` (25 MB) e imágenes.
+  - `cotizaciones/…`: fotos del cliente (5 MB), propuesta (10 MB) y PDF (8 MB).
+- **Functions** (`firebase/functions/index.js`):
+  - `onNuevaNotificacion` envía los correos con Brevo y los push con FCM;
+  - `limpiarNotificacionesAntiguas` corre cada día.
 
 ```bash
-# Desplegar solo las reglas de seguridad (sin funciones ni hosting)
 cd firebase
-firebase deploy --only firestore:rules,storage
+firebase deploy --only "firestore:rules,storage"   # reglas
+firebase deploy --only "functions"                  # funciones
 ```
 
-### 3. Firebase Cloud Functions
-
-```bash
-npm install -g firebase-tools
-cd firebase
-firebase login
-firebase use woodenhouse-898de
-
-# Instalar dependencias de las Functions
-cd functions && npm install && cd ..
-
-# Configurar variables de entorno de las Functions
-firebase functions:config:set \
-  brevo.api_key="tu_brevo_api_key" \
-  email.from="noreply@woodenhouse.com.mx" \
-  email.from_name="Wooden House" \
-  email.admin="contacto@woodenhouse.com.mx"
-
-# Desplegar todas las functions
-firebase deploy --only functions
-```
-
-> Las Cloud Functions escuchan triggers en la colección `notificaciones` de Firestore. El backend PHP escribe en Firestore; las Functions leen el documento y envían el correo vía Brevo API.
-
-### 4. PayPal Webhook
-
-1. Ir a [developer.paypal.com](https://developer.paypal.com) → My Apps & Credentials → tu app → **Webhooks**
-2. Agregar URL: `https://tudominio.com/api/pagos.php?action=paypal_webhook`
-3. Seleccionar eventos: `PAYMENT.CAPTURE.COMPLETED`, `PAYMENT.CAPTURE.DENIED`, `PAYMENT.CAPTURE.REFUNDED`, `CHECKOUT.ORDER.VOIDED`
-4. Copiar el **Webhook ID** generado al `.env` como `PAYPAL_WEBHOOK_ID`
-
-### 5. Stripe Webhook
-
-1. Ir a [dashboard.stripe.com](https://dashboard.stripe.com) → Developers → Webhooks
-2. Agregar URL: `https://tudominio.com/api/pagos.php?action=stripe_webhook`
-3. Seleccionar eventos: `payment_intent.succeeded`, `payment_intent.payment_failed`, `charge.refunded`
-4. Copiar el **Signing Secret** al `.env` como `STRIPE_WEBHOOK_SECRET`
-
-### 6. Servidor Apache
-
-```apache
-# En httpd.conf o el VirtualHost — apuntar DocumentRoot a /public
-<VirtualHost *:443>
-    DocumentRoot "/ruta/al/proyecto/Wooden House/public"
-    ServerName woodenhouse.com.mx
-
-    <Directory "/ruta/al/proyecto/Wooden House/public">
-        AllowOverride All
-        Require all granted
-    </Directory>
-</VirtualHost>
-```
-
-```bash
-# Habilitar módulos necesarios
-a2enmod rewrite headers expires deflate
-service apache2 restart
-```
+> En PowerShell, la lista separada por comas **debe ir entre comillas**. Sin ellas, solo se despliega lo primero de la lista.
 
 ---
 
-## Notificaciones por correo — empleados
+## Servidor de producción y despliegue
 
-Los empleados activos (rol `empleado`) reciben copia (CC) de los correos de:
+- **Servidor:** Ubuntu + Apache, `DocumentRoot /var/www/html/public`, con un `Alias /api` hacia `/var/www/html/api`. El sitio por defecto de Apache (`000-default`) está deshabilitado.
+- **Cloudflare** (proxy) termina el HTTPS. El firewall (`ufw`) solo acepta los puertos 80 y 443 desde los rangos de IP de Cloudflare.
+- **Caché:** `av()` versiona cada JS y CSS por el **contenido** del archivo, así que al subir un archivo cambiado el navegador baja la versión nueva aunque el programa de subida conserve la fecha. Si algo se ve viejo, purga una vez la caché de Cloudflare.
 
-- **Nuevo pedido** — para estar al tanto del trabajo pendiente de producción.
-- **Nueva cita** — para preparar las visitas de medición e instalación.
-- **Cotización en producción** — cuando el admin aprueba una cotización e inicia fabricación (orden de trabajo).
+### Orden al subir una actualización
 
-La función `_obtenerCorreosEmpleados()` en `includes/notifications.php` consulta en tiempo real a todos los empleados activos y devuelve sus correos separados por coma. Si no hay empleados, el campo se omite sin afectar el correo al cliente.
+1. Si hay cambios de base de datos, corre primero la migración (`database/migracion_….sql`).
+2. Sube los archivos (`api/`, `includes/`, `public/`). Nunca subas `.env`, `.git/`, `node_modules/`, `DIAGRAMAS/` ni `RECURSOS/`.
+3. Si cambiaron las reglas o las funciones de Firebase, despliégalas.
+4. Prueba con un pedido de prueba el flujo que cambió.
 
----
+### Webhooks de pago
 
-## Correcciones de bugs (2026-06-18)
-
-### QR de 2FA — "QRCode is not defined"
-
-**Causa:** La librería `qrcode@1.5.4` cargada desde CDN no siempre expone `QRCode` como global en todos los navegadores.
-
-**Corrección:** Eliminada la dependencia de la librería. El QR ahora se genera como una `<img>` con `src` apuntando a `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=...`. Cero dependencias JS, funciona en todos los navegadores.
-
----
-
-## Seguridad y mejoras de producción (2026-06-07)
-
-### CSP sin `unsafe-inline` en `script-src`
-
-El CSP en `public/.htaccess` ya **no tiene `'unsafe-inline'` en `script-src`**. Toda ejecución de scripts inline está bloqueada por política. Las consecuencias que se resolvieron:
-
-- **`modal-auth.js`:** todos los `onclick`/`onsubmit` del HTML del modal reemplazados con `addEventListener` en `_initCamposModal()`.
-- **`catalogo.js`:** filtros de categoría usan `data-cat-filter`, paginación usa `data-call + data-args`, botones de carrito se enlazan con `addEventListener` post-render; `onerror` en imágenes reemplazado por `data-img-fallback`.
-- **`detalle_producto.js`:** thumbnails sin `onclick` — manejados por `event-delegation.js` via `.thumb[data-idx]`.
-
-> **Regla para código nuevo:** No usar `onclick=`, `onsubmit=`, `onerror=` ni ningún handler inline. Usar `data-call`, `data-cat-filter`, `data-dismiss`, `data-auth-action`, o `addEventListener` desde JS externo.
-
-### HTTPS redirect — corrección de ERR_TOO_MANY_REDIRECTS
-
-El servidor usa un proxy/CDN (Cloudflare/Nginx) que termina SSL antes de Apache. La redirección HTTPS anterior causaba un loop infinito porque Apache siempre veía `HTTPS=off`.
-
-**Corrección (`.htaccess` raíz y `public/.htaccess`):**
-```apache
-RewriteCond %{HTTPS} off
-RewriteCond %{HTTP:X-Forwarded-Proto} !=https
-RewriteCond %{HTTP_HOST} !^localhost$ [NC]
-RewriteCond %{HTTP_HOST} !^127\.0\.0\.1$
-RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
-```
-
-### Rate limits más estrictos
-
-`api/auth.php`:
-- Login de personal: 5 intentos / 15 min
-- Login de clientes: 5 intentos / 15 min
-- Registro de clientes: 3 intentos / 15 min
-
-### Validación de URLs de imágenes (productos)
-
-`api/productos.php` — función `validarUrlImagen()` que verifica:
-- Esquema `https` obligatorio
-- Host en lista blanca: `firebasestorage.googleapis.com`, `storage.googleapis.com`, `*.firebasestorage.app`
-- Máximo 2 048 caracteres
-
-### Firebase Storage rules — lista explícita de MIME
-
-`firebase/storage.rules` — lista explícita en lugar de `image/.*` (que permitía SVG como vector XSS):
-```
-['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-```
-
-### Firebase Firestore rules — validación de campos
-
-`firebase/firestore.rules` — el `allow create` valida estructura, tipos y longitudes:
-- `titulo`: string, máximo 200 caracteres
-- `mensaje`: string, máximo 1 000 caracteres
+- **Stripe:** `https://<dominio>/api/pagos.php?action=stripe_webhook`
+  - eventos: `payment_intent.succeeded`, `payment_intent.payment_failed`, `charge.refunded`
+  - el signing secret va en `STRIPE_WEBHOOK_SECRET`
+- **PayPal:** `https://<dominio>/api/pagos.php?action=paypal_webhook`
+  - eventos: `PAYMENT.CAPTURE.COMPLETED`, `PAYMENT.CAPTURE.DENIED`, `PAYMENT.CAPTURE.REFUNDED`, `CHECKOUT.ORDER.VOIDED`
+  - el ID del webhook va en `PAYPAL_WEBHOOK_ID`
 
 ---
 
-## Mejoras visuales y UX (2026-06-07)
+## Notificaciones
 
-### Sistema de animaciones global (`animations.css` + `animations.js`)
+| Canal | Para quién | Cómo |
+|-------|-----------|------|
+| **Campanita del panel** | Cada persona ve **solo las suyas** (por rol, por área del empleado o dirigidas a ella) | `notificarPanel()` → tabla `notificaciones_personal`, en tiempo real por SSE |
+| **Push** | jefe, ventas, diseñador y empleados (**nunca** el administrador) | FCM; el dispositivo queda ligado a la cuenta que tiene la sesión abierta y se da de baja al cerrar sesión |
+| **Correo** | Cliente: confirmaciones y cambios de estado. Jefe y ventas: copia completa. Diseño, taller e instalación: aviso corto | Firestore → Cloud Function → Brevo |
 
-- **Scroll-reveal:** clases `.wh-reveal`, `.wh-reveal-left`, `.wh-reveal-right`, `.wh-reveal-zoom` activadas por `IntersectionObserver` con umbral 0.12.
-- **Hover lift:** `.wh-lift` (8 px) y `.wh-lift-sm` (4 px) aplicados automáticamente a tarjetas y botones.
-- **Ripple:** `.wh-btn-ripple` en botones de acción.
-- **Skeleton loading:** `.wh-skeleton` para estados de carga.
-- Respeta `prefers-reduced-motion`.
-
-### Lightbox de imágenes
-
-Al hacer clic en cualquier imagen con `data-lightbox`:
-- Se abre un overlay oscuro con la imagen en tamaño completo.
-- **Scroll para zoom** (0.5× a 4×) sobre la imagen.
-- Cierre con clic fuera, botón × o tecla Escape.
-- Lógica en `event-delegation.js`, CSS en `animations.css`.
-
-### Solicitudes — diferenciación cotización vs cita
-
-`public/solicitudes.php`: tres tarjetas de decisión al inicio:
-- Dorada: "Ya sé lo que quiero → Cotización"
-- Azul: "Necesito asesoría presencial → Visita a domicilio"
-- Verde: "Ya envié una solicitud → Seguimiento"
-
-### Status badges de alta visibilidad
-
-Reemplazado el patrón `background: ${color}30` (invisible sobre fondos oscuros) por clases CSS con fondos sólidos:
-
-| Clase | Uso |
-|-------|-----|
-| `.status-pending` | Pendiente |
-| `.status-progress` | Pagado / En proceso |
-| `.status-producing` | En producción |
-| `.status-ready` | Listo |
-| `.status-completed` | Completado / Entregado |
-| `.status-cancelled` | Cancelado |
-| `.status-new` | Nueva |
-| `.status-replied` | Respondida |
+Algunos avisos:
+- pedido nuevo;
+- pedido listo para producción, listo para entregar o modificado;
+- cotización nueva o confirmada;
+- cita nueva.
 
 ---
 
-## Limpieza de código (2026-05-15)
+## Seguridad
 
-Eliminados comentarios redundantes (WHAT) de todos los archivos del proyecto — JS, PHP, API y plantillas HTML. Se conservaron únicamente separadores de sección, restricciones de seguridad no obvias, invariantes de concurrencia y comportamientos contraintuitivos de Firebase/navegador.
-
----
-
-## Correcciones de bugs críticos (v9 — 2026-05-14)
-
-### Bug 1 — Sesión del cliente se cerraba al navegar
-
-**Corrección (`includes/config.php`):** `SESSION_IDLE_TIMEOUT` cambiado de 120 s a 900 s (15 minutos).
-
-### Bug 2 — Correo de confirmación de pedido se enviaba dos veces
-
-**Corrección (`api/pagos.php`):** `UPDATE ... WHERE notificacion_enviada = 0` atómico. Solo el proceso que modifica 1 fila envía el correo.
-
-### Bug 3 — Datos del checkout correspondían a un cliente anterior
-
-**Corrección (`public/assets/js/checkout.js`):** Los campos de identidad siempre se sobreescriben con los datos del cliente autenticado.
-
-### Bugs 4–6 — Contaminación de sesiones entre cliente y empleado
-
-**Corrección (`includes/auth.php`):**
-- Claves de sesión separadas: `_usuario_login_time` y `_cliente_login_time`.
-- Funciones `_destruirSesionCliente()` y `_destruirSesionPersonal()` independientes.
-
-### Bug 7 — Validación de teléfono en "Mi cuenta" bloqueaba guardado
-
-**Corrección (`public/assets/js/mi-cuenta.js`):** Condición reescrita con precedencia correcta de operadores.
+- **CSP con nonce** (`includes/csp.php`): ningún script inline se ejecuta sin el `nonce` de la petición. Solo `pago.php` conserva `'unsafe-inline'`, por los SDK de pago.
+- **Sesiones:** inactividad de 15 min y límite absoluto. Con `sesiones_revocadas_desde` se cierran todas las sesiones de una cuenta.
+- **CSRF:** cookie `XSRF-TOKEN` más la cabecera `X-CSRF-Token` en todo `POST`/`PUT`/`DELETE`.
+- **Límites de peticiones** en el login, la creación y edición de pedidos, las descargas y los formularios públicos (con campo trampa contra bots).
+- **Privacidad del folio:** la búsqueda pública por folio no muestra nombre ni montos.
+- **Montos ocultos** en la API para los roles que no deben verlos (no basta con no pintarlos).
+- **URLs de archivos:** solo se aceptan las de Firebase Storage del proyecto. La descarga de entregables solo baja del bucket propio, para que el servidor no sirva de puente hacia cualquier sitio.
+- **Archivos sensibles bloqueados por Apache:** `.env`, `.sql`, `.log`, `firebase-adminsdk*.json`, copias `~`/`.swp`, y las carpetas `includes/`, `database/`, `logs/` y `firebase/`.
+- La cuenta de servicio de Firebase vive fuera de la carpeta web.
 
 ---
 
-## Mejoras de UX y exportación real (v8 — 2026-04-23)
+## Reglas para código nuevo
 
-- `exportReportXLSX()` genera un archivo `.xlsx` real con 4 hojas vía SheetJS 0.20.3.
-- Logo envuelto en `<a href="/inicio">` en todas las páginas.
-- Botón flotante "¿Cómo comprar?" con modal de 4 pasos.
-- "Solicitudes" → **"Cotización y Citas"** con subtítulo más descriptivo.
-
----
-
-## Correcciones y mejoras (v5 — 2026-03-17)
-
-- Sincronización de datos de contacto al perfil del cliente al completar pedido/cotización/cita.
-- `credentials: 'same-origin'` agregado a los fetch de POST en `solicitudes.js`.
-- Badge "Cliente registrado" en paneles si el registro tiene `cliente_id`.
-- Campos `metodo_pago`, `referencia_pago` y `fecha_pago` asignados antes de llamar `notificarNuevoPedido` en PayPal.
+1. **Sin JavaScript inline:**
+   - nada de `onclick=`, `onchange=` u `onerror=`;
+   - usa `data-call="funcion"` con `data-args='[…]'` (o `data-onchange` / `data-oninput`), que maneja `event-delegation.js`;
+   - un `<script>` inline lleva `nonce="<?= cspNonce() ?>"`.
+2. **Recursos versionados:** incluye JS y CSS con `av('js/archivo.js')` para que la caché se renueve sola.
+3. **Montos:** antes de mostrar o devolver cifras, revisa `puedeVerMontos()` / `window.WH_VE_MONTOS`.
+4. **Responsivo:** todo el sitio y los 4 paneles deben funcionar en celular. Prueba cada cambio a 390 px de ancho.
+5. **Iconos** con Lucide: `<i data-lucide="nombre"></i>` y después `lucide.createIcons()`.
+6. **Secciones plegables** con `<details class="wh-collapse">` (o `wh-subcollapse`): la pastilla "Mostrar ⌄ / Ocultar ⌃" sale sola.
+7. **Textos guardados con `sanitize()`** (htmlspecialchars): al ponerlos en un `<input>` hay que decodificarlos (ver `_pmTexto()` en `pedido-manual.js`).
+8. **Cambios de base de datos:** escribe una migración y actualiza `schema.sql` (ver [Base de datos](#base-de-datos)).
 
 ---
 
-## Seguridad y correcciones críticas (v7 — 2026-03-27)
+## API
 
-- Guardas de acceso server-side en `pago.php` y `solicitudes.php`.
-- `SESSION_IDLE_TIMEOUT = 900` + timeout absoluto de 2 horas.
-- Cookie de sesión con `lifetime = 0` — eliminada al cerrar el navegador.
-- Verificación de correo requerida para agregar al carrito.
-- Usuario de BD con permisos mínimos (`SELECT/INSERT/UPDATE/DELETE` únicamente).
+Todas las respuestas son JSON: `{ success: true, … }` o `{ success: false, error }`.
 
----
+| Endpoint | Acceso | Para qué |
+|----------|--------|----------|
+| `pedidos.php` | Público (checkout, folio) / personal | Listar, ver, cambiar estado y fecha. Acciones: `crear_manual`, `editar_manual`, `agregar_adjunto`, `descargar_diseno` |
+| `pagos.php` | Público / webhooks / jefe y ventas | Stripe, PayPal y pagos manuales |
+| `productos.php`, `categorias.php` | Público (GET) / gestión | Catálogo, fotos, especificaciones y precio por ancho |
+| `cotizaciones.php`, `cotizador_catalogo.php` | Público (POST) / gestión | Solicitudes, respuesta con partidas y PDF, conversión a pedido |
+| `citas.php`, `calendario.php` | Público (POST) / personal | Citas de medición e instalación |
+| `disponibilidad.php`, `capacidad.php`, `dias_bloqueados.php` | Público (GET) / gestión | Fechas de entrega posibles |
+| `clientes.php` | Cliente / gestión | Perfil e historial |
+| `empleados.php`, `invitaciones.php` | Gestión / público (activar) | Personal e invitaciones |
+| `notificaciones.php`, `eventos.php`, `push_tokens.php` | Personal | Campanita, tiempo real (SSE) y push |
+| `reportes.php` | Jefe | Ventas, pedidos, productos y clientes |
+| `ofertas.php` | Público (activas) / gestión | Cupones y promociones |
+| `auth.php` | — | Login con token de Firebase (personal y clientes) |
 
-## Correcciones de responsivo y UX móvil (v6 — 2026-03-27)
-
-- Catálogo: grid de `auto-fill 260px` → `repeat(2,1fr)` → `1fr` según ancho de pantalla.
-- Barra de navegación móvil con `position: fixed !important` y capa de composición propia.
-
----
-
-## Correcciones de bugs aplicadas (v3 — 2026-03-12)
-
-- Login empleado: 404 en primer intento por cookie sin atributo `domain` en localhost.
-- Extraído CSS de `terminos.php` a `terminos.css`; script de auth de `carrito-checkout.php` movido a `checkout.js`.
-
----
-
-## Correcciones de Seguridad (v2)
-
-- Verificación de tipo MIME y magic bytes antes de subir imágenes.
-- Sanitización completa de campos en `solicitudes.js`.
-- `_destruirSesion()` elimina cookie `XSRF-TOKEN` y regenera el ID de sesión.
-- Campo honeypot anti-bot en formularios de cotización y cita.
-
----
-
-## Seguridad — .htaccess
-
-### `/public/.htaccess` — Content Security Policy
-
-`script-src` sin `'unsafe-inline'`. Todos los handlers inline han sido eliminados del código JS.
-
-| Directiva | Dominios clave permitidos |
-|-----------|--------------------------|
-| `script-src` | gstatic.com, firebaseapp.com, stripe.com, paypal.com, jsdelivr.net, cdnjs |
-| `style-src` | `'unsafe-inline'`, fonts.googleapis.com, cdnjs |
-| `connect-src` | *.firebaseio.com, **wss://*.firebaseio.com**, firestore.googleapis.com, www.googleapis.com, identitytoolkit.googleapis.com, securetoken.googleapis.com, accounts.google.com, api.stripe.com, api-m.paypal.com, api.qrserver.com |
-| `frame-src` | js.stripe.com, paypal.com, woodenhouse-898de.firebaseapp.com, accounts.google.com |
-| `img-src` | firebasestorage.googleapis.com, paypalobjects.com, api.qrserver.com, blob:, data: |
-| `worker-src` | 'self' blob: |
-
-> **`wss://*.firebaseio.com`** es crítico para que Firestore Realtime funcione (WebSocket).
-> **`api.qrserver.com`** debe estar en `connect-src` e `img-src` para que el QR del 2FA cargue correctamente.
-
----
-
-## Funcionalidades implementadas
-
-### Frontend público
-- Página de inicio: hero, 3 razones, 4 pasos del proceso, proyectos y FAQ
-- Catálogo con filtro por categoría, búsqueda en tiempo real, ordenamiento y lightbox de zoom en imágenes
-- Detalle de producto con galería, especificaciones en tabs, selector de cantidad y zoom de imagen principal
-- Carrito con selector de semanas de entrega basado en disponibilidad real de la API
-- Proceso de pago: Stripe Elements (tarjeta) + PayPal Smart Buttons
-- Seguimiento de pedidos/cotizaciones/citas por token sin necesidad de login
-- Formularios de cotización y cita diferenciados con tarjetas de decisión guía
-
-### Sistema de cuentas de cliente
-- Registro e inicio de sesión con Firebase Auth (modular SDK v10, dynamic import)
-- Verificación de correo con polling automático; banner persistente hasta confirmar
-- Modal de autenticación contextual con event listeners (100% CSP-compatible)
-- Portal "Mi Cuenta": historial de pedidos, perfil editable, estadísticas
-- Vinculación automática de pedidos/cotizaciones/citas a la cuenta
-
-### Panel Administrador *(auto-polling 30s)*
-- Dashboard con KPIs, gráficas de ventas/estados y 8 acciones rápidas
-- Gestión completa de pedidos, cotizaciones (flujo 8 estados) y citas
-- Gestión de cotizaciones de producción: precio, descripción, fecha estimada, token de seguimiento
-- Gestión de productos (CRUD + galería Firebase Storage + especificaciones)
-- **Invitar empleados** — el admin genera una invitación por correo; el empleado crea su propia contraseña
-- Reportes avanzados exportables a `.xlsx` real (SheetJS) y PDF
-- Clientes registrados: historial, total gastado, pedidos y cotizaciones
-- **Ofertas & Marketing:** CRUD de descuentos y cupones con vigencia y usos máximos
-- **2FA Setup:** sección de seguridad con QR TOTP y verificación de código
-
-### Panel Empleado *(auto-polling 30s)*
-- Vista de pedidos con timeline de 4 etapas
-- Citas y cotizaciones con cambio de estado inline
-- Calendario interactivo sincronizado con la API
-- Notificaciones en tiempo real desde Firestore
-- **2FA Setup:** sección de seguridad con QR TOTP y verificación de código
-
-### Sistema de notificaciones y correos
-- Escritura en Firestore al crear pedidos/cotizaciones/citas y en cada transición de estado
-- Listener en tiempo real en los paneles (sin recarga)
-- Cloud Functions en Firestore: 10 handlers de correo + 1 función scheduled de limpieza
-- Empleados reciben CC en correos de nuevos pedidos y nuevas citas
-- Empleados reciben orden de fabricación cuando una cotización entra a producción
-- Correo de invitación con enlace de activación único para nuevos empleados
-
-### Seguridad
-- **2FA TOTP (RFC 6238)** obligatorio para todo el personal (admin y empleado)
-- Sistema de invitaciones: el admin nunca conoce la contraseña del empleado
-- `script-src` sin `'unsafe-inline'` — toda ejecución inline bloqueada por CSP
-- HTTPS forzado con detección de proxy/CDN (`X-Forwarded-Proto`)
-- Rate limiting: 3–5 intentos por 15 min en autenticación
-- Tokens JWT de Firebase verificados en cada llamada a la API PHP
-- Headers de seguridad HTTP completos (CSP, HSTS, X-Frame-Options, etc.)
-- Firestore Rules con validación de estructura, tipos y longitudes
-- Storage Rules con lista explícita de MIME types (sin SVG)
-- Validación de URLs de imágenes: solo HTTPS + hosts de Firebase Storage en lista blanca
-- Validación de imágenes por magic bytes en el panel administrador
-- Sanitización completa de campos en JS y PHP
-- Campo honeypot anti-bot en formularios públicos
-- Session timeout absoluto (2h) y por inactividad (15 min)
-- `sesiones_revocadas_desde` para invalidar sesiones antiguas de personal y clientes
-- Usuario de BD con permisos mínimos (SELECT/INSERT/UPDATE/DELETE únicamente)
-
----
-
-## Módulos de la API
-
-| Endpoint | Métodos | Acceso | Descripción |
-|----------|---------|--------|-------------|
-| `/api/productos.php` | GET POST PUT DELETE | público (GET) / admin | CRUD productos + imágenes |
-| `/api/categorias.php` | GET POST PUT DELETE | público (GET) / admin | CRUD categorías |
-| `/api/pedidos.php` | GET POST PUT | público (POST) / empleado+ | Crear y gestionar pedidos |
-| `/api/disponibilidad.php` | GET | público | Semanas disponibles |
-| `/api/capacidad.php` | GET POST PUT DELETE | admin | Slots de producción |
-| `/api/cotizaciones.php` | GET POST PUT | público (POST) / admin | Cotizaciones — flujo 8 estados |
-| `/api/citas.php` | GET POST PUT DELETE | público (POST) / empleado+ | Citas |
-| `/api/invitaciones.php` | GET POST | admin (crear) / público (validar + activar) | Invitaciones de personal |
-| `/api/pagos.php` | POST | público / webhook | Stripe + PayPal |
-| `/api/reportes.php` | GET | admin | Reportes y estadísticas |
-| `/api/notificaciones.php` | GET POST PUT | empleado+ | Notificaciones Firestore |
-| `/api/empleados.php` | GET PUT DELETE | admin | Gestión de personal |
-| `/api/calendario.php` | GET | empleado+ | Disponibilidad de citas |
-| `/api/auth.php` | POST GET | — | Verificación de tokens + 2FA setup/check |
-| `/api/clientes.php` | GET PUT | cliente / admin | Perfil y pedidos del cliente |
-| `/api/ofertas.php` | GET POST PUT DELETE | público (GET activas) / admin | Ofertas y cupones |
-
----
-
-## Migración a producción (Hostinger)
-
-### Archivos a subir
-
-```
-✅ SÍ subir:
-api/, includes/, public/, firebase/, database/schema.sql
-
-❌ NO subir:
-.env                  ← se crea manualmente en el servidor
-.git/                 ← no es necesario en producción
-node_modules/         ← se instala con npm install en el servidor
-```
-
-### Base de datos en Hostinger
-
-**Instalación limpia** (recomendado si no hay datos reales):
-```bash
-# En phpMyAdmin de Hostinger, importar:
-database/schema.sql
-```
-
-**Migrar datos existentes** desde el servidor actual:
-```bash
-docker exec wh_db mysqldump -u root -pwhrootbd1234 wooden_house > backup_completo.sql
-# Subir backup_completo.sql a phpMyAdmin de Hostinger e importar
-```
-
-### Activar Stripe en producción
-
-1. En [dashboard.stripe.com](https://dashboard.stripe.com) → Activar cuenta → completar datos fiscales.
-2. Obtener `pk_live_...` y `sk_live_...` en Developers → API Keys.
-3. Crear webhook con la URL de producción.
-4. Actualizar `.env` con las claves live.
-
-### Activar PayPal en producción
-
-1. En [developer.paypal.com](https://developer.paypal.com) → Live Apps → crear o usar la app live.
-2. Obtener `Client ID` y `Secret` del modo Live.
-3. Crear webhook con la URL de producción.
-4. Cambiar `PAYPAL_MODE=live` en `.env`.
-
----
-
-## Requisitos del servidor
-
-- **PHP** 8.0 o superior
-- **MySQL** 8.0+ o **MariaDB** 10.4+
-- **Apache** 2.4+ con módulos: `mod_rewrite`, `mod_headers`, `mod_expires`, `mod_deflate`
-- **Extensiones PHP**: `pdo`, `pdo_mysql`, `json`, `mbstring`, `curl`, `openssl`
-- **HTTPS** obligatorio en producción (requerido por Firebase Auth, Stripe y PayPal)
-
----
-
-## Notas de desarrollo
-
-- Los iconos usan **Font Awesome 6.5.1** vía CDN — sin emojis en el código
-- **Bootstrap 5.3.3** se carga solo el JS (sin CSS) para no sobreescribir el tema oscuro personalizado
-- El carrito persiste en `sessionStorage` con la clave `wh_carrito`
-- Los paneles de admin y empleado requieren sesión activa de Firebase Auth **y** 2FA verificado
-- Los clientes usan la misma Firebase Auth pero se almacenan en tabla `clientes`, no en `usuarios_personal`
-- Las sesiones PHP distinguen entre personal (`usuario_id`, `usuario_rol`) y clientes (`cliente_id`, `cliente_rol`)
-- `AuthModal.open(callback)` — abre el modal de auth desde cualquier página; `AuthModal.openRegistro()` lo abre en la pestaña de registro
-- `event-delegation.js` maneja todos los eventos del sitio via `data-*` attributes — incluir en toda página nueva
-- `animations.js` aplica automáticamente clases de reveal a tarjetas y botones via `IntersectionObserver`
-- Los logs del servidor se guardan en `logs/` (ignorado en `.gitignore`)
-- El `firebase/` completo está **fuera de `public/`** — no es accesible desde el navegador
-- El QR del 2FA se genera como imagen desde `api.qrserver.com` — requiere conexión a internet en el navegador del usuario
-- `api/cotizaciones.php` solo aceptable por admin en PUT (los empleados fabrican, no gestionan cotizaciones)
+El historial de cambios por versión está en el log de git (`git log`).

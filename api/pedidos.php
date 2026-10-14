@@ -32,6 +32,125 @@ function ocultarMontosPedido(array $p): array {
     return $p;
 }
 
+// Muebles de un pedido cargado a mano (crear_manual y editar_manual): del
+// catálogo o líneas a la medida (nombre libre + cantidad/unidad/precio) —
+// mismas columnas que usa el flujo del cliente (detalle_pedido), para que
+// taller/instalación vean siempre la misma tabla sin importar si el pedido
+// nació del carrito o se cargó a mano.
+function leerItemsPedidoManual($itemsRaw): array {
+    $storageHost = 'https://firebasestorage.googleapis.com/';
+    $items = [];
+    foreach ((is_array($itemsRaw) ? $itemsRaw : []) as $it) {
+        if (!is_array($it)) continue;
+        $nombreItem = sanitize(mb_substr((string)($it['nombre'] ?? ''), 0, 180));
+        $cantidad   = max(0, (float)($it['cantidad'] ?? 0));
+        if ($nombreItem === '' || $cantidad <= 0) continue;
+        $unidad = in_array($it['unidad'] ?? '', ['pza', 'ml', 'm2', 'juego'], true) ? $it['unidad'] : 'pza';
+        $precio = max(0, (float)($it['precio_unitario'] ?? 0));
+        // Si viene de un modelo del catálogo se liga producto_id (igual que en
+        // el sitio) para mostrar sus especificaciones reales. Se valida que exista.
+        $productoId = null;
+        if (!empty($it['producto_id'])) {
+            $pid = sanitizeInt($it['producto_id']);
+            if ($pid && dbRow("SELECT id FROM productos WHERE id = ?", [$pid])) $productoId = $pid;
+        }
+        // "Este modelo pero en otras medidas". Sin htmlspecialchars: las medidas
+        // llevan comillas de pulgadas (24") y los paneles ya escapan al pintar.
+        $medidas  = mb_substr(trim(strip_tags((string)($it['medidas_personalizadas'] ?? ''))), 0, 1000);
+        $ancho    = sanitizeInt($it['ancho_cm'] ?? 0);
+        $cubierta = in_array($it['cubierta'] ?? '', ['mdf', 'cuarzo', 'granito', 'marmol'], true) ? $it['cubierta'] : null;
+        $color    = mb_substr(trim(strip_tags((string)($it['color'] ?? ''))), 0, 80);
+        $info     = mb_substr(trim(strip_tags((string)($it['info_extra'] ?? ''))), 0, 2000);
+        // Fotos del modelo que trae el cliente (fuera de catálogo): varias, solo
+        // de Firebase Storage del proyecto. La primera va también en
+        // imagen_referencia (correos y vistas que solo muestran una).
+        $fotos = is_array($it['imagenes_referencia'] ?? null) ? $it['imagenes_referencia'] : [];
+        if (!$fotos && !empty($it['imagen_referencia'])) $fotos = [$it['imagen_referencia']];
+        $fotos = array_values(array_unique(array_filter(array_map(fn($u) => trim((string)$u), $fotos),
+            fn($u) => $u !== '' && strlen($u) <= 500 && strpos($u, $storageHost) === 0)));
+        if (count($fotos) > 10) jsonError("Máximo 10 fotos por modelo ({$nombreItem})", 422);
+        // 'NO_LLEVA' = el cliente no quiere ovalín/monomando (distinto de "por
+        // definir"). Al editar llega 'No lleva', tal como quedó guardado.
+        $ovalinIt    = in_array($it['ovalin'] ?? '', ['NO_LLEVA', 'No lleva'], true) ? 'No lleva'
+            : (is_string($it['ovalin'] ?? null) && whOvalinValido($it['ovalin']) ? $it['ovalin'] : null);
+        $monomandoIt = in_array($it['monomando'] ?? '', ['NO_LLEVA', 'No lleva'], true) ? 'No lleva'
+            : (is_string($it['monomando'] ?? null) && whMonomandoValido($it['monomando']) ? $it['monomando'] : null);
+        [$adicIt] = whAdicionalesElegidos($it['adicionales'] ?? []);
+        $items[] = [
+            'id' => sanitizeInt($it['id'] ?? 0) ?: null,
+            'producto_id' => $productoId, 'nombre' => $nombreItem, 'cantidad' => $cantidad, 'unidad' => $unidad,
+            'precio_unitario' => $precio, 'medidas' => $medidas,
+            'ancho_cm' => ($ancho > 0 && $ancho <= 1000) ? $ancho : null,
+            'cubierta' => $cubierta, 'color' => $color, 'info_extra' => $info,
+            'imagen_referencia' => $fotos[0] ?? '', 'imagenes_referencia' => $fotos,
+            // En el pedido manual el precio lo pone ventas (ya incluye los
+            // adicionales que eligió); aquí solo se guarda qué lleva.
+            'ovalin' => $ovalinIt, 'monomando' => $monomandoIt, 'adicionales' => $adicIt ? whAdicionalesTexto($adicIt) : null,
+        ];
+    }
+    return $items;
+}
+
+// Qué columnas opcionales de pedidos/detalle_pedido ya existen en este
+// servidor (migraciones que pueden no haber corrido todavía). Si falta una,
+// el dato no se pierde: va a las notas o a los adjuntos del pedido.
+function columnasPedidoManual(): array {
+    static $c = null;
+    if ($c !== null) return $c;
+    $hay = function (string $sql): bool {
+        try { dbRows($sql); return true; } catch (\Throwable $e) { return false; }
+    };
+    return $c = [
+        'tel_sec'      => $hay("SELECT telefonos_secundarios FROM pedidos LIMIT 0"),
+        'medidas'      => $hay("SELECT medidas_personalizadas FROM detalle_pedido LIMIT 0"),
+        'bano'         => $hay("SELECT ancho_cm, cubierta, color, info_extra, imagen_referencia FROM detalle_pedido LIMIT 0"),
+        'accesorios'   => $hay("SELECT ovalin, monomando, adicionales FROM detalle_pedido LIMIT 0"),
+        'tipo'         => $hay("SELECT tipo_proyecto FROM pedidos LIMIT 0"),
+        'fotos_modelo' => $hay("SELECT imagenes_referencia FROM detalle_pedido LIMIT 0"),
+    ];
+}
+
+// Una línea de detalle_pedido lista para insertar.
+function lineaDetallePedido(int $pedidoId, array $it, array $cols): array {
+    $linea = [
+        'pedido_id'       => $pedidoId,
+        'producto_id'     => $it['producto_id'],
+        'nombre_producto' => $it['nombre'],
+        'cantidad'        => $it['cantidad'],
+        'unidad'          => $it['unidad'],
+        'precio_unitario' => $it['precio_unitario'],
+        'total_linea'     => round($it['cantidad'] * $it['precio_unitario'], 2),
+    ];
+    if ($cols['medidas'] && $it['medidas'] !== '') $linea['medidas_personalizadas'] = $it['medidas'];
+    if ($cols['bano']) {
+        $linea['ancho_cm']          = $it['ancho_cm'];
+        $linea['cubierta']          = $it['cubierta'];
+        $linea['color']             = $it['color'] !== '' ? $it['color'] : null;
+        $linea['info_extra']        = $it['info_extra'] !== '' ? $it['info_extra'] : null;
+        $linea['imagen_referencia'] = $it['imagen_referencia'] !== '' ? $it['imagen_referencia'] : null;
+    }
+    if ($cols['fotos_modelo']) {
+        $linea['imagenes_referencia'] = $it['imagenes_referencia'] ? json_encode($it['imagenes_referencia'], JSON_UNESCAPED_SLASHES) : null;
+    }
+    if ($cols['accesorios']) {
+        $linea['ovalin']      = $it['ovalin'];
+        $linea['monomando']   = $it['monomando'];
+        $linea['adicionales'] = $it['adicionales'];
+    }
+    return $linea;
+}
+
+// Sin la columna imagenes_referencia (migración pendiente), las fotos 2..n
+// de cada modelo se guardan como fotos de referencia del pedido.
+function fotosModeloSinColumna(array $items, array $cols): array {
+    if ($cols['fotos_modelo']) return [];
+    $extra = [];
+    foreach ($items as $it) {
+        foreach (array_slice($it['imagenes_referencia'], $cols['bano'] ? 1 : 0) as $u) $extra[] = $u;
+    }
+    return $extra;
+}
+
 // ── Pedido cargado a mano por jefe/diseñador/ventas (encargo que hoy llega
 // por WhatsApp/teléfono y se pasaba de palabra) — sin catálogo/precio, con
 // descripción libre y/o nota de voz + fotos para el diseñador. Antes del
@@ -58,53 +177,7 @@ if ($method === 'POST' && $action === 'crear_manual') {
     // cantidad/unidad/precio) — mismas columnas que usa el flujo del cliente
     // (detalle_pedido), para que taller/instalación vean siempre la misma
     // tabla sin importar si el pedido nació del carrito o se cargó a mano.
-    $itemsRaw = is_array($body['items'] ?? null) ? $body['items'] : [];
-    $items = [];
-    foreach ($itemsRaw as $it) {
-        if (!is_array($it)) continue;
-        $nombreItem = sanitize(mb_substr((string)($it['nombre'] ?? ''), 0, 180));
-        $cantidad   = max(0, (float)($it['cantidad'] ?? 0));
-        if ($nombreItem === '' || $cantidad <= 0) continue;
-        $unidad = in_array($it['unidad'] ?? '', ['pza', 'ml', 'm2', 'juego'], true) ? $it['unidad'] : 'pza';
-        $precio = max(0, (float)($it['precio_unitario'] ?? 0));
-        // Si viene de un modelo del catálogo (no línea a la medida), se liga
-        // producto_id — igual que cuando el cliente lo agrega desde el sitio —
-        // para que sus especificaciones reales (medidas, material) se puedan
-        // mostrar junto a la línea. Se valida que el producto exista de verdad.
-        $productoId = null;
-        if (!empty($it['producto_id'])) {
-            $pid = sanitizeInt($it['producto_id']);
-            if ($pid && dbRow("SELECT id FROM productos WHERE id = ?", [$pid])) $productoId = $pid;
-        }
-        // "Este modelo pero en otras medidas" — viaja pegado a la línea hasta
-        // taller/instalación, en vez de perderse en la descripción general.
-        // Sin htmlspecialchars (a diferencia de sanitize()): las medidas
-        // llevan comillas de pulgadas (24") y los paneles ya escapan al pintar.
-        $medidas = mb_substr(trim(strip_tags((string)($it['medidas_personalizadas'] ?? ''))), 0, 1000);
-        // Mueble de baño: ancho, cubierta (MDF/piedra), color e info extra;
-        // modelo fuera de catálogo: foto que trajo el cliente (Firebase Storage).
-        $ancho    = sanitizeInt($it['ancho_cm'] ?? 0);
-        $cubierta = in_array($it['cubierta'] ?? '', ['mdf', 'cuarzo', 'granito', 'marmol'], true) ? $it['cubierta'] : null;
-        $color    = mb_substr(trim(strip_tags((string)($it['color'] ?? ''))), 0, 80);
-        $info     = mb_substr(trim(strip_tags((string)($it['info_extra'] ?? ''))), 0, 2000);
-        $imgRef   = trim((string)($it['imagen_referencia'] ?? ''));
-        // 'NO_LLEVA' = el cliente no quiere ovalín/monomando (distinto de "por definir").
-        $ovalinIt    = ($it['ovalin'] ?? '') === 'NO_LLEVA' ? 'No lleva'
-            : (is_string($it['ovalin'] ?? null) && whOvalinValido($it['ovalin']) ? $it['ovalin'] : null);
-        $monomandoIt = ($it['monomando'] ?? '') === 'NO_LLEVA' ? 'No lleva'
-            : (is_string($it['monomando'] ?? null) && whMonomandoValido($it['monomando']) ? $it['monomando'] : null);
-        [$adicIt] = whAdicionalesElegidos($it['adicionales'] ?? []);
-        if ($imgRef !== '' && strpos($imgRef, 'https://firebasestorage.googleapis.com/') !== 0) $imgRef = '';
-        $items[] = [
-            'producto_id' => $productoId, 'nombre' => $nombreItem, 'cantidad' => $cantidad, 'unidad' => $unidad,
-            'precio_unitario' => $precio, 'medidas' => $medidas,
-            'ancho_cm' => ($ancho > 0 && $ancho <= 1000) ? $ancho : null,
-            'cubierta' => $cubierta, 'color' => $color, 'info_extra' => $info, 'imagen_referencia' => $imgRef,
-            // En el pedido manual el precio lo pone ventas (ya incluye los
-            // adicionales que eligió); aquí solo se guarda qué lleva.
-            'ovalin' => $ovalinIt, 'monomando' => $monomandoIt, 'adicionales' => $adicIt ? whAdicionalesTexto($adicIt) : null,
-        ];
-    }
+    $items = leerItemsPedidoManual($body['items'] ?? null);
     $tipoProyecto = in_array($body['tipo_proyecto'] ?? '', ['bano', 'cocina', 'closet'], true) ? $body['tipo_proyecto'] : 'bano';
 
     // Teléfonos adicionales que da el cliente (pareja, encargado de obra...).
@@ -194,14 +267,11 @@ if ($method === 'POST' && $action === 'crear_manual') {
     // telefonos_secundarios / medidas_personalizadas (ver schema.sql) aún no
     // corrió en este servidor, el dato no se pierde — se agrega a las notas
     // del pedido, que el instalador también ve.
-    $tieneTelSec = false;
-    try { dbRows("SELECT telefonos_secundarios FROM pedidos LIMIT 0"); $tieneTelSec = true; } catch (Exception $e) {}
-    $tieneMedidas = false;
-    try { dbRows("SELECT medidas_personalizadas FROM detalle_pedido LIMIT 0"); $tieneMedidas = true; } catch (Exception $e) {}
-    $tieneDetalleBano = false;
-    try { dbRows("SELECT ancho_cm, cubierta, color, info_extra, imagen_referencia FROM detalle_pedido LIMIT 0"); $tieneDetalleBano = true; } catch (Exception $e) {}
-    $tieneAccesoriosM = false;
-    try { dbRows("SELECT ovalin, monomando, adicionales FROM detalle_pedido LIMIT 0"); $tieneAccesoriosM = true; } catch (Exception $e) {}
+    $cols = columnasPedidoManual();
+    $tieneTelSec = $cols['tel_sec'];
+    $tieneMedidas = $cols['medidas'];
+    $tieneDetalleBano = $cols['bano'];
+    $tieneAccesoriosM = $cols['accesorios'];
     if (!$tieneAccesoriosM) {
         // Migración (b) pendiente: no perder lo elegido — va al texto de extra.
         foreach ($items as &$itAcc) {
@@ -214,8 +284,7 @@ if ($method === 'POST' && $action === 'crear_manual') {
         }
         unset($itAcc);
     }
-    $tieneTipoProyecto = false;
-    try { dbRows("SELECT tipo_proyecto FROM pedidos LIMIT 0"); $tieneTipoProyecto = true; } catch (Exception $e) {}
+    $tieneTipoProyecto = $cols['tipo'];
     $etiquetasCubierta = ['mdf' => 'Tapa de MDF', 'cuarzo' => 'Cuarzo', 'granito' => 'Granito', 'marmol' => 'Mármol'];
 
     $notas = 'Pedido cargado a mano desde el panel (encargo directo/WhatsApp).';
@@ -291,31 +360,7 @@ if ($method === 'POST' && $action === 'crear_manual') {
         $pedidoId = dbInsert('pedidos', $datosPedido);
 
         if ($items) {
-            foreach ($items as $it) {
-                $linea = [
-                    'pedido_id'       => $pedidoId,
-                    'producto_id'     => $it['producto_id'],
-                    'nombre_producto' => $it['nombre'],
-                    'cantidad'        => $it['cantidad'],
-                    'unidad'          => $it['unidad'],
-                    'precio_unitario' => $it['precio_unitario'],
-                    'total_linea'     => round($it['cantidad'] * $it['precio_unitario'], 2),
-                ];
-                if ($tieneMedidas && $it['medidas'] !== '') $linea['medidas_personalizadas'] = $it['medidas'];
-                if ($tieneDetalleBano) {
-                    $linea['ancho_cm']          = $it['ancho_cm'];
-                    $linea['cubierta']          = $it['cubierta'];
-                    $linea['color']             = $it['color'] !== '' ? $it['color'] : null;
-                    $linea['info_extra']        = $it['info_extra'] !== '' ? $it['info_extra'] : null;
-                    $linea['imagen_referencia'] = $it['imagen_referencia'] !== '' ? $it['imagen_referencia'] : null;
-                }
-                if ($tieneAccesoriosM) {
-                    $linea['ovalin']      = $it['ovalin'];
-                    $linea['monomando']   = $it['monomando'];
-                    $linea['adicionales'] = $it['adicionales'];
-                }
-                dbInsert('detalle_pedido', $linea);
-            }
+            foreach ($items as $it) dbInsert('detalle_pedido', lineaDetallePedido($pedidoId, $it, $cols));
         } else {
             // Sin productos capturados — el detalle real (medidas, materiales)
             // lo define el diseñador durante el trabajo.
@@ -329,7 +374,7 @@ if ($method === 'POST' && $action === 'crear_manual') {
             ]);
         }
 
-        foreach ($fotos as $url) {
+        foreach (array_merge($fotos, fotosModeloSinColumna($items, $cols)) as $url) {
             dbInsert('pedido_adjuntos', [
                 'pedido_id'  => $pedidoId,
                 'tipo'       => 'foto',
@@ -375,6 +420,195 @@ if ($method === 'POST' && $action === 'crear_manual') {
     } catch (\Throwable $e) {}
 
     jsonSuccess(['pedido_id' => $pedidoId, 'numero_pedido' => $numeroPedido, 'aviso_capacidad' => $avisoCapacidad]);
+}
+
+// ── Editar un pedido completo (dirección mal escrita, otro teléfono, cambió
+// un mueble, la fecha...). Mismo formulario que "Crear pedido" ya lleno
+// (pedido-manual.js). Lo que NO cambia aquí: los pagos ya registrados (van
+// por "Registrar pago recibido") ni el estado del pedido. Los muebles se
+// reemplazan por la lista que manda el formulario.
+if ($method === 'POST' && $action === 'editar_manual') {
+    $usuario = requerirPersonal();
+    if (!in_array($usuario['rol'], ['jefe', 'disenador', 'ventas'], true)) {
+        jsonError('Acceso denegado', 403);
+    }
+    requerirCsrf();
+    checkRateLimit('pedidos_editar_manual', 60, 3600);
+    if (!$id) jsonError('ID requerido', 400);
+    $pedido = dbRow("SELECT * FROM pedidos WHERE id = ?", [$id]);
+    if (!$pedido) jsonError('Pedido no encontrado', 404);
+    if (in_array($pedido['estado'], ['finalizado', 'cancelado'], true)) {
+        jsonError('Este pedido ya está ' . ($pedido['estado'] === 'finalizado' ? 'finalizado' : 'cancelado') . ' y no se puede editar', 422);
+    }
+
+    $body = getJsonBody();
+    requireFields($body, ['nombre_cliente']);
+    $nombreCliente = sanitize($body['nombre_cliente']);
+    if (mb_strlen($nombreCliente) < 2) jsonError('Nombre del cliente requerido', 422);
+
+    $cols  = columnasPedidoManual();
+    $items = leerItemsPedidoManual($body['items'] ?? null);
+    $tipoProyecto = in_array($body['tipo_proyecto'] ?? '', ['bano', 'cocina', 'closet'], true) ? $body['tipo_proyecto'] : 'bano';
+    $veMontos = puedeVerMontos($usuario);
+
+    // Precios de los muebles que ya existían: quien no ve montos (diseñador)
+    // no los manda, así que se conservan los guardados por id de línea.
+    $lineasPrevias = [];
+    foreach (dbRows("SELECT id, precio_unitario FROM detalle_pedido WHERE pedido_id = ?", [$id]) as $l) {
+        $lineasPrevias[(int)$l['id']] = (float)$l['precio_unitario'];
+    }
+    if (!$veMontos) {
+        foreach ($items as &$itPrev) $itPrev['precio_unitario'] = $lineasPrevias[$itPrev['id'] ?? 0] ?? 0;
+        unset($itPrev);
+    }
+
+    $telefonosSec = [];
+    foreach ((is_array($body['telefonos_secundarios'] ?? null) ? $body['telefonos_secundarios'] : []) as $tel) {
+        $tel = sanitize(mb_substr(trim((string)$tel), 0, 30));
+        if ($tel !== '' && !in_array($tel, $telefonosSec, true)) $telefonosSec[] = $tel;
+    }
+    if (count($telefonosSec) > 10) jsonError('Máximo 10 teléfonos secundarios', 422);
+
+    // Fecha: una ya pasada solo se acepta si es la que ya tenía (no se obliga
+    // a moverla para poder corregir otro dato).
+    $fechaEntrega = trim((string)($body['fecha_estimada'] ?? ''));
+    if ($fechaEntrega !== '') {
+        $dt = DateTime::createFromFormat('Y-m-d', $fechaEntrega);
+        if (!$dt || $dt->format('Y-m-d') !== $fechaEntrega) jsonError('Fecha de entrega inválida', 422);
+        if ($fechaEntrega < date('Y-m-d') && $fechaEntrega !== (string)$pedido['fecha_estimada']) {
+            jsonError('La fecha de entrega no puede ser anterior a hoy', 422);
+        }
+    }
+
+    $tipoEntrega = ($body['tipo_entrega'] ?? 'envio') === 'recoger' ? 'recoger' : 'envio';
+    $incluyeInstalacion = ($tipoEntrega === 'envio' && !empty($body['incluye_instalacion'])) ? 1 : 0;
+
+    $update = [
+        'nombre_cliente'      => $nombreCliente,
+        'telefono_cliente'    => sanitize(mb_substr((string)($body['telefono_cliente'] ?? ''), 0, 30)),
+        'tipo_entrega'        => $tipoEntrega,
+        'incluye_instalacion' => $incluyeInstalacion,
+        'fecha_estimada'      => $fechaEntrega !== '' ? $fechaEntrega : null,
+        'mensaje_disenador'   => sanitize($body['descripcion'] ?? ''),
+    ];
+    if ($cols['tipo']) $update['tipo_proyecto'] = $tipoProyecto;
+    if ($cols['tel_sec']) $update['telefonos_secundarios'] = $telefonosSec ? json_encode($telefonosSec, JSON_UNESCAPED_UNICODE) : null;
+
+    // Dirección: los pedidos del sitio la traen en partes (colonia, CP,
+    // coordenadas del mapa). Solo si la cambiaron se reemplaza por el texto
+    // nuevo y se borran las partes viejas (si no, el mapa apuntaría al lugar
+    // anterior).
+    if ($tipoEntrega === 'recoger') {
+        $update['direccion_envio'] = '';
+    } elseif (!empty($body['direccion_modificada']) || $pedido['tipo_entrega'] === 'recoger') {
+        $dir = sanitize(mb_substr((string)($body['direccion_envio'] ?? ''), 0, 255));
+        if ($dir === '') jsonError('Falta la dirección de entrega (o elige "Pasa a recogerlo")', 422);
+        $update['direccion_envio'] = $dir;
+        foreach (['colonia_envio', 'ciudad_envio', 'municipio_envio', 'cp_envio', 'lat', 'lng'] as $c) {
+            if (array_key_exists($c, $pedido)) $update[$c] = null;
+        }
+    }
+
+    // Montos (solo jefe/ventas): mismo cálculo que al crear. Lo ya cobrado
+    // no cambia; el total nunca puede quedar debajo de eso.
+    $pagadoYa = (float)$pedido['monto_pagado'];
+    if ($veMontos) {
+        $costoEnvio = $tipoEntrega === 'envio' ? round(max(0, (float)($body['costo_envio'] ?? 0)), 2) : 0.0;
+        $costoInst  = $incluyeInstalacion ? round(max(0, (float)($body['costo_instalacion'] ?? 0)), 2) : 0.0;
+        $descuento  = round(max(0, (float)($body['descuento'] ?? 0)), 2);
+        $totalItems = array_sum(array_map(fn($it) => round($it['cantidad'] * $it['precio_unitario'], 2), $items));
+        $total      = round(max(0, $totalItems + $costoEnvio + $costoInst - $descuento), 2);
+        $subtotal   = $totalItems;
+        $acordado   = round(max(0, (float)($body['total_acordado'] ?? 0)), 2);
+        if ($acordado > 0) {
+            $total = $acordado;
+            $subtotal = round(max(0, $acordado - $costoEnvio - $costoInst + $descuento), 2);
+        }
+        if ($total < $pagadoYa - 0.01) {
+            jsonError('El total ($' . number_format($total, 2) . ') no puede quedar debajo de lo que el cliente ya pagó ($' . number_format($pagadoYa, 2) . ')', 422);
+        }
+        $update += ['subtotal' => $subtotal, 'costo_envio' => $costoEnvio, 'costo_instalacion' => $costoInst, 'descuento' => $descuento, 'total' => $total];
+        if ($pagadoYa > 0.009) $update['tipo_pago'] = $pagadoYa >= $total - 0.01 ? 'completo' : 'anticipo';
+        if (in_array($pedido['estado'], ['pendiente', 'anticipo_pagado', 'pagado'], true)) {
+            $update['estado'] = $pagadoYa <= 0.009 ? 'pendiente' : ($pagadoYa >= $total - 0.01 ? 'pagado' : 'anticipo_pagado');
+        }
+    }
+
+    // Adjuntos: quitar los que marcaron y agregar los nuevos (Firebase del proyecto).
+    $storageHost = 'https://firebasestorage.googleapis.com/';
+    $quitar = array_values(array_filter(array_map('intval', is_array($body['adjuntos_quitar'] ?? null) ? $body['adjuntos_quitar'] : [])));
+    $fotosNuevas = is_array($body['fotos'] ?? null) ? $body['fotos'] : [];
+    $fotosNuevas = array_values(array_filter(array_map(fn($u) => trim((string)$u), $fotosNuevas),
+        fn($u) => strpos($u, $storageHost) === 0 && strlen($u) <= 350));
+    $fotosNuevas = array_merge($fotosNuevas, fotosModeloSinColumna($items, $cols));
+    $audioUrl = trim((string)($body['audio_url'] ?? ''));
+    if ($audioUrl !== '' && strpos($audioUrl, $storageHost) !== 0) jsonError('audio_url inválido', 422);
+
+    $descripcion = $update['mensaje_disenador'];
+    $quedanAdj = (int)(dbRow("SELECT COUNT(*) AS n FROM pedido_adjuntos WHERE pedido_id = ?", [$id])['n'] ?? 0);
+    if ($quitar) {
+        $ph = implode(',', array_fill(0, count($quitar), '?'));
+        $quedanAdj -= (int)(dbRow("SELECT COUNT(*) AS n FROM pedido_adjuntos WHERE pedido_id = ? AND id IN ($ph)", array_merge([$id], $quitar))['n'] ?? 0);
+    }
+    if ($quedanAdj + count($fotosNuevas) + ($audioUrl !== '' ? 1 : 0) > 30) jsonError('Demasiados adjuntos en este pedido (máximo 30).', 422);
+
+    try {
+        db()->beginTransaction();
+        dbUpdate('pedidos', $update, 'id = ?', [$id]);
+
+        dbQuery("DELETE FROM detalle_pedido WHERE pedido_id = ?", [$id]);
+        if ($items) {
+            foreach ($items as $it) dbInsert('detalle_pedido', lineaDetallePedido($id, $it, $cols));
+        } else {
+            dbInsert('detalle_pedido', [
+                'pedido_id'       => $id,
+                'producto_id'     => null,
+                'nombre_producto' => 'Pedido personalizado — ver descripción para el diseñador',
+                'cantidad'        => 1,
+                'precio_unitario' => 0,
+                'total_linea'     => 0,
+            ]);
+        }
+
+        if ($quitar) {
+            $ph = implode(',', array_fill(0, count($quitar), '?'));
+            dbQuery("DELETE FROM pedido_adjuntos WHERE pedido_id = ? AND id IN ($ph)", array_merge([$id], $quitar));
+        }
+        foreach ($fotosNuevas as $url) {
+            dbInsert('pedido_adjuntos', ['pedido_id' => $id, 'tipo' => 'foto', 'url' => $url, 'subido_por' => (int)$usuario['id']]);
+        }
+        if ($audioUrl !== '') {
+            dbInsert('pedido_adjuntos', ['pedido_id' => $id, 'tipo' => 'audio', 'url' => $audioUrl, 'subido_por' => (int)$usuario['id']]);
+        }
+        db()->commit();
+    } catch (Exception $e) {
+        db()->rollBack();
+        appLog('error', 'Error editando pedido', ['pedido_id' => $id, 'error' => $e->getMessage()]);
+        jsonError('Error interno al guardar los cambios', 500);
+    }
+
+    appLog('info', 'Pedido editado', [
+        'pedido_id' => $id, 'usuario_id' => (int)$usuario['id'], 'rol' => $usuario['rol'],
+        'total_antes' => (float)$pedido['total'], 'total_despues' => (float)($update['total'] ?? $pedido['total']),
+    ]);
+
+    // Aviso en los paneles: quien ya trabaja el pedido tiene que enterarse
+    // (dirección o fecha nueva para instalación, otro mueble para el taller).
+    try {
+        $folio = $pedido['numero_pedido'];
+        $quien = trim($usuario['nombre_completo'] ?? $usuario['nombre'] ?? '') ?: ucfirst($usuario['rol']);
+        $msg = "Pedido $folio — $quien corrigió los datos. Revisa la dirección, la fecha y los muebles.";
+        notificarPanel(['jefe'], null, 'pedido_editado', "Pedido $folio modificado", $msg, '/admin#pedidos');
+        notificarPanel(['ventas'], null, 'pedido_editado', "Pedido $folio modificado", $msg, '/ventas#pedidos');
+        if (!in_array($pedido['estado'], ['pendiente', 'anticipo_pagado', 'pagado'], true) || $pedido['disenador_id']) {
+            notificarPanel(['disenador'], $pedido['disenador_id'] ? (int)$pedido['disenador_id'] : null, 'pedido_editado', "Pedido $folio modificado", $msg, '/disenador#pedidos');
+        }
+        if (in_array($pedido['estado'], ['listo_para_produccion', 'en_produccion', 'alistando_pedido', 'en_camino_instalacion'], true)) {
+            notificarPanel(['empleado'], null, 'pedido_editado', "Pedido $folio modificado", $msg, '/empleado#pedidos');
+        }
+    } catch (\Throwable $e) {}
+
+    jsonSuccess(['pedido_id' => $id, 'numero_pedido' => $pedido['numero_pedido']]);
 }
 
 // ── Ventas/jefe/administrador agrega contexto a un pedido YA existente

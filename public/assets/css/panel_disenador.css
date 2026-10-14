@@ -1047,17 +1047,44 @@
    default y se expanden con un clic — nunca se borra nada, solo se oculta
    visualmente (ver "historial completo"). */
 .wh-collapse { margin-bottom: 14px; }
-.wh-collapse > summary { cursor:pointer; font-weight:700; color:var(--accent); font-size:11px; text-transform:uppercase; letter-spacing:.8px; list-style:none; display:flex; align-items:center; gap:6px; user-select:none; }
+.wh-collapse > summary { cursor:pointer; font-weight:700; color:var(--accent); font-size:11px; text-transform:uppercase; letter-spacing:.8px; list-style:none; display:flex; align-items:center; gap:6px; flex-wrap:wrap; user-select:none; position:relative; min-height:34px; padding-right:104px; }
+/* Mostrar / Ocultar: una pastilla con flecha a la derecha del título, para
+   que se entienda que esa parte se abre y se cierra (antes era un triangulito
+   que casi no se veía). La flecha apunta hacia abajo cuando está cerrado
+   ("hay más abajo") y hacia arriba cuando está abierto. */
+.wh-collapse > summary::after,
+.wh-subcollapse > summary::after {
+  content:"Mostrar"; position:absolute; right:0; top:50%; transform:translateY(-50%);
+  padding:5px 28px 5px 12px; border-radius:999px; border:1.5px solid var(--accent);
+  color:var(--accent); background:transparent; font-size:11px; font-weight:700;
+  text-transform:none; letter-spacing:0; line-height:1.2; white-space:nowrap;
+  transition:background .15s, color .15s;
+}
+.wh-collapse[open] > summary::after,
+.wh-subcollapse[open] > summary::after { content:"Ocultar"; }
+.wh-collapse > summary::before,
+.wh-subcollapse > summary::before {
+  content:""; position:absolute; right:13px; top:50%; z-index:1; pointer-events:none;
+  width:6px; height:6px; border-right:2px solid var(--accent); border-bottom:2px solid var(--accent);
+  transform:translateY(-75%) rotate(45deg); transition:transform .2s;
+}
+.wh-collapse[open] > summary::before,
+.wh-subcollapse[open] > summary::before { transform:translateY(-25%) rotate(-135deg); }
+.wh-collapse > summary:hover::after,
+.wh-subcollapse > summary:hover::after { background:var(--accent); color:#fff; }
+.wh-collapse > summary:hover::before,
+.wh-subcollapse > summary:hover::before { border-color:#fff; }
+.wh-collapse > summary:focus-visible,
+.wh-subcollapse > summary:focus-visible { outline:2px solid var(--accent); outline-offset:3px; border-radius:6px; }
+@media (prefers-reduced-motion: reduce) {
+  .wh-collapse > summary::before, .wh-subcollapse > summary::before { transition:none; }
+}
 .wh-collapse > summary::-webkit-details-marker { display:none; }
-.wh-collapse > summary::before { content:"\25B8"; display:inline-block; transition: transform .15s; font-size:10px; }
-.wh-collapse[open] > summary::before { transform: rotate(90deg); }
 .wh-collapse .wh-collapse-count { color:var(--muted2); font-weight:400; text-transform:none; letter-spacing:normal; margin-left:4px; }
 .wh-collapse-body { padding-top:8px; }
 .wh-subcollapse { margin-bottom:6px; }
-.wh-subcollapse > summary { cursor:pointer; font-size:11px; font-weight:700; color:var(--muted2); list-style:none; display:flex; align-items:center; gap:5px; user-select:none; }
+.wh-subcollapse > summary { cursor:pointer; font-size:11px; font-weight:700; color:var(--muted2); list-style:none; display:flex; align-items:center; gap:5px; flex-wrap:wrap; user-select:none; position:relative; min-height:32px; padding-right:104px; }
 .wh-subcollapse > summary::-webkit-details-marker { display:none; }
-.wh-subcollapse > summary::before { content:"\25B8"; display:inline-block; transition: transform .15s; font-size:9px; }
-.wh-subcollapse[open] > summary::before { transform: rotate(90deg); }
 
   /* Acción "→ Siguiente estado" en la tabla de pedidos: botón con borde y
      color de acento para que se distinga en tema claro y oscuro. */

@@ -72,6 +72,19 @@
   .pm-ancho-otro .form-input{ max-width:140px; }
   .pm-acc-top{ display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
   .pm-adic em{ margin-left:auto; font-style:normal; color:var(--accent); font-weight:700; white-space:nowrap; }
+  /* Fotos del modelo fuera de catálogo y adjuntos ya guardados (al editar) */
+  .pm-fotos-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(76px,1fr)); gap:8px; margin:2px 0 6px; }
+  .pm-foto-thumb{ position:relative; aspect-ratio:1; }
+  .pm-foto-thumb img{ width:100%; height:100%; object-fit:cover; border-radius:8px; border:1px solid var(--border); display:block; }
+  .pm-foto-x{ position:absolute; top:4px; right:4px; width:26px; height:26px; border-radius:50%; border:none; background:rgba(160,20,20,.9); color:#fff; font-size:15px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .pm-quitada img, .pm-quitada audio{ opacity:.35; filter:grayscale(1); }
+  .pm-quitada .pm-foto-x{ background:var(--accent); }
+  .pm-audio-guardado{ display:flex; flex-direction:column; gap:4px; margin-bottom:8px; }
+  .pm-audio-guardado audio{ width:100%; height:36px; }
+  #pm_adjuntos_existentes{ margin-bottom:10px; }
+  .pm-pago-edit{ display:flex; gap:8px; align-items:flex-start; font-size:13px; color:var(--text); padding:10px 12px; border-radius:10px; background:color-mix(in srgb, var(--accent) 10%, var(--bg)); border:1px solid var(--border); margin-bottom:12px; }
+  .pm-pago-edit[hidden], .pm-solo-crear[hidden]{ display:none !important; }
+  .pm-pago-edit svg{ flex-shrink:0; color:var(--accent); width:16px; height:16px; margin-top:2px; }
   @media (max-width: 560px){
     .pm-opciones, .pm-costos, .pm-dos{ grid-template-columns:1fr; }
     .pm-opcion{ flex-direction:row; align-items:center; gap:12px; }
@@ -96,11 +109,11 @@ unset($_pmSesion);
 <div class="modal" id="pedidoManualModal">
   <div class="modal-content" style="max-width:640px;width:min(640px,96vw);">
     <div class="modal-header">
-      <h3 class="modal-title"><i data-lucide="package-plus"></i> Crear pedido</h3>
+      <h3 class="modal-title" id="pm_titulo"><i data-lucide="package-plus"></i> Crear pedido</h3>
       <button class="modal-close" data-dismiss="pedidoManualModal">×</button>
     </div>
 
-    <p class="pm-intro">Llena los pasos en orden, como si el cliente estuviera comprando en el carrito. Lo marcado con <strong>*</strong> es obligatorio; todo lo demás le llega tal cual al diseñador, al taller y al instalador.</p>
+    <p class="pm-intro" id="pm_intro">Llena los pasos en orden, como si el cliente estuviera comprando en el carrito. Lo marcado con <strong>*</strong> es obligatorio; todo lo demás le llega tal cual al diseñador, al taller y al instalador.</p>
 
     <!-- PASO · Tipo de proyecto -->
     <section class="pm-paso">
@@ -229,7 +242,8 @@ unset($_pmSesion);
         <label>Instalación ($)<input type="number" class="form-input" id="pm_costo_instalacion" min="0" step="0.01" value="0" inputmode="decimal"></label>
         <label>Descuento ($)<input type="number" class="form-input" id="pm_descuento" min="0" step="0.01" value="0" inputmode="decimal"></label>
       </div>
-      <div class="pm-opciones pm-opciones--compactas" role="radiogroup" aria-label="Forma de pago">
+      <div class="pm-pago-edit" id="pm_pago_edit_nota" hidden></div>
+      <div class="pm-opciones pm-opciones--compactas pm-solo-crear" role="radiogroup" aria-label="Forma de pago">
         <label class="pm-opcion">
           <input type="radio" name="pm_tipo_pago" value="completo" checked>
           <span class="pm-opcion-icono"><i data-lucide="circle-check"></i></span>
@@ -246,7 +260,7 @@ unset($_pmSesion);
           <span class="pm-opcion-texto"><strong>Todavía no paga</strong><small>No pasa a producción hasta que pague</small></span>
         </label>
       </div>
-      <div class="pm-costos" id="pm_pago_detalle">
+      <div class="pm-costos pm-solo-crear" id="pm_pago_detalle">
         <label>Monto recibido ($)<input type="number" class="form-input" id="pm_monto_pagado" min="0" step="0.01" inputmode="decimal"></label>
         <label>¿Cómo pagó?
           <select class="form-select" id="pm_metodo_pago">
@@ -299,6 +313,7 @@ unset($_pmSesion);
 
     <div class="form-group" id="pm_fotos_bloque">
       <label class="form-label" id="pm_fotos_label">Fotos de referencia</label>
+      <div id="pm_adjuntos_existentes" hidden></div>
       <div id="pmImgDropZone" style="border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer;" data-trigger-click="pm_fotos_files">
         <i data-lucide="camera" style="color:var(--accent);"></i>
         <p style="margin:6px 0 0;font-size:13px;color:var(--muted);">Haz clic para elegir fotos (o arrastra aquí)</p>

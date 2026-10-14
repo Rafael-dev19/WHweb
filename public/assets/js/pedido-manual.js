@@ -16,6 +16,11 @@ let _pmFotosPendientes = [];
 let _pmItems = [];
 let _pmTelefonosSec = [];
 const _PM_MAX_TELEFONOS = 10;
+const _PM_MAX_FOTOS_MODELO = 10;
+// Modo edición (abrirModalEditarPedido): el mismo formulario, ya lleno con
+// el pedido. null = creando uno nuevo.
+//   { id, folio, pagado, dirOriginal, fechaOriginal, adjuntos, quitar:Set, lineaMedidaId }
+let _pmEdit = null;
 
 const _pmGrabador = crearGrabadorAudio({
   btnGrabarId: 'pm_btn_grabar',
@@ -28,8 +33,229 @@ const _pmGrabador = crearGrabadorAudio({
 
 /* ── Abrir/cerrar ────────────────────────────────────────────────────── */
 function abrirModalCrearPedido() {
+  _pmEdit = null;
   _pmResetForm();
+  _pmTextosModo();
   openModal('pedidoManualModal');
+}
+
+// Títulos, botón y sección de pago según se esté creando o editando.
+function _pmTextosModo() {
+  const editando = !!_pmEdit;
+  const titulo = document.getElementById('pm_titulo');
+  if (titulo) titulo.innerHTML = editando
+    ? `<i data-lucide="pencil"></i> Editar pedido ${escapeHtml(_pmEdit.folio)}`
+    : '<i data-lucide="package-plus"></i> Crear pedido';
+  const intro = document.getElementById('pm_intro');
+  if (intro) intro.innerHTML = editando
+    ? 'Corrige lo que haga falta y toca <strong>Guardar cambios</strong>. Los pagos que ya se registraron no cambian; para un pago nuevo usa "Registrar pago recibido" en el detalle del pedido.'
+    : 'Llena los pasos en orden, como si el cliente estuviera comprando en el carrito. Lo marcado con <strong>*</strong> es obligatorio; todo lo demás le llega tal cual al diseñador, al taller y al instalador.';
+  const btn = document.getElementById('pm_btn_guardar');
+  if (btn) btn.innerHTML = editando ? '<i data-lucide="save"></i> Guardar cambios' : '<i data-lucide="save"></i> Crear pedido';
+  // Al editar no se captura un pago nuevo aquí: solo se muestra lo ya cobrado.
+  document.querySelectorAll('.pm-solo-crear').forEach(el => { el.hidden = editando; });
+  const nota = document.getElementById('pm_pago_edit_nota');
+  if (nota) {
+    nota.hidden = !editando;
+    if (editando) nota.innerHTML = `<i data-lucide="info"></i> El cliente ya pagó <strong>${fmtMoneyPM(_pmEdit.pagado)}</strong>. El total no puede quedar por debajo de eso.`;
+  }
+  _pmRenderAdjuntosExistentes();
+  window.lucide?.createIcons();
+}
+
+/* ── Editar un pedido existente ──────────────────────────────────────── */
+// Los textos se guardan con htmlspecialchars (sanitize() en la API): para
+// mostrarlos en un input hay que regresarlos a texto normal, si no "&quot;"
+// aparecería tal cual y al guardar se volvería a codificar.
+function _pmTexto(s) {
+  const t = document.createElement('textarea');
+  t.innerHTML = String(s ?? '');
+  return t.value;
+}
+
+async function abrirModalEditarPedido(id) {
+  let p;
+  try {
+    const data = await apiFetch(`${API_BASE}/pedidos.php?id=${id}`);
+    if (!data.success || !data.pedido) throw new Error(data.error || 'No encontrado');
+    p = data.pedido;
+  } catch (e) {
+    showNotification('No se pudo abrir el pedido: ' + e.message, 'error');
+    return;
+  }
+  if (['finalizado', 'cancelado'].includes(p.estado)) {
+    showNotification('Este pedido ya está cerrado y no se puede editar.', 'warning');
+    return;
+  }
+
+  _pmEdit = null;
+  _pmResetForm();
+
+  const direccion = [
+    _pmTexto(p.direccion_envio),
+    p.colonia_envio ? `Col. ${_pmTexto(p.colonia_envio)}` : '',
+    _pmTexto(p.ciudad_envio || ''),
+    p.municipio_envio ? `Mpio. ${_pmTexto(p.municipio_envio)}` : '',
+    p.cp_envio ? `CP ${p.cp_envio}` : '',
+  ].filter(Boolean).join(', ');
+  _pmEdit = {
+    id: p.id,
+    folio: p.numero_pedido,
+    pagado: Number(p.monto_pagado) || 0,
+    dirOriginal: direccion,
+    fechaOriginal: p.fecha_estimada || '',
+    adjuntos: (p.adjuntos || []).filter(a => a.tipo === 'foto' || a.tipo === 'audio'),
+    quitar: new Set(),
+    lineaMedidaId: null,
+  };
+
+  document.getElementById('pm_nombre').value = _pmTexto(p.nombre_cliente);
+  document.getElementById('pm_telefono').value = _pmTexto(p.telefono_cliente);
+  try {
+    const tels = Array.isArray(p.telefonos_secundarios) ? p.telefonos_secundarios : JSON.parse(p.telefonos_secundarios || '[]');
+    _pmTelefonosSec = (Array.isArray(tels) ? tels : []).map(_pmTexto);
+  } catch (e) { _pmTelefonosSec = []; }
+  _pmRenderTelefonos();
+
+  _pmMarcarRadio('pm_entrega', p.tipo_entrega === 'recoger' ? 'recoger' : (Number(p.incluye_instalacion) ? 'instalacion' : 'envio'));
+  document.getElementById('pm_direccion').value = direccion;
+  const fecha = document.getElementById('pm_fecha_entrega');
+  if (fecha) {
+    fecha.value = p.fecha_estimada || '';
+    // Una fecha ya pasada se puede dejar como está (no obliga a moverla).
+    if (p.fecha_estimada && p.fecha_estimada < fecha.min) fecha.min = p.fecha_estimada;
+  }
+  document.getElementById('pm_descripcion').value = _pmTexto(p.mensaje_disenador);
+
+  const tipo = ['bano', 'cocina', 'closet'].includes(p.tipo_proyecto) ? p.tipo_proyecto : 'bano';
+  _pmMarcarRadio('pm_tipo_proyecto', tipo);
+  const lineas = (p.items || []).filter(l => !(l.producto_id == null && /^Pedido personalizado — ver descripción/.test(l.nombre_producto || '')));
+  if (tipo === 'bano') {
+    _pmItems = await Promise.all(lineas.map(_pmItemDesdeLinea));
+  } else if (lineas[0]) {
+    _pmLlenarMedida(lineas[0]);
+  }
+
+  if (window.WH_PM_MONTOS) {
+    const setNum = (elId, v) => { const el = document.getElementById(elId); if (el) el.value = String(Number(v) || 0); };
+    setNum('pm_costo_envio', p.costo_envio);
+    setNum('pm_costo_instalacion', p.costo_instalacion);
+    setNum('pm_descuento', p.descuento);
+  }
+  pmActualizarTipo();
+  pmActualizarEntrega();
+  _pmRenderItemsTabla();
+  if (window.WH_PM_MONTOS) {
+    // Si el total guardado no es la suma de los muebles, fue un total
+    // acordado con el cliente: se respeta.
+    const { calculado } = _pmTotales();
+    const total = Number(p.total) || 0;
+    if (Math.abs(calculado - total) > 0.009) document.getElementById('pm_total_acordado').value = total.toFixed(2);
+    pmActualizarPago();
+  }
+
+  _pmTextosModo();
+  // El detalle queda debajo: se cierra para no apilar dos ventanas.
+  ['adminPedidoDetalleModal', 'empPedidoDetalleModal'].forEach(m => { if (document.getElementById(m)) closeModal(m); });
+  openModal('pedidoManualModal');
+}
+
+// Línea guardada → mueble del formulario.
+async function _pmItemDesdeLinea(l) {
+  const it = _pmNuevoItem(!!l.producto_id);
+  const adicCatalogo = (window.WH_ACCESORIOS || {}).adicionales || {};
+  const nombresAdic = String(l.adicionales || '').split(',').map(s => s.trim()).filter(Boolean);
+  Object.assign(it, {
+    id: l.id,
+    producto_id: l.producto_id ? Number(l.producto_id) : null,
+    nombre: _pmTexto(l.nombre_producto || l.producto_nombre || ''),
+    cantidad: Number(l.cantidad) || 1,
+    unidad: l.unidad || 'pza',
+    precio_unitario: Number(l.precio_unitario) || 0,
+    ancho_cm: l.ancho_cm ? Number(l.ancho_cm) : null,
+    cubierta: l.cubierta || 'mdf',
+    color: l.color || '',
+    info_extra: l.info_extra || '',
+    ovalin: l.ovalin === 'No lleva' ? 'NO_LLEVA' : (l.ovalin || ''),
+    monomando: l.monomando === 'No lleva' ? 'NO_LLEVA' : (l.monomando || ''),
+    adicionales: Object.keys(adicCatalogo).filter(k => nombresAdic.includes(adicCatalogo[k].nombre)),
+  });
+  let fotos = [];
+  try { fotos = JSON.parse(l.imagenes_referencia || '[]'); } catch (e) { fotos = []; }
+  if (!Array.isArray(fotos) || !fotos.length) fotos = l.imagen_referencia ? [l.imagen_referencia] : [];
+  it._fotos = fotos.map(url => ({ url, file: null }));
+
+  const medidas = String(l.medidas_personalizadas || '');
+  if (it._catalogo) {
+    it.medidas_personalizadas = medidas;
+    it._verMedidas = !!medidas.trim();
+    try {
+      const d = await apiFetch(`${API_BASE}/productos.php?id=${it.producto_id}`);
+      it._medidas = d?.producto?.medidas || [];
+    } catch (e) { it._medidas = []; }
+    if (it.ancho_cm && !it._medidas.some(m => m.ancho_cm === it.ancho_cm)) it._anchoOtro = true;
+  } else {
+    // Fuera de catálogo: la 1ª línea es "Ancho 60 cm · Alto 80 cm · Fondo 45 cm".
+    const [primera, ...resto] = medidas.split('\n');
+    const dims = {};
+    const esDims = /^(Ancho|Alto|Fondo) [\d.]+ cm( · (Ancho|Alto|Fondo) [\d.]+ cm)*$/.test(primera.trim());
+    if (esDims) primera.split(' · ').forEach(parte => { const [k, v] = parte.trim().split(' '); dims[k] = v; });
+    if (dims.Ancho && !it.ancho_cm) it.ancho_cm = Number(dims.Ancho);
+    it.alto_cm = dims.Alto || '';
+    it.fondo_cm = dims.Fondo || '';
+    it.medidas_personalizadas = esDims ? resto.join('\n') : medidas;
+  }
+  return it;
+}
+
+// Cocina/clóset: un solo renglón con medidas, colores, info y precio.
+function _pmLlenarMedida(l) {
+  _pmEdit.lineaMedidaId = l.id;
+  const [primera, ...resto] = String(l.medidas_personalizadas || '').split('\n');
+  const dims = {};
+  const esDims = /^(Ancho|Alto|Fondo) [\d.]+ m( · (Ancho|Alto|Fondo) [\d.]+ m)*$/.test(primera.trim());
+  if (esDims) primera.split(' · ').forEach(parte => { const [k, v] = parte.trim().split(' '); dims[k] = v; });
+  const set = (elId, v) => { const el = document.getElementById(elId); if (el) el.value = v ?? ''; };
+  set('pm_med_ancho', dims.Ancho);
+  set('pm_med_alto', dims.Alto);
+  set('pm_med_fondo', dims.Fondo);
+  set('pm_med_notas', esDims ? resto.join('\n') : (l.medidas_personalizadas || ''));
+  set('pm_med_colores', l.color || '');
+  set('pm_med_info', l.info_extra || '');
+  if (window.WH_PM_MONTOS) set('pm_med_precio', Number(l.precio_unitario) ? String(Number(l.precio_unitario)) : '');
+}
+
+// Fotos y nota de voz que ya tiene el pedido: se pueden quitar.
+function _pmRenderAdjuntosExistentes() {
+  const cont = document.getElementById('pm_adjuntos_existentes');
+  if (!cont) return;
+  const adj = _pmEdit?.adjuntos || [];
+  cont.hidden = !adj.length;
+  if (!adj.length) { cont.innerHTML = ''; return; }
+  const fotos = adj.filter(a => a.tipo === 'foto');
+  const audios = adj.filter(a => a.tipo === 'audio');
+  const quitada = a => _pmEdit.quitar.has(a.id);
+  cont.innerHTML = `
+    <div class="pm-hint" style="margin-bottom:6px;">Ya guardado en el pedido — toca <strong>×</strong> para quitar algo:</div>
+    ${fotos.length ? `<div class="pm-fotos-grid">${fotos.map(a => `
+      <div class="pm-foto-thumb ${quitada(a) ? 'pm-quitada' : ''}">
+        <img src="${escapeHtml(a.url)}" alt="Foto guardada">
+        <button type="button" class="pm-foto-x" data-call="pmToggleAdjunto" data-args="[${a.id}]"
+          title="${quitada(a) ? 'Conservar' : 'Quitar'}" aria-label="${quitada(a) ? 'Conservar foto' : 'Quitar foto'}">${quitada(a) ? '↺' : '×'}</button>
+      </div>`).join('')}</div>` : ''}
+    ${audios.map(a => `
+      <div class="pm-audio-guardado ${quitada(a) ? 'pm-quitada' : ''}">
+        <audio controls src="${escapeHtml(a.url)}"></audio>
+        <button type="button" class="pm-link" data-call="pmToggleAdjunto" data-args="[${a.id}]">${quitada(a) ? 'Conservar nota de voz' : 'Quitar nota de voz'}</button>
+      </div>`).join('')}
+    ${_pmEdit.quitar.size ? `<div class="pm-hint" style="color:var(--danger,#e57373);">Se quitará(n) ${_pmEdit.quitar.size} al guardar.</div>` : ''}`;
+}
+
+function pmToggleAdjunto(adjId) {
+  if (!_pmEdit) return;
+  if (_pmEdit.quitar.has(adjId)) _pmEdit.quitar.delete(adjId);
+  else _pmEdit.quitar.add(adjId);
+  _pmRenderAdjuntosExistentes();
 }
 
 function _pmHoyISO() {
@@ -70,8 +296,10 @@ function _pmResetForm() {
   _pmGrabador.borrar();
   const progreso = document.getElementById('pm_progreso');
   if (progreso) progreso.style.display = 'none';
-  _pmItems.forEach(it => it._preview && URL.revokeObjectURL(it._preview));
+  _pmItems.forEach(_pmLiberarFotos);
   _pmItems = [];
+  const acordadoReset = document.getElementById('pm_total_acordado');
+  if (acordadoReset) acordadoReset.value = '';
   _pmRenderItemsTabla();
   pmActualizarTipo();
   pmActualizarEntrega();
@@ -139,6 +367,13 @@ function pmActualizarPago() {
     hint.innerHTML = acordado > 0
       ? `Calculado (muebles + envío + instalación − descuento): <strong>${fmtMoneyPM(calculado)}</strong> · Diferencia: <strong>${dif >= 0 ? '+' : '−'}${fmtMoneyPM(Math.abs(dif))}</strong>`
       : `Calculado automáticamente: <strong>${fmtMoneyPM(calculado)}</strong>. Si acordaste otro total con el cliente, escríbelo aquí.`;
+  }
+  if (_pmEdit) {
+    // Editando: lo cobrado ya está registrado; solo cambia el total.
+    document.getElementById('pm_res_total').textContent  = fmtMoneyPM(total);
+    document.getElementById('pm_res_pagado').textContent = fmtMoneyPM(_pmEdit.pagado);
+    document.getElementById('pm_res_resta').textContent  = fmtMoneyPM(Math.max(0, total - _pmEdit.pagado));
+    return;
   }
   const tipo = _pmValorRadio('pm_tipo_pago') || 'completo';
   const detalle = document.getElementById('pm_pago_detalle');
@@ -222,7 +457,10 @@ function _pmNuevoItem(desdeCatalogo) {
     ancho_cm: null, cubierta: 'mdf', color: '', info_extra: '', medidas_personalizadas: '',
     alto_cm: '', fondo_cm: '', ovalin: '', monomando: '', adicionales: [],
     _catalogo: desdeCatalogo, _medidas: [], _q: '', _resultados: null, _buscando: false,
-    _verMedidas: false, _archivo: null, _preview: '',
+    _verMedidas: false,
+    // Fotos del modelo que trae el cliente: { url, file } — file = null si ya
+    // estaba subida (al editar), si no es la vista previa local (blob:).
+    _fotos: [],
   };
 }
 
@@ -392,31 +630,35 @@ function pmToggleMedidas(idx) {
   if (it._verMedidas) _pmEnfocarItem(idx, '[data-pm-campo="medidas_personalizadas"]');
 }
 
-function pmFotoModelo(idx, file) {
+function pmFotoModelo(idx, files) {
   const it = _pmItems[idx];
-  if (!it || !file) return;
-  if (!_PM_TIPOS_IMG.includes(file.type)) {
-    showNotification('Esa imagen no es válida (usa JPG, PNG o WEBP).', 'warning');
-    return;
-  }
-  if (it._preview) URL.revokeObjectURL(it._preview);
-  it._archivo = file;
-  it._preview = URL.createObjectURL(file);
+  if (!it || !files?.length) return;
+  const validas = Array.from(files).filter(f => {
+    if (_PM_TIPOS_IMG.includes(f.type)) return true;
+    showNotification(`"${f.name}" no es una imagen válida (usa JPG, PNG o WEBP).`, 'warning');
+    return false;
+  });
+  const libres = _PM_MAX_FOTOS_MODELO - it._fotos.length;
+  if (validas.length > libres) showNotification(`Máximo ${_PM_MAX_FOTOS_MODELO} fotos por modelo.`, 'warning');
+  validas.slice(0, Math.max(0, libres)).forEach(file => it._fotos.push({ file, url: URL.createObjectURL(file) }));
   _pmRenderItemsTabla();
 }
 
-function pmQuitarFotoModelo(idx) {
+function pmQuitarFotoModelo(idx, f) {
   const it = _pmItems[idx];
-  if (!it) return;
-  if (it._preview) URL.revokeObjectURL(it._preview);
-  it._archivo = null;
-  it._preview = '';
+  const foto = it?._fotos[f];
+  if (!foto) return;
+  if (foto.file) URL.revokeObjectURL(foto.url);
+  it._fotos.splice(f, 1);
   _pmRenderItemsTabla();
+}
+
+function _pmLiberarFotos(it) {
+  (it?._fotos || []).forEach(f => f.file && URL.revokeObjectURL(f.url));
 }
 
 function pmEliminarItem(idx) {
-  const it = _pmItems[idx];
-  if (it?._preview) URL.revokeObjectURL(it._preview);
+  _pmLiberarFotos(_pmItems[idx]);
   _pmItems.splice(idx, 1);
   _pmRenderItemsTabla();
 }
@@ -477,15 +719,18 @@ function _pmRenderItemCard(it, idx) {
       <label class="pm-campo">Nombre o descripción del modelo
         <input type="text" class="form-input" data-pm-campo="nombre" value="${escapeHtml(it.nombre)}" placeholder="ej: Mueble de 3 cajones con repisa (foto del cliente)">
       </label>
-      <div class="pm-campo">Foto del modelo
-        <div class="pm-foto-modelo">
-          ${it._preview ? `<img src="${it._preview}" alt="Foto del modelo">
-            <button type="button" class="pm-link" data-call="pmQuitarFotoModelo" data-args="[${idx}]">Quitar foto</button>` : ''}
-          <label class="btn btn-secondary btn-small" style="cursor:pointer;">
-            <i data-lucide="camera"></i> ${it._preview ? 'Cambiar foto' : 'Subir foto'}
-            <input type="file" accept="image/*" data-pm-foto-modelo style="display:none">
-          </label>
-        </div>
+      <div class="pm-campo"><span>Fotos del modelo · ${it._fotos.length} de ${_PM_MAX_FOTOS_MODELO}</span>
+        ${it._fotos.length ? `<div class="pm-fotos-grid">${it._fotos.map((f, fi) => `
+          <div class="pm-foto-thumb">
+            <img src="${escapeHtml(f.url)}" alt="Foto ${fi + 1} del modelo">
+            <button type="button" class="pm-foto-x" data-call="pmQuitarFotoModelo" data-args="[${idx}, ${fi}]" title="Quitar foto" aria-label="Quitar foto ${fi + 1}">×</button>
+          </div>`).join('')}</div>` : ''}
+        ${it._fotos.length < _PM_MAX_FOTOS_MODELO ? `
+        <label class="btn btn-secondary btn-small" style="cursor:pointer;align-self:flex-start;">
+          <i data-lucide="camera"></i> ${it._fotos.length ? 'Agregar más fotos' : 'Subir fotos'}
+          <input type="file" accept="image/*" multiple data-pm-foto-modelo style="display:none">
+        </label>` : ''}
+        <span class="pm-hint">Puedes elegir varias a la vez: de frente, de lado, detalles, la captura que mandó el cliente…</span>
       </div>
       <div class="pm-costos">
         <label>Ancho (cm)<input type="number" class="form-input" data-pm-campo="ancho_cm" value="${it.ancho_cm ?? ''}" min="0" step="1" inputmode="numeric"></label>
@@ -598,8 +843,10 @@ async function _pmSubirAdjuntos(carpeta) {
   const label    = document.getElementById('pm_progreso_label');
   if (progreso) progreso.style.display = 'block';
 
-  const conFoto = _pmTipoProyecto() === 'bano' ? _pmItems.filter(it => it._archivo) : [];
-  const totalArchivos = _pmFotosPendientes.length + (audioBlob ? 1 : 0) + conFoto.length;
+  const fotosModelo = _pmTipoProyecto() === 'bano'
+    ? _pmItems.flatMap(it => it._catalogo ? [] : it._fotos.filter(f => f.file))
+    : [];
+  const totalArchivos = _pmFotosPendientes.length + (audioBlob ? 1 : 0) + fotosModelo.length;
   let subidos = 0;
   const marcarProgreso = (texto) => {
     const pct = totalArchivos ? Math.round((subidos / totalArchivos) * 100) : 100;
@@ -628,13 +875,17 @@ async function _pmSubirAdjuntos(carpeta) {
     subidos++;
   }
 
-  for (let i = 0; i < conFoto.length; i++) {
-    const it = conFoto[i];
-    marcarProgreso(`Subiendo foto del modelo ${i + 1} de ${conFoto.length}...`);
-    const ext = (it._archivo.name.split('.').pop() || 'jpg').toLowerCase();
+  // Cada foto subida se reemplaza por su URL de Storage (si falla a la
+  // mitad y se vuelve a guardar, las ya subidas no se suben otra vez).
+  for (let i = 0; i < fotosModelo.length; i++) {
+    const foto = fotosModelo[i];
+    marcarProgreso(`Subiendo foto del modelo ${i + 1} de ${fotosModelo.length}...`);
+    const ext = (foto.file.name.split('.').pop() || 'jpg').toLowerCase();
     const ref = firebaseStorage.ref(`pedidos/${carpeta}/modelos/modelo-${Date.now()}-${i}.${ext}`);
-    const snap = await ref.put(it._archivo);
-    it.imagen_referencia = await snap.ref.getDownloadURL();
+    const snap = await ref.put(foto.file);
+    URL.revokeObjectURL(foto.url);
+    foto.url = await snap.ref.getDownloadURL();
+    foto.file = null;
     subidos++;
   }
 
@@ -651,6 +902,7 @@ function _pmItemsParaEnviar(tipoProyecto) {
     const dims = [['Ancho', m('pm_med_ancho')], ['Alto', m('pm_med_alto')], ['Fondo', m('pm_med_fondo')]]
       .filter(([, v]) => v).map(([k, v]) => `${k} ${v} m`).join(' · ');
     return [{
+      id: _pmEdit?.lineaMedidaId || null,
       producto_id: null,
       nombre: tipoProyecto === 'cocina' ? 'Cocina a la medida' : 'Clóset a la medida',
       cantidad: 1, unidad: 'juego',
@@ -667,11 +919,13 @@ function _pmItemsParaEnviar(tipoProyecto) {
       // junto a la línea (el ancho también como dato aparte).
       const dimsCustom = it._catalogo ? '' : [['Ancho', it.ancho_cm], ['Alto', it.alto_cm], ['Fondo', it.fondo_cm]]
         .filter(([, v]) => v).map(([k, v]) => `${k} ${v} cm`).join(' · ');
+      const fotos = it._catalogo ? [] : it._fotos.filter(f => !f.file).map(f => f.url);
       return {
+        id: it.id || null,
         producto_id: it.producto_id,
         nombre: it.nombre.trim(),
         cantidad: it.cantidad,
-        unidad: 'pza',
+        unidad: it.unidad || 'pza',
         precio_unitario: it.precio_unitario,
         ancho_cm: it.ancho_cm ? parseInt(it.ancho_cm, 10) : null,
         cubierta: it.cubierta,
@@ -681,7 +935,8 @@ function _pmItemsParaEnviar(tipoProyecto) {
         color: it.color.trim(),
         info_extra: it.info_extra.trim(),
         medidas_personalizadas: [dimsCustom, it.medidas_personalizadas.trim()].filter(Boolean).join('\n'),
-        imagen_referencia: it.imagen_referencia || '',
+        imagen_referencia: fotos[0] || '',
+        imagenes_referencia: fotos,
       };
     });
 }
@@ -718,7 +973,20 @@ async function guardarPedidoManual() {
     return;
   }
   let pago = {};
-  if (window.WH_PM_MONTOS) {
+  if (window.WH_PM_MONTOS && _pmEdit) {
+    const { total } = _pmTotales();
+    if (total < _pmEdit.pagado - 0.009) {
+      showNotification(`El total (${fmtMoneyPM(total)}) no puede quedar debajo de lo que el cliente ya pagó (${fmtMoneyPM(_pmEdit.pagado)}).`, 'error');
+      document.getElementById('pm_total_acordado')?.focus();
+      return;
+    }
+    pago = {
+      costo_envio: _pmNum('pm_costo_envio'),
+      costo_instalacion: _pmNum('pm_costo_instalacion'),
+      descuento: _pmNum('pm_descuento'),
+      total_acordado: _pmNum('pm_total_acordado'),
+    };
+  } else if (window.WH_PM_MONTOS) {
     const { total } = _pmTotales();
     const tipoPago = _pmValorRadio('pm_tipo_pago') || 'completo';
     const monto = tipoPago === 'sin_pago' ? 0 : _pmNum('pm_monto_pagado');
@@ -746,7 +1014,7 @@ async function guardarPedidoManual() {
       referencia_pago: document.getElementById('pm_referencia_pago')?.value.trim() || '',
     };
   }
-  if (fechaEntrega && fechaEntrega < _pmHoyISO()) {
+  if (fechaEntrega && fechaEntrega < _pmHoyISO() && fechaEntrega !== _pmEdit?.fechaOriginal) {
     showNotification('La fecha de entrega no puede ser anterior a hoy', 'error');
     return;
   }
@@ -754,7 +1022,7 @@ async function guardarPedidoManual() {
     showNotification('Escribe en "Información detallada" qué quiere el cliente (o graba una nota de voz)', 'error');
     return;
   }
-  if (tipoProyecto === 'bano' && !descripcion && !_pmGrabador.tieneBlob() && !_pmItems.length) {
+  if (tipoProyecto === 'bano' && !descripcion && !_pmGrabador.tieneBlob() && !_pmItems.length && !_pmEdit) {
     showNotification('Agrega al menos un mueble, o describe el proyecto / graba una nota de voz', 'error');
     return;
   }
@@ -763,9 +1031,10 @@ async function guardarPedidoManual() {
   btn.disabled = true;
   btn.innerHTML = '<i class="wh-icon-spin" data-lucide="loader-circle"></i> Guardando...';
   window.lucide?.createIcons();
+  const edit = _pmEdit;
 
   try {
-    const carpeta = 'manual-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+    const carpeta = (edit ? `editar-${edit.id}-` : 'manual-') + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
     const { fotos, audioUrl } = await _pmSubirAdjuntos(carpeta);
     const itemsValidos = _pmItemsParaEnviar(tipoProyecto);
 
@@ -784,26 +1053,40 @@ async function guardarPedidoManual() {
       tipo_proyecto: tipoProyecto,
       items: itemsValidos,
     };
+    if (edit) {
+      payload.direccion_modificada = direccion !== edit.dirOriginal.trim();
+      payload.adjuntos_quitar = [...edit.quitar];
+    }
 
-    const data = await apiFetch(`${API_BASE}/pedidos.php?action=crear_manual`, {
+    const data = await apiFetch(edit
+      ? `${API_BASE}/pedidos.php?action=editar_manual&id=${edit.id}`
+      : `${API_BASE}/pedidos.php?action=crear_manual`, {
       method: 'POST',
       body: JSON.stringify(payload),
     });
 
-    if (data.success) {
+    if (data.success && edit) {
+      showNotification(`Pedido ${data.numero_pedido} actualizado`, 'success');
+      closeModal('pedidoManualModal');
+      _pmEdit = null;
+      if (typeof window.cargarPedidosAPI === 'function') window.cargarPedidosAPI();
+      else if (typeof cargarPedidosEmpleadoAPI === 'function') cargarPedidosEmpleadoAPI();
+      const ver = window.verDetallePedidoAdmin || window.verDetallePedidoEmp;
+      if (typeof ver === 'function') ver(edit.id);
+    } else if (data.success) {
       showNotification(`Pedido ${data.numero_pedido} creado`, 'success');
       if (data.aviso_capacidad) setTimeout(() => showNotification(data.aviso_capacidad, 'warning'), 600);
       closeModal('pedidoManualModal');
       if (typeof window.cargarPedidosAPI === 'function') window.cargarPedidosAPI();
       else if (typeof cargarPedidosEmpleadoAPI === 'function') cargarPedidosEmpleadoAPI();
     } else {
-      showNotification(data.error || 'Error al crear el pedido', 'error');
+      showNotification(data.error || (edit ? 'No se pudieron guardar los cambios' : 'Error al crear el pedido'), 'error');
     }
   } catch (e) {
     showNotification('Error: ' + e.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '<i data-lucide="save"></i> Crear pedido';
+    btn.innerHTML = _pmEdit ? '<i data-lucide="save"></i> Guardar cambios' : '<i data-lucide="save"></i> Crear pedido';
     window.lucide?.createIcons();
   }
 }
@@ -844,7 +1127,7 @@ document.addEventListener('DOMContentLoaded', () => {
     itemsCont.addEventListener('change', function (e) {
       if (!e.target.matches('[data-pm-foto-modelo]')) return;
       const card = e.target.closest('[data-pm-item]');
-      if (card && e.target.files?.[0]) pmFotoModelo(Number(card.dataset.pmItem), e.target.files[0]);
+      if (card && e.target.files?.length) pmFotoModelo(Number(card.dataset.pmItem), e.target.files);
     });
     itemsCont.addEventListener('keydown', function (e) {
       if (e.key === 'Enter' && e.target.matches('[data-pm-buscar]')) {
@@ -881,6 +1164,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 window.abrirModalCrearPedido  = abrirModalCrearPedido;
+window.abrirModalEditarPedido = abrirModalEditarPedido;
+window.pmToggleAdjunto        = pmToggleAdjunto;
 window.guardarPedidoManual    = guardarPedidoManual;
 window.pmPreviewFotos         = pmPreviewFotos;
 window.pmEliminarFoto         = pmEliminarFoto;
